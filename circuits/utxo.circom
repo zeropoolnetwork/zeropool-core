@@ -37,14 +37,14 @@ template utxo() {
   }
 
   component uid_bits = Num2Bits(253);
-  uid_bits.in <== in[4];
+  uid_bits.in <== in[3];
 
   for(var i = 0; i<253; i++) {
     hasher.in[i+144] <== uid_bits.out[i];
   }
 
   component owner_bits = Num2Bits_strict();
-  owner_bits.in <== in[3];
+  owner_bits.in <== in[4];
 
   for(var i = 0; i<254; i++) {
     hasher.in[i+397] <== owner_bits.out[i];

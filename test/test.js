@@ -14,7 +14,7 @@ const { MerkleTree } = require("../src/merkletree.js");
 function depositTest() {
   const u = utxoRandom();
   const { inputs } = depositCompute({ asset: utxoToAsset(u), owner: u.owner });
-  console.log(inputs);
+  //console.log(inputs);
   const w = witness(inputs, "transaction");
 }
 

@@ -57,7 +57,7 @@ function getAsset({assetId, amount, nativeAmount}) {
   return assetId + (amount << 16n) + (nativeAmount << 80n);
 }
 
-function utxoFromAsset(asset, owner, uid) {
+function utxoFromAsset(asset, uid, owner) {
   return _.defaults({ owner, uid }, parseAsset(asset));
 }
 
@@ -74,6 +74,7 @@ function depositCompute({ asset, owner }) {
   const utxo = utxoFromAsset(asset, uid, owner);
 
   const utxo_out = [utxoInputs(utxo)];
+  console.log(utxo);
   const out_u0 = utxoHash(utxo);
   const out_u1_or_asset = asset;
   const inputs = _.defaultsDeep({ utxo_out, out_u0, out_u1_or_asset }, defaultInputs(proofLength));
@@ -287,7 +288,7 @@ function addSignatures(pk, data) {
 
 function utxoHash(utxo) {
   const inputs = utxoInputs(utxo);
-  [1n << 16n, 1n << 64n, 1n << 64n, 1n << 253n, babyJub.p].forEach((v, i) => assert((0n <= inputs[i]) && (inputs[i] < v)));
+  [1n << 16n, 1n << 64n, 1n << 64n, 1n << 253n, babyJub.p].forEach((v, i) => assert((0n <= inputs[i]) && (inputs[i] < v), `wrong value at utxo[${i}]`));
   const mantice = inputs[0] + (inputs[1] << 16n) + (inputs[2] << 80n) + (inputs[3] << 144n) +  (inputs[4] << 397n);
   return pedersen(mantice, 651);
 }

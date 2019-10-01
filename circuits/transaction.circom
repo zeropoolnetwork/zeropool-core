@@ -13,7 +13,7 @@ template MulEqZero(n) {
   } else if (n==2){
     in[0]*in[1]===0;
   } else if (n > 2) {
-    signal t[n-1];
+    signal t[n-2];
     t[0] <== in[0]*in[1];
     for(var j=2; j<(n-1);j++) {
       t[j-1] <== t[j-2]*in[j];
@@ -136,19 +136,19 @@ template transaction(n) {
 
   component utxo_in_hash[2];
 
-  utxo_in_hash[1]=utxo();
-  utxo_in_hash[1].in[0] <== utxo_in[1][0] + (assetId.out-utxo_in[1][0])*is_deposit;
-  utxo_in_hash[1].in[1] <== utxo_in[1][1] + (assetAmount.out-utxo_in[1][0])*is_deposit;
-  utxo_in_hash[1].in[2] <== utxo_in[1][2] + (assetNativeAmount.out-utxo_in[1][0])*is_deposit;
-  utxo_in_hash[1].in[3] <== utxo_in[1][3];
-  utxo_in_hash[1].in[4] <== pubkey.out[0];  
-
-
   utxo_in_hash[0]=utxo();
+  utxo_in_hash[0].in[0] <== utxo_in[0][0] + (assetId.out-utxo_in[0][0])*is_deposit;
+  utxo_in_hash[0].in[1] <== utxo_in[0][1] + (assetAmount.out-utxo_in[0][1])*is_deposit;
+  utxo_in_hash[0].in[2] <== utxo_in[0][2] + (assetNativeAmount.out-utxo_in[0][2])*is_deposit;
+  utxo_in_hash[0].in[3] <== utxo_in[0][3];
+  utxo_in_hash[0].in[4] <== pubkey.out[0];  
+
+
+  utxo_in_hash[1]=utxo();
   for(var i=0; i<4; i++){
-    utxo_in_hash[0].in[i] <== utxo_in[0][i];
+    utxo_in_hash[1].in[i] <== utxo_in[1][i];
   }
-  utxo_in_hash[0].in[4] <== pubkey.out[0];
+  utxo_in_hash[1].in[4] <== pubkey.out[0];
 
 
   component mp_path_bits[2];
@@ -188,13 +188,13 @@ template transaction(n) {
   utxo_out_hash[1]=utxo();
   utxo_out_hash[1].in[0]<==utxo_out[1][0] + (assetId.out - utxo_out[1][0]) * is_withdrawal;
   utxo_out_hash[1].in[1]<==utxo_out[1][1] + (assetAmount.out - utxo_out[1][1]) * is_withdrawal;
-  utxo_out_hash[1].in[1]<==utxo_out[1][2] + (assetNativeAmount.out - utxo_out[1][2]) * is_withdrawal;
+  utxo_out_hash[1].in[2]<==utxo_out[1][2] + (assetNativeAmount.out - utxo_out[1][2]) * is_withdrawal;
   utxo_out_hash[1].in[3]<==utxo_out[1][3];
   utxo_out_hash[1].in[4]<==utxo_out[1][4];
 
   
 
-  out_u0 - utxo_out_hash[0].out === 0;
+  out_u0 === utxo_out_hash[0].out;
   (out_u1_or_asset - utxo_out_hash[1].out) * (is_transfer + is_swap) === 0;
 
   component sameAssets = IsZero();
