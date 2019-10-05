@@ -1,7 +1,6 @@
-include "../node_modules/circomlib/circuits/merkleproofmimc.circom";
+include "../node_modules/circomlib/circuits/merkleproofposeidon.circom";
 include "../node_modules/circomlib/circuits/comparators.circom";
 include "../node_modules/circomlib/circuits/pointbits.circom";
-include "../node_modules/circomlib/circuits/mimc.circom";
 include "../node_modules/circomlib/circuits/pedersen.circom";
 include "utxo.circom";
 
@@ -71,16 +70,21 @@ template transaction(n) {
     16950150798460657717958625567821834550301663161624707787222815936182638968203
   ];
 
-  component txtype_bits = Num2Bits(162);
+  component txtype_bits = Num2Bits(226);
   txtype_bits.in <== txtype;
+
+  component fee = Bits2Num(64);
+  for (var i = 0; i < 64; i++) {
+    fee.in[i] <== txtype_bits.out[160+i];
+  }
 
   signal is_deposit; 
   signal is_withdrawal;
   signal is_transfer;
   signal is_swap;
 
-  var b0=txtype_bits.out[160];
-  var b1=txtype_bits.out[161];
+  var b0=txtype_bits.out[224];
+  var b1=txtype_bits.out[225];
   is_swap <== b0 * b1;  
   is_deposit <== is_swap + 1 - b0 - b1;  
   is_withdrawal <== - is_swap + b0;  
@@ -141,7 +145,7 @@ template transaction(n) {
   utxo_in_hash[0].in[1] <== utxo_in[0][1] + (assetAmount.out-utxo_in[0][1])*is_deposit;
   utxo_in_hash[0].in[2] <== utxo_in[0][2] + (assetNativeAmount.out-utxo_in[0][2])*is_deposit;
   utxo_in_hash[0].in[3] <== utxo_in[0][3];
-  utxo_in_hash[0].in[4] <== pubkey.out[0];  
+  utxo_in_hash[0].in[4] <== pubkey.out[0]; 
 
 
   utxo_in_hash[1]=utxo();
@@ -150,6 +154,9 @@ template transaction(n) {
   }
   utxo_in_hash[1].in[4] <== pubkey.out[0];
 
+  component doublespend = IsZero();
+  doublespend.in <== utxo_in_hash[0].out - utxo_in_hash[1].out;
+  doublespend.out === 0;
 
   component mp_path_bits[2];
   component merkleproof[2];
@@ -157,7 +164,7 @@ template transaction(n) {
   for(var j=0; j<2; j++) {
     mp_path_bits[j] = Num2Bits(n);
     mp_path_bits[j].in <== mp_path[j];
-    merkleproof[j]=merkleproofmimc(n);
+    merkleproof[j]=merkleproofposeidon(n);
     merkleproof[j].leaf <== utxo_in_hash[j].out;
     for(var i=0; i<n; i++) {
       merkleproof[j].sibling[i] <== mp_sibling[j][i];
@@ -178,47 +185,47 @@ template transaction(n) {
   (n1_or_u_in - utxo_in_hash[1].out)*is_swap === 0;
 
 
-  component utxo_out_hash[2];
+  // component utxo_out_hash[2];
 
-  utxo_out_hash[0]=utxo();
-  for(var i=0; i<5; i++){
-    utxo_out_hash[0].in[i]<==utxo_out[0][i];
-  }
+  // utxo_out_hash[0]=utxo();
+  // for(var i=0; i<5; i++){
+  //   utxo_out_hash[0].in[i]<==utxo_out[0][i];
+  // }
 
-  utxo_out_hash[1]=utxo();
-  utxo_out_hash[1].in[0]<==utxo_out[1][0] + (assetId.out - utxo_out[1][0]) * is_withdrawal;
-  utxo_out_hash[1].in[1]<==utxo_out[1][1] + (assetAmount.out - utxo_out[1][1]) * is_withdrawal;
-  utxo_out_hash[1].in[2]<==utxo_out[1][2] + (assetNativeAmount.out - utxo_out[1][2]) * is_withdrawal;
-  utxo_out_hash[1].in[3]<==utxo_out[1][3];
-  utxo_out_hash[1].in[4]<==utxo_out[1][4];
+  // utxo_out_hash[1]=utxo();
+  // utxo_out_hash[1].in[0]<==utxo_out[1][0] + (assetId.out - utxo_out[1][0]) * is_withdrawal;
+  // utxo_out_hash[1].in[1]<==utxo_out[1][1] + (assetAmount.out - utxo_out[1][1]) * is_withdrawal;
+  // utxo_out_hash[1].in[2]<==utxo_out[1][2] + (assetNativeAmount.out - utxo_out[1][2]) * is_withdrawal;
+  // utxo_out_hash[1].in[3]<==utxo_out[1][3];
+  // utxo_out_hash[1].in[4]<==utxo_out[1][4];
 
   
 
-  out_u0 === utxo_out_hash[0].out;
-  (out_u1_or_asset - utxo_out_hash[1].out) * (is_transfer + is_swap) === 0;
+  // out_u0 === utxo_out_hash[0].out;
+  // (out_u1_or_asset - utxo_out_hash[1].out) * (is_transfer + is_swap) === 0;
 
-  component sameAssets = IsZero();
-  sameAssets.in <== utxo_in_hash[0].in[0] - utxo_in_hash[1].in[0];
+  // component sameAssets = IsZero();
+  // sameAssets.in <== utxo_in_hash[0].in[0] - utxo_in_hash[1].in[0];
 
-  utxo_in_hash[0].in[1] + utxo_in_hash[1].in[1] - utxo_out_hash[0].in[1] - utxo_out_hash[1].in[1] === 0;
-  utxo_in_hash[0].in[2] + utxo_in_hash[1].in[2] - utxo_out_hash[0].in[2] - utxo_out_hash[1].in[2] === 0;
+  // utxo_in_hash[0].in[1] + utxo_in_hash[1].in[1] - utxo_out_hash[0].in[1] - utxo_out_hash[1].in[1] === 0;
+  // utxo_in_hash[0].in[2] + utxo_in_hash[1].in[2] - utxo_out_hash[0].in[2] - utxo_out_hash[1].in[2] - fee.out === 0;
   
-  (utxo_in_hash[0].in[1] - utxo_out_hash[0].in[1])*(1-sameAssets.out) === 0;
+  // (utxo_in_hash[0].in[1] - utxo_out_hash[0].in[1])*(1-sameAssets.out) === 0;
 
-  utxo_in_hash[0].in[0] === utxo_out_hash[0].in[0];
-  utxo_in_hash[1].in[0] === utxo_out_hash[1].in[0];
+  // utxo_in_hash[0].in[0] === utxo_out_hash[0].in[0];
+  // utxo_in_hash[1].in[0] === utxo_out_hash[1].in[0];
 
-  component cn0 = Nullifier();
-  cn0.uid <== utxo_in_hash[0].in[3];
-  cn0.privkey <== utxo_in_hash[0].in[4];
+  // component cn0 = Nullifier();
+  // cn0.uid <== utxo_in_hash[0].in[3];
+  // cn0.privkey <== utxo_in_hash[0].in[4];
 
-  (cn0.out - n0)*(is_withdrawal+is_transfer+is_swap) === 0;
+  // (cn0.out - n0)*(is_withdrawal+is_transfer+is_swap) === 0;
 
-  component cn1 = Nullifier();
-  cn1.uid <== utxo_in_hash[1].in[3];
-  cn1.privkey <== utxo_in_hash[1].in[4];
+  // component cn1 = Nullifier();
+  // cn1.uid <== utxo_in_hash[1].in[3];
+  // cn1.privkey <== utxo_in_hash[1].in[4];
   
-  (cn1.out - n1_or_u_in)*(is_withdrawal+is_transfer) === 0;
+  // (cn1.out - n1_or_u_in)*(is_withdrawal+is_transfer) === 0;
 
 }
 

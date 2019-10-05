@@ -1,11 +1,10 @@
 const _ = require("lodash");
 const assert = require("assert");
-const { eddsa2mimc_sign } = require("circomlib/src/eddsa2mimc.js");
-const { multiHash } = require("circomlib/src/mimc7.js");
-const ecvrfpedersen = require("circomlib/src/ecvrfpedersen.js");
 const babyJub = require("circomlib/src/babyjub.js");
 const { pedersen, randrange } = require("./utils.js");
 const { MerkleTree } = require("./merkletree.js");
+
+const poseidon = require("circomlib/src/poseidon.js").createHash(6, 8, 57);
 
 
 const proofLength = 2;
@@ -53,7 +52,7 @@ function parseAsset(asset) {
   return {assetId, amount, nativeAmount}
 }
 
-function getAsset({assetId, amount, nativeAmount}) {
+function packAsset({assetId, amount, nativeAmount}) {
   return assetId + (amount << 16n) + (nativeAmount << 80n);
 }
 
@@ -61,7 +60,7 @@ function utxoFromAsset(asset, uid, owner) {
   return _.defaults({ owner, uid }, parseAsset(asset));
 }
 
-function utxoToAsset(utxo) { return getAsset(utxo) };
+function utxoToAsset(utxo) { return packAsset(utxo) };
 
 
 function uidRandom() {
@@ -72,9 +71,7 @@ function uidRandom() {
 function depositCompute({ asset, owner }) {
   const uid = uidRandom();
   const utxo = utxoFromAsset(asset, uid, owner);
-
   const utxo_out = [utxoInputs(utxo)];
-  console.log(utxo);
   const out_u0 = utxoHash(utxo);
   const out_u1_or_asset = asset;
   const inputs = _.defaultsDeep({ utxo_out, out_u0, out_u1_or_asset }, defaultInputs(proofLength));
@@ -84,62 +81,62 @@ function depositCompute({ asset, owner }) {
   return { inputs, add_utxo, add_nullifier };
 }
 
+function getNullifier(utxo, privkey) {
+  const preimage = utxo.uid+(privkey << 253n);
+  return pedersen(pedersen(preimage, 504), 254);
+}
 
-function withdrawalPreCompute({ asset, receiver, utxo_in, mp_sibling, mp_path, root }) {
+function withdrawalCompute({ asset, receiver, utxo_in, mp_sibling, mp_path, root, privkey, fee}) {
   const asset_utxo = utxoFromAsset(asset);
+  const spend_out = spendUtxoPair(utxo_in, asset_utxo, fee, utxo_in[0].owner);
+  assert(spend_out != null, "cannot compute spend");
+
+  let utxo_out = [spend_out.utxo];
+  if (spend_out.in_swap) [utxo_in[0], utxo_in[1]] = [utxo_in[1], utxo_in[0]];
+
   assert((0n <= receiver) && (receiver < (1n << 160n)), "receiver must be 160bit number");
   assert((utxo_in[0].assetId == asset_utxo.assetId) && (utxo_in[0].assetId == utxo_in[1].assetId), "assets must be same");
   assert(utxo_in[0].owner == utxo_in[1].owner, "owner must be same");
   for (let i = 0; i < 2; i++)
     assert(root == MerkleTree.computeRoot(mp_sibling[i], mp_path[i], utxoHash(utxo_in[i])));
 
-  const same_inputs = _.eq(utxo_in[0], utxo_in[1]);
-  const spend_out = spendUtxoPair(utxo_in, asset_utxo, utxo_in[0].owner);
-  assert(spend_out != null, "cannot compute spend");
-  const utxo_out = spend_out[1];
-  const txtype = (1n << 160n) + receiver;
-  return { utxo_in, utxo_out, asset, txtype, mp_sibling, mp_path, root, same_inputs };
-}
 
 
-function withdrawalCompute({ same_inputs, utxo_in, utxo_out, asset, txtype, mp_sibling, mp_path, root, ecvrf, eddsa }) {
-
-  const out_u1 = utxoHash(utxo_out);
+  const txtype = (1n << 224n) + (fee << 160n) + receiver;
+  const out_u0 = utxoHash(utxo_out[0]);
   const add_utxo = [utxo_out];
-  const out_u2_or_asset = asset;
+  const out_u1_or_asset = asset;
 
-  const n1 = ecvrf[0][0];
-  const n2_or_u_in = ecvrf[1][0];
-  const add_nullifier = [n1, n2_or_u_in];
+  const n0 = getNullifier(utxo_in[0], privkey);
+  const n1_or_u_in = getNullifier(utxo_in[1], privkey);
+  const add_nullifier = [n0, n1_or_u_in];
 
-  utxo_out = [utxoInputs(utxo_out)];
+
   utxo_in = utxo_in.map(utxoInputs);
-  ecvrf = ecvrf.map(x => x.slice(1));
+  utxo_out = utxo_out.map(utxoInputs);
+
   const inputs = _.defaultsDeep(
-    { mp_path, mp_sibling, utxo_in, root, txtype, out_u1, out_u2_or_asset, ecvrf, n1, n2_or_u_in, utxo_out, eddsa },
+    { mp_path, mp_sibling, utxo_in, root, txtype, out_u0, out_u1_or_asset, n0, n1_or_u_in, utxo_out, privkey},
     defaultInputs(proofLength)
   );
-
+  trimInputs(inputs);
   return { inputs, add_utxo, add_nullifier };
 
 }
 
 
-function spendUtxoPair(utxo_in, utxo_spend, owner) {
+function spendUtxoPair(utxo_in, utxo_spend, fee, owner) {
   assert(utxo_in.length == 2);
   if (typeof owner === "undefined") owner = 0n;
   const uid = uidRandom();
   const total_amount = {};
-  const same_inputs = _.eq(utxo_in[0], utxo_in[1]);
-  if (same_inputs) {
-    total_amount[utxo_in[0].assetId] = utxo_in[0].amount;
-  }
-  else {
-    utxo_in.forEach(u => total_amount[u.assetId] = _.get(total_amount, u.assetId, 0n) + u.amount);
-  }
-
+  
+  utxo_in.forEach(u => total_amount[u.assetId] = _.get(total_amount, u.assetId, 0n) + u.amount);
+  utxo_in.forEach(u => total_amount["native"] = _.get(total_amount, "native", 0n) + u.nativeAmount);
+ 
   total_amount[utxo_spend.assetId] -= utxo_spend.amount;
-  if (total_amount[utxo_spend.assetId] < 0n)
+  total_amount["native"] -= utxo_spend.nativeAmount + fee;
+  if ((total_amount[utxo_spend.assetId] < 0n) || (total_amount["native"] < 0n))
     return null;
 
 
@@ -149,14 +146,14 @@ function spendUtxoPair(utxo_in, utxo_spend, owner) {
         delete total_amount[k];
 
   const k = _.keys(total_amount);
-  if (k.length > 1)
+  if (k.length > 2)
     return null;
 
-  const utxo_rem = utxo(BigInt(k[0]), total_amount[k[0]], owner, uid);
-  if (utxo_in[0].assetId == utxo_spend.assetId)
-    return [utxo_spend, utxo_rem];
+  const utxo_rem = utxo(BigInt(k[0]), total_amount[k[0]], total_amount["native"], owner, uid);
+  if (utxo_in[1].assetId == utxo_spend.assetId)
+    return {utxo:utxo_rem, in_swap:false}
   else
-    return [utxo_rem, utxo_spend];
+    return {utxo:utxo_rem, in_swap:true};
 
 }
 
@@ -252,34 +249,6 @@ function transfer2Compute({ utxo_in, utxo_out, txtype, mp_sibling, mp_path, root
 
 }
 
-function addSignatures(pk, data) {
-  let eddsa, ecvrf;
-  switch (data.txtype >> 160n) {
-    case 1n:
-      eddsa = txSign(pk, ...data.utxo_in, data.utxo_out, data.asset, data.txtype);
-      ecvrf = [
-        utxoVRF(pk, data.utxo_in[0]),
-        data.same_inputs ? utxoVRF(pk, _.defaults({ uid: eddsa[0] }, data.utxo_in[1])) : utxoVRF(pk, data.utxo_in[1])
-      ];
-      break;
-    case 2n:
-      eddsa = txSign(pk, ...data.utxo_in, ...data.utxo_out, data.txtype);
-      ecvrf = [
-        utxoVRF(pk, data.utxo_in[0]),
-        data.same_inputs ? utxoVRF(pk, { uid: eddsa[0] }) : utxoVRF(pk, data.utxo_in[1])
-      ];
-      break;
-    case 3n:
-      eddsa = txSign(pk, ...data.utxo_in, ...data.utxo_out, data.txtype);
-      ecvrf = [
-        utxoVRF(pk, data.utxo_in[0])
-      ];
-      break;
-    default:
-      return data;
-  }
-  return _.merge(data, { eddsa, ecvrf });
-}
 
 
 
@@ -288,7 +257,8 @@ function addSignatures(pk, data) {
 
 function utxoHash(utxo) {
   const inputs = utxoInputs(utxo);
-  [1n << 16n, 1n << 64n, 1n << 64n, 1n << 253n, babyJub.p].forEach((v, i) => assert((0n <= inputs[i]) && (inputs[i] < v), `wrong value at utxo[${i}]`));
+  console.log(inputs);
+  [1n << 16n, 1n << 64n, 1n << 64n, 1n << 253n, babyJub.p].forEach((v, i) => assert((0n <= inputs[i]) && (inputs[i] < v), `wrong value at utxo[${i}]: ${inputs[i]}`));
   const mantice = inputs[0] + (inputs[1] << 16n) + (inputs[2] << 80n) + (inputs[3] << 144n) +  (inputs[4] << 397n);
   return pedersen(mantice, 651);
 }
@@ -297,9 +267,9 @@ function utxoHash(utxo) {
 
 _.assign(exports, {
   utxo, utxoInputs, utxoRandom, utxoToAsset, utxoFromAsset, utxoHash,
-  depositCompute, addSignatures,
-  withdrawalCompute, withdrawalPreCompute,
+  depositCompute,
+  withdrawalCompute,
   transferCompute, transferPreCompute,
   transfer2Compute, transfer2PreCompute,
-  proofLength, getAsset
+  proofLength, packAsset
 });

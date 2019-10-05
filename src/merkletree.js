@@ -1,5 +1,5 @@
 const _ = require("lodash");
-const { multiHash } = require("circomlib/src/mimc7.js");
+const poseidon = require("circomlib/src/poseidon.js").createHash(6, 8, 57);
 
 class MerkleTree {
   constructor(height) {
@@ -8,7 +8,7 @@ class MerkleTree {
     this._merkleDefaults = Array(this.height);
     this._merkleDefaults[0] = 0n;
     for (let i = 1; i < this.height; i++) {
-      this._merkleDefaults[i] = multiHash([this._merkleDefaults[i - 1], this._merkleDefaults[i - 1]]);
+      this._merkleDefaults[i] = poseidon([this._merkleDefaults[i - 1], this._merkleDefaults[i - 1]]);
     }
   }
   _cell(row, index) {
@@ -20,7 +20,7 @@ class MerkleTree {
     this._merkleState[0][pos] = leaf;
     for (let i = 1; i < this.height; i++) {
       pos = pos >> 1;
-      this._merkleState[i][pos] = multiHash([this._cell(i - 1, pos * 2), this._cell(i - 1, pos * 2 + 1)]);
+      this._merkleState[i][pos] = poseidon([this._cell(i - 1, pos * 2), this._cell(i - 1, pos * 2 + 1)]);
     }
   }
 
@@ -31,7 +31,7 @@ class MerkleTree {
   static computeRoot(pi, index, leaf) {
     let root = leaf;
     for (let i = 0; i < pi.length; i++) {
-      root = ((index >> i) & 1) == 0 ? multiHash([root, pi[i]]) : multiHash([pi[i], root]);
+      root = ((index >> i) & 1) == 0 ? poseidon([root, pi[i]]) : poseidon([pi[i], root]);
     }
     return root;
   }

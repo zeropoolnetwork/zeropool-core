@@ -6,25 +6,22 @@ const { utxoRandom, utxoHash, depositCompute, utxoToAsset, addSignatures,
   withdrawalCompute, withdrawalPreCompute,
   transferCompute, transferPreCompute,
   transfer2Compute, transfer2PreCompute,
-  proofLength
+  proofLength, packAsset
 } = require("../src/inputs.js")
 const { MerkleTree } = require("../src/merkletree.js");
-
+const assert = require("assert");
 
 function depositTest() {
   const u = utxoRandom();
   const { inputs } = depositCompute({ asset: utxoToAsset(u), owner: u.owner });
-  //console.log(inputs);
   const w = witness(inputs, "transaction");
 }
 
 async function depositTest_Proof_and_verify() {
   const u = utxoRandom();
   const { inputs } = depositCompute({ asset: utxoToAsset(u), owner: u.owner });
-  console.log(inputs);
   const pi = await proof(inputs, "transaction");
-  console.log(pi.proof, pi.publicSignals);
-  console.log(await verify(pi, "transaction"));
+  assert(await verify(pi, "transaction"), "wrong proof or verification key.");
 
 }
 
@@ -83,17 +80,27 @@ function genRandomState(fixed) {
 
 async function withdrawalTest() {
   const st = genRandomState({ assetId: true });
-  const mp_path = Array(2).fill(0).map(() => randrange(0, st.utxos.length));
+  const mp_path = (()=>{
+    const a = randrange(1, st.utxos.length);
+    const b = randrange(2, st.utxos.length+1);
+    return [a, (a*b)%st.utxos.length];
+  })();
+  console.log(mp_path);
+  const fee = 1n;
 
   const receiver = randrange(0n, 1n << 160n);
   const mp_sibling = mp_path.map(e => st.tree.proof(e));
-  const asset = st.utxos[mp_path[0]].assetId + ((st.utxos[mp_path[0]].amount / 2n) << 16n);
+  const u0 = st.utxos[mp_path[0]];
+  const asset = packAsset({  // half of amount and native amount of utxo u0
+    assetId:u0.assetId, 
+    amount:u0.amount/2n, 
+    nativeAmount:u0.nativeAmount/2n }); 
   const root = st.tree.root;
   const utxo_in = mp_path.map(i => st.utxos[i]);
 
-  let res = withdrawalPreCompute({ asset, receiver, utxo_in, mp_sibling, mp_path, root });
-  res = addSignatures(st.pk, res);
-  const { inputs } = withdrawalCompute(res);
+  // let res = withdrawalPreCompute({ asset, receiver, utxo_in, mp_sibling, mp_path, root });
+  // res = addSignatures(st.pk, res);
+  const { inputs } = withdrawalCompute({ asset, receiver, utxo_in, mp_sibling, mp_path, root, privkey:st.pk, fee });
   const w = witness(inputs, "transaction");
 
 }
@@ -221,19 +228,19 @@ function transfer2Test3() {
 
 
 
-describe("Deposit", function () {
-  this.timeout(80000000);
-  it("Should prove deposit", depositTest)
-  // it("Should prove and verify transfer", transferTest_Proof_and_verify);
-  // it("Should prove and verify deposit", depositTest_Proof_and_verify);
-})
+// describe("Deposit", function () {
+//   this.timeout(80000000);
+//   // it("Should prove deposit", depositTest)
+//   // it("Should prove and verify transfer", transferTest_Proof_and_verify);
+//   it("Should prove and verify deposit", depositTest_Proof_and_verify);
+// })
 
-//describe("Withdrawal", function () {
-//  this.timeout(80000000);
-//  it("Should prove and verify withdrawal", withdrawalTest_Proof_and_verify);
-  //  it("Should withdraw for 2 inputs", withdrawalTest);
-  //  it("Should withdraw for 1 input", withdrawalTest2);
-//})
+describe("Withdrawal", function () {
+ this.timeout(80000000);
+// it("Should prove and verify withdrawal", withdrawalTest_Proof_and_verify);
+   it("Should withdraw for 2 inputs", withdrawalTest);
+//   it("Should withdraw for 1 input", withdrawalTest2);
+})
 
 // describe("Transfer", function () {
 //   this.timeout(80000);
