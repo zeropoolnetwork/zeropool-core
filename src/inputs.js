@@ -97,9 +97,9 @@ function withdrawalCompute({ asset, receiver, utxo_in, mp_sibling, mp_path, root
   assert((0n <= receiver) && (receiver < (1n << 160n)), "receiver must be 160bit number");
   assert((utxo_in[0].assetId == asset_utxo.assetId) && (utxo_in[0].assetId == utxo_in[1].assetId), "assets must be same");
   assert(utxo_in[0].owner == utxo_in[1].owner, "owner must be same");
-  for (let i = 0; i < 2; i++)
-    assert(root == MerkleTree.computeRoot(mp_sibling[i], mp_path[i], utxoHash(utxo_in[i])));
-
+  for (let i = 0; i < 2; i++) 
+    assert(root == MerkleTree.computeRoot(mp_sibling[i], mp_path[i], utxoHash(utxo_in[i])) || utxo_in[i].amount==0n && utxo_in[i].nativeAmount==0n);
+  
 
 
   const txtype = (1n << 224n) + (fee << 160n) + receiver;
@@ -149,7 +149,7 @@ function spendUtxoPair(utxo_in, utxo_spend, fee, owner) {
   if (k.length > 2)
     return null;
 
-  const utxo_rem = utxo(BigInt(k[0]), total_amount[k[0]], total_amount["native"], owner, uid);
+  const utxo_rem = utxo(BigInt(k[0]), total_amount[k[0]], total_amount["native"], uid, owner);
   if (utxo_in[1].assetId == utxo_spend.assetId)
     return {utxo:utxo_rem, in_swap:false}
   else
@@ -257,7 +257,6 @@ function transfer2Compute({ utxo_in, utxo_out, txtype, mp_sibling, mp_path, root
 
 function utxoHash(utxo) {
   const inputs = utxoInputs(utxo);
-  console.log(inputs);
   [1n << 16n, 1n << 64n, 1n << 64n, 1n << 253n, babyJub.p].forEach((v, i) => assert((0n <= inputs[i]) && (inputs[i] < v), `wrong value at utxo[${i}]: ${inputs[i]}`));
   const mantice = inputs[0] + (inputs[1] << 16n) + (inputs[2] << 80n) + (inputs[3] << 144n) +  (inputs[4] << 397n);
   return pedersen(mantice, 651);
@@ -271,5 +270,5 @@ _.assign(exports, {
   withdrawalCompute,
   transferCompute, transferPreCompute,
   transfer2Compute, transfer2PreCompute,
-  proofLength, packAsset
+  proofLength, packAsset, utxo
 });

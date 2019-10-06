@@ -6,7 +6,7 @@ const { utxoRandom, utxoHash, depositCompute, utxoToAsset, addSignatures,
   withdrawalCompute, withdrawalPreCompute,
   transferCompute, transferPreCompute,
   transfer2Compute, transfer2PreCompute,
-  proofLength, packAsset
+  proofLength, packAsset, utxo
 } = require("../src/inputs.js")
 const { MerkleTree } = require("../src/merkletree.js");
 const assert = require("assert");
@@ -27,18 +27,20 @@ async function depositTest_Proof_and_verify() {
 
 async function withdrawalTest_Proof_and_verify() {
   const st = genRandomState({ assetId: true });
-  const mp_path = Array(2).fill(0).map(() => randrange(0, st.utxos.length));
+  const mp_path = randrange2(0, st.utxos.length);
+  const fee = 1n;
 
   const receiver = randrange(0n, 1n << 160n);
   const mp_sibling = mp_path.map(e => st.tree.proof(e));
-  const asset = st.utxos[mp_path[0]].assetId + ((st.utxos[mp_path[0]].amount / 2n) << 16n);
+  const u0 = st.utxos[mp_path[0]];
+  const asset = packAsset({  // half of amount and native amount of utxo u0
+    assetId:u0.assetId, 
+    amount:u0.amount/2n, 
+    nativeAmount:u0.nativeAmount/2n }); 
   const root = st.tree.root;
   const utxo_in = mp_path.map(i => st.utxos[i]);
 
-  let res = withdrawalPreCompute({ asset, receiver, utxo_in, mp_sibling, mp_path, root });
-  res = addSignatures(st.pk, res);
-  const { inputs } = withdrawalCompute(res);
-  console.log(inputs);
+  const { inputs } = withdrawalCompute({ asset, receiver, utxo_in, mp_sibling, mp_path, root, privkey:st.pk, fee });
   //const w = witness(inputs, "transaction");
   const pi = await proof(inputs, "transaction");
   console.log(pi.proof, pi.publicSignals);
@@ -78,14 +80,17 @@ function genRandomState(fixed) {
   return { pk, utxos, tree };
 }
 
+function randrange2(from, to){
+  const n = to-from;
+  assert(n >= 2);
+  const a = randrange(from, to);
+  const b = ((a - from + randrange(1, n)) % n) + from;
+  return [a,b];
+}
+
 async function withdrawalTest() {
   const st = genRandomState({ assetId: true });
-  const mp_path = (()=>{
-    const a = randrange(1, st.utxos.length);
-    const b = randrange(2, st.utxos.length+1);
-    return [a, (a*b)%st.utxos.length];
-  })();
-  console.log(mp_path);
+  const mp_path = randrange2(0, st.utxos.length);
   const fee = 1n;
 
   const receiver = randrange(0n, 1n << 160n);
@@ -98,8 +103,6 @@ async function withdrawalTest() {
   const root = st.tree.root;
   const utxo_in = mp_path.map(i => st.utxos[i]);
 
-  // let res = withdrawalPreCompute({ asset, receiver, utxo_in, mp_sibling, mp_path, root });
-  // res = addSignatures(st.pk, res);
   const { inputs } = withdrawalCompute({ asset, receiver, utxo_in, mp_sibling, mp_path, root, privkey:st.pk, fee });
   const w = witness(inputs, "transaction");
 
@@ -107,18 +110,20 @@ async function withdrawalTest() {
 
 function withdrawalTest2() {
   const st = genRandomState({ assetId: true });
-  const _mp_path = randrange(0, st.utxos.length);
-  const mp_path = Array(2).fill(_mp_path);
+  const mp_path = [randrange(0, st.utxos.length), 0];
+  const fee = 1n;
 
   const receiver = randrange(0n, 1n << 160n);
-  const mp_sibling = mp_path.map(e => st.tree.proof(e));
-  const asset = st.utxos[mp_path[0]].assetId + ((st.utxos[mp_path[0]].amount / 2n) << 16n);
+  const mp_sibling = [st.tree.proof(mp_path[0]),  Array(proofLength).fill(0n)];
+  const u0 = st.utxos[mp_path[0]];
+  const asset = packAsset({  // half of amount and native amount of utxo u0
+    assetId:u0.assetId, 
+    amount:u0.amount/2n, 
+    nativeAmount:u0.nativeAmount/2n }); 
   const root = st.tree.root;
-  const utxo_in = mp_path.map(i => st.utxos[i]);
+  const utxo_in = [st.utxos[mp_path[0]], utxo(u0.assetId, 0n, 0n, randrange(0n, 1n<<253n), u0.owner)];
 
-  let res = withdrawalPreCompute({ asset, receiver, utxo_in, mp_sibling, mp_path, root });
-  res = addSignatures(st.pk, res);
-  const { inputs } = withdrawalCompute(res);
+  const { inputs } = withdrawalCompute({ asset, receiver, utxo_in, mp_sibling, mp_path, root, privkey:st.pk, fee });
   const w = witness(inputs, "transaction");
 
 }
@@ -236,10 +241,10 @@ function transfer2Test3() {
 // })
 
 describe("Withdrawal", function () {
- this.timeout(80000000);
-// it("Should prove and verify withdrawal", withdrawalTest_Proof_and_verify);
-   it("Should withdraw for 2 inputs", withdrawalTest);
-//   it("Should withdraw for 1 input", withdrawalTest2);
+  this.timeout(80000000); 
+  it("Should prove and verify withdrawal", withdrawalTest_Proof_and_verify);
+//  it("Should withdraw for 2 inputs", withdrawalTest);
+//  it("Should withdraw for 1 input", withdrawalTest2);
 })
 
 // describe("Transfer", function () {
