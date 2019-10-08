@@ -71,7 +71,6 @@ class MerkleTree {
     let memframesz = s + offset;
     let memframe = Array(memframesz+1).fill(0n);
     
-    
     for (let i = 0; i<s; i++)
       memframe[i+offset] = elements[i];
     
@@ -85,7 +84,8 @@ class MerkleTree {
       }
       
       memframesz = offset + ((memframesz+1) >> 1);
-      memframe[memframesz] = merkleDefaults[i];
+      if (memframesz&0x1 == 1)
+        memframe[memframesz] = merkleDefaults[i];
       
       if (offset > 0)
         memframe[0] = pi[i]

@@ -33,7 +33,7 @@ function randrange(from, to) {
     return from + Math.floor(Math.random() * interval);
 
   let t = 0;
-  while (interval > bigInt.one.shl(t))
+  while (interval > bigInt.one.shl(t*8))
     t++;
   return from + bigInt.leBuff2int(crypto.randomBytes(t)) % interval;
 }
