@@ -1,4 +1,4 @@
-include "../node_modules/circomlib/circuits/merkleproofposeidon.circom";
+include "../node_modules/circomlib/circuits/merkleproofmimc.circom";
 include "../node_modules/circomlib/circuits/comparators.circom";
 include "../node_modules/circomlib/circuits/compconstant.circom";
 include "../node_modules/circomlib/circuits/pointbits.circom";
@@ -8,6 +8,8 @@ include "utxo.circom";
 
 template MulEqZero(n) {
   signal input in[n];
+  signal output out;
+
   if (n==1){
     in[0]===0;
   } else if (n==2){
@@ -18,7 +20,7 @@ template MulEqZero(n) {
     for(var j=2; j<(n-1);j++) {
       t[j-1] <== t[j-2]*in[j];
     }
-    0 === t[n-3]*in[n-1];
+    out <== t[n-3]*in[n-1];
   }
 }
 
@@ -176,7 +178,7 @@ template transaction(n) {
   for(var j=0; j<2; j++) {
     mp_path_bits[j] = Num2Bits(n);
     mp_path_bits[j].in <== mp_path[j];
-    merkleproof[j]=merkleproofposeidon(n);
+    merkleproof[j]=merkleproofmimc(n);
     merkleproof[j].leaf <== utxo_in_hash[j].out;
     for(var i=0; i<n; i++) {
       merkleproof[j].sibling[i] <== mp_sibling[j][i];
@@ -188,11 +190,13 @@ template transaction(n) {
   root0expr.in[0] <== merkleproof[0].root-root;
   root0expr.in[1] <== is_withdrawal+is_transfer+is_swap;
   root0expr.in[2] <== utxo_in_hash[0].in[1]+utxo_in_hash[0].in[2];
+  root0expr.out === 0;
 
   component root1expr = MulEqZero(3);
   root1expr.in[0] <== merkleproof[1].root-root;
   root1expr.in[1] <== is_withdrawal+is_transfer;
   root1expr.in[2] <== utxo_in_hash[1].in[1]+utxo_in_hash[1].in[2];
+  root1expr.out === 0;
 
   (n1_or_u_in - utxo_in_hash[1].out)*is_swap === 0;
 

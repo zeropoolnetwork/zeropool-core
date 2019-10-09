@@ -4,7 +4,7 @@ const babyJub = require("circomlib/src/babyjub.js");
 const { pedersen, randrange } = require("./utils.js");
 const { MerkleTree } = require("./merkletree.js");
 
-const poseidon = require("circomlib/src/poseidon.js").createHash(6, 8, 57);
+//const poseidon = require("circomlib/src/poseidon.js").createHash(6, 8, 57);
 
 
 const proofLength = 2;

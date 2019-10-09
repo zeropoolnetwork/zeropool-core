@@ -242,9 +242,9 @@ function transfer2Test3() {
 
 describe("Withdrawal", function () {
   this.timeout(80000000); 
-  it("Should prove and verify withdrawal", withdrawalTest_Proof_and_verify);
-//  it("Should withdraw for 2 inputs", withdrawalTest);
-//  it("Should withdraw for 1 input", withdrawalTest2);
+//  it("Should prove and verify withdrawal", withdrawalTest_Proof_and_verify);
+  it("Should withdraw for 2 inputs", withdrawalTest);
+  it("Should withdraw for 1 input", withdrawalTest2);
 })
 
 // describe("Transfer", function () {
