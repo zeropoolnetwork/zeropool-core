@@ -92,15 +92,17 @@ function withdrawalCompute({ asset, receiver, utxo_in, mp_sibling, mp_path, root
   assert(spend_out != null, "cannot compute spend");
 
   let utxo_out = [spend_out.utxo];
-  if (spend_out.in_swap) [utxo_in[0], utxo_in[1]] = [utxo_in[1], utxo_in[0]];
+  if (spend_out.in_swap) {
+    swap(utxo_in);
+    swap(mp_sibling);
+    swap(mp_path);
+}
 
   assert((0n <= receiver) && (receiver < (1n << 160n)), "receiver must be 160bit number");
   assert((utxo_in[0].assetId == asset_utxo.assetId) && (utxo_in[0].assetId == utxo_in[1].assetId), "assets must be same");
   assert(utxo_in[0].owner == utxo_in[1].owner, "owner must be same");
   for (let i = 0; i < 2; i++) 
     assert(root == MerkleTree.computeRoot(mp_sibling[i], mp_path[i], utxoHash(utxo_in[i])) || utxo_in[i].amount==0n && utxo_in[i].nativeAmount==0n);
-  
-
 
   const txtype = (1n << 224n) + (fee << 160n) + receiver;
   const out_u0 = utxoHash(utxo_out[0]);
@@ -127,7 +129,7 @@ function withdrawalCompute({ asset, receiver, utxo_in, mp_sibling, mp_path, root
 
 function spendUtxoPair(utxo_in, utxo_spend, fee, owner) {
   assert(utxo_in.length == 2);
-  if (typeof owner === "undefined") owner = 0n;
+  if (typeof owner === "undefined") owner = utxo_in[0].owner;
   const uid = uidRandom();
   const total_amount = {};
   
@@ -150,6 +152,7 @@ function spendUtxoPair(utxo_in, utxo_spend, fee, owner) {
     return null;
 
   const utxo_rem = utxo(BigInt(k[0]), total_amount[k[0]], total_amount["native"], uid, owner);
+
   if (utxo_in[1].assetId == utxo_spend.assetId)
     return {utxo:utxo_rem, in_swap:false}
   else
@@ -157,48 +160,59 @@ function spendUtxoPair(utxo_in, utxo_spend, fee, owner) {
 
 }
 
+function swap(a) {
+  const t = a[0];
+  a[0] = a[1];
+  a[1] = t;
+}
 
-
-function transferPreCompute({ utxo_in, utxo_out, mp_sibling, mp_path, root, txbound, receiver }) {
+function transferCompute({ utxo_in, utxo_out, mp_sibling, mp_path, root, txbound, fee, receiver, privkey }) {
   if (typeof txbound === "undefined") txbound = 0n;
-  if (typeof receiver === "undefined") receiver = utxo_in[0].owner;
+
   if (!(utxo_out instanceof Array)) {
     utxo_out = [utxo_out];
   }
   if (utxo_out.length == 1) {
-    utxo_out = spendUtxoPair(utxo_in, utxo_out[0], receiver);
-    assert(utxo_out != null, "cannot spend utxo pair");
+    const spend_out = spendUtxoPair(utxo_in, utxo_out[0], fee, receiver);
+    assert(spend_out != null, "cannot compute spend");
+
+    utxo_out = [spend_out.utxo, utxo_out[0]];
+    if (spend_out.in_swap) {
+        swap(utxo_in);
+        swap(mp_sibling);
+        swap(mp_path);
+    }
+
   }
 
   assert((0n <= txbound) && (txbound < (1n << 160n)), "txbound must be 160bit number");
   assert(utxo_in[0].owner == utxo_in[1].owner, "owner must be same");
-  for (let i = 0; i < 2; i++)
-    assert(root == MerkleTree.computeRoot(mp_sibling[i], mp_path[i], utxoHash(utxo_in[i])));
+  
 
-  const same_inputs = _.eq(utxo_in[0], utxo_in[1]);
-  const txtype = (2n << 160n) + txbound;
-  return { utxo_in, utxo_out, txtype, mp_sibling, mp_path, root, same_inputs };
-}
+  for (let i = 0; i < 2; i++){
+    assert(root == MerkleTree.computeRoot(mp_sibling[i], mp_path[i], utxoHash(utxo_in[i])) || 
+      (utxo_in[i].nativeAmount == 0n && utxo_in[i].amount == 0n), `Wrong merkle proof for utxo_in[${i}]`);
+  }
+  const txtype = (2n << 224n) + (fee << 160n) + txbound;
 
 
-function transferCompute({ same_inputs, utxo_in, utxo_out, txtype, mp_sibling, mp_path, root, ecvrf, eddsa }) {
-
-  const out_u1 = utxoHash(utxo_out[0]);
+  const out_u0 = utxoHash(utxo_out[0]);
   const add_utxo = utxo_out;
-  const out_u2_or_asset = utxoHash(utxo_out[1]);
+  const out_u1_or_asset = utxoHash(utxo_out[1]);
 
-  const n1 = ecvrf[0][0];
-  const n2_or_u_in = ecvrf[1][0];
-  const add_nullifier = [n1, n2_or_u_in];
+  const n0 = getNullifier(utxo_in[0], privkey);
+  const n1_or_u_in = getNullifier(utxo_in[1], privkey);
+  const add_nullifier = [n0, n1_or_u_in];
 
   utxo_out = utxo_out.map(utxoInputs);
   utxo_in = utxo_in.map(utxoInputs);
-  ecvrf = ecvrf.map(x => x.slice(1));
+
   const inputs = _.defaultsDeep(
-    { mp_path, mp_sibling, utxo_in, root, txtype, out_u1, out_u2_or_asset, ecvrf, n1, n2_or_u_in, utxo_out, eddsa },
+    { mp_path, mp_sibling, utxo_in, root, txtype, out_u0, out_u1_or_asset, n0, n1_or_u_in, utxo_out, privkey },
     defaultInputs(proofLength)
   );
-
+  
+  trimInputs(inputs);
   return { inputs, add_utxo, add_nullifier };
 
 }
@@ -268,7 +282,7 @@ _.assign(exports, {
   utxo, utxoInputs, utxoRandom, utxoToAsset, utxoFromAsset, utxoHash,
   depositCompute,
   withdrawalCompute,
-  transferCompute, transferPreCompute,
+  transferCompute,
   transfer2Compute, transfer2PreCompute,
   proofLength, packAsset, utxo
 });

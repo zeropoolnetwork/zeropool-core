@@ -132,50 +132,55 @@ function withdrawalTest2() {
 
 function transferTest() {
   const st = genRandomState({ assetId: true });
-  const mp_path = Array(2).fill(0).map(() => randrange(0, st.utxos.length));
+  const mp_path = randrange2(0, st.utxos.length);
 
+  const fee = 1n;
   const txbound = randrange(0n, 1n << 160n);
   const mp_sibling = mp_path.map(e => st.tree.proof(e));
-  const utxo_out = _.defaults({ amount: st.utxos[mp_path[0]].amount / 2n }, st.utxos[mp_path[0]]);
+
+  const u0 = st.utxos[mp_path[0]];
+  const utxo_out = _.defaults({ amount:u0.amount/2n, nativeAmount:u0.nativeAmount/2n }, u0);
+
   const root = st.tree.root;
   const utxo_in = mp_path.map(i => st.utxos[i]);
 
-  let res = transferPreCompute({ txbound, utxo_out, utxo_in, mp_sibling, mp_path, root });
-  res = addSignatures(st.pk, res);
-  const { inputs } = transferCompute(res);
+  const { inputs } = transferCompute({ utxo_in, utxo_out, mp_sibling, mp_path, root, txbound, fee, privkey:st.pk });
   const w = witness(inputs, "transaction");
 }
 
 function transferTest2() {
   const st = genRandomState();
-  const mp_path = Array(2).fill(0).map(() => randrange(0, st.utxos.length));
+  const mp_path = randrange2(0, st.utxos.length);
 
+  const fee = 1n;
   const txbound = randrange(0n, 1n << 160n);
   const mp_sibling = mp_path.map(e => st.tree.proof(e));
-  const utxo_out = _.defaults({ amount: st.utxos[mp_path[0]].amount }, st.utxos[mp_path[0]]);
+
+  const u0 = st.utxos[mp_path[0]];
+  const utxo_out = _.defaults({ amount:u0.amount, nativeAmount:u0.nativeAmount/2n }, u0);
+
   const root = st.tree.root;
   const utxo_in = mp_path.map(i => st.utxos[i]);
 
-  let res = transferPreCompute({ txbound, utxo_out, utxo_in, mp_sibling, mp_path, root });
-  res = addSignatures(st.pk, res);
-  const { inputs } = transferCompute(res);
+  const { inputs } = transferCompute({ utxo_in, utxo_out, mp_sibling, mp_path, root, txbound, fee, privkey:st.pk });
   const w = witness(inputs, "transaction");
 }
 
 function transferTest3() {
-  const st = genRandomState();
-  const _mp_path = randrange(0, st.utxos.length);
-  const mp_path = Array(2).fill(_mp_path);
+  const st = genRandomState({ assetId: true });
+  const mp_path = [randrange(0, st.utxos.length), 0];
+  const fee = 1n;
+  const mp_sibling = [st.tree.proof(mp_path[0]),  Array(proofLength).fill(0n)];
 
   const txbound = randrange(0n, 1n << 160n);
-  const mp_sibling = mp_path.map(e => st.tree.proof(e));
-  const utxo_out = _.defaults({ amount: st.utxos[mp_path[0]].amount / 2n }, st.utxos[mp_path[0]]);
-  const root = st.tree.root;
-  const utxo_in = mp_path.map(i => st.utxos[i]);
 
-  let res = transferPreCompute({ txbound, utxo_out, utxo_in, mp_sibling, mp_path, root });
-  res = addSignatures(st.pk, res);
-  const { inputs } = transferCompute(res);
+  const u0 = st.utxos[mp_path[0]];
+  const utxo_out = _.defaults({ amount:u0.amount/2n, nativeAmount:u0.nativeAmount/2n }, u0);
+
+  const root = st.tree.root;
+  const utxo_in = [st.utxos[mp_path[0]], utxo(u0.assetId, 0n, 0n, randrange(0n, 1n<<253n), u0.owner)];
+
+  const { inputs } = transferCompute({ utxo_in, utxo_out, mp_sibling, mp_path, root, txbound, fee, privkey:st.pk });
   const w = witness(inputs, "transaction");
 }
 
@@ -240,15 +245,15 @@ function transfer2Test3() {
 //   it("Should prove and verify deposit", depositTest_Proof_and_verify);
 // })
 
-describe("Withdrawal", function () {
-  this.timeout(80000000); 
-//  it("Should prove and verify withdrawal", withdrawalTest_Proof_and_verify);
-  it("Should withdraw for 2 inputs", withdrawalTest);
-  it("Should withdraw for 1 input", withdrawalTest2);
-})
+// describe("Withdrawal", function () {
+//   this.timeout(80000000); 
+  // it("Should prove and verify withdrawal", withdrawalTest_Proof_and_verify);
+  // it("Should withdraw for 2 inputs", withdrawalTest);
+//   it("Should withdraw for 1 input", withdrawalTest2);
+// })
 
 // describe("Transfer", function () {
-//   this.timeout(80000);
+//   this.timeout(80000000); 
 //   it("Should transfer for 2 same asset type inputs", transferTest);
 //   it("Should transfer for 2 different asset inputs", transferTest2);
 //   it("Should transfer for 1 input", transferTest3);
