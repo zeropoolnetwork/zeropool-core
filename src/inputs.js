@@ -132,13 +132,14 @@ function spendUtxoPair(utxo_in, utxo_spend, fee, owner) {
   if (typeof owner === "undefined") owner = utxo_in[0].owner;
   const uid = uidRandom();
   const total_amount = {};
+  let total_native_amount = 0n;
   
   utxo_in.forEach(u => total_amount[u.assetId] = _.get(total_amount, u.assetId, 0n) + u.amount);
-  utxo_in.forEach(u => total_amount["native"] = _.get(total_amount, "native", 0n) + u.nativeAmount);
+  utxo_in.forEach(u => total_native_amount += u.nativeAmount);
  
   total_amount[utxo_spend.assetId] -= utxo_spend.amount;
-  total_amount["native"] -= utxo_spend.nativeAmount + fee;
-  if ((total_amount[utxo_spend.assetId] < 0n) || (total_amount["native"] < 0n))
+  total_native_amount -= utxo_spend.nativeAmount + fee;
+  if ((total_amount[utxo_spend.assetId] < 0n) || (total_native_amount < 0n))
     return null;
 
 
@@ -146,12 +147,17 @@ function spendUtxoPair(utxo_in, utxo_spend, fee, owner) {
     for (let k in total_amount)
       if (total_amount[k] == 0n)
         delete total_amount[k];
+  
+  if(_.keys(total_amount).length==0) {
+    total_amount[utxo_in[1].assetId] = 0n;
+  }
 
   const k = _.keys(total_amount);
   if (k.length > 2)
     return null;
+  
 
-  const utxo_rem = utxo(BigInt(k[0]), total_amount[k[0]], total_amount["native"], uid, owner);
+  const utxo_rem = utxo(BigInt(k[0]), total_amount[k[0]], total_native_amount, uid, owner);
 
   if (utxo_in[1].assetId == utxo_spend.assetId)
     return {utxo:utxo_rem, in_swap:false}
@@ -178,9 +184,7 @@ function transferCompute({ utxo_in, utxo_out, mp_sibling, mp_path, root, txbound
 
     utxo_out = [spend_out.utxo, utxo_out[0]];
     if (spend_out.in_swap) {
-        swap(utxo_in);
-        swap(mp_sibling);
-        swap(mp_path);
+        swap(utxo_out);
     }
 
   }
@@ -220,45 +224,51 @@ function transferCompute({ utxo_in, utxo_out, mp_sibling, mp_path, root, txbound
 
 
 
-function transfer2PreCompute({ utxo_in, utxo_out, mp_sibling, mp_path, root, txbound, receiver }) {
+function transfer2Compute({ utxo_in, utxo_out, mp_sibling, mp_path, root, txbound, receiver, fee, privkey }) {
+
   if (typeof txbound === "undefined") txbound = 0n;
-  if (typeof receiver === "undefined") receiver = utxo_in[0].owner;
+
   if (!(utxo_out instanceof Array)) {
     utxo_out = [utxo_out];
   }
   if (utxo_out.length == 1) {
-    utxo_out = spendUtxoPair(utxo_in, utxo_out[0], receiver);
-    assert(utxo_out != null, "cannot spend utxo pair");
+    const spend_out = spendUtxoPair(utxo_in, utxo_out[0], fee, receiver);
+    assert(spend_out != null, "cannot compute spend");
+
+    utxo_out = [spend_out.utxo, utxo_out[0]];
+    if (spend_out.in_swap) {
+        swap(utxo_out);
+    }
+
   }
 
   assert((0n <= txbound) && (txbound < (1n << 160n)), "txbound must be 160bit number");
   assert(utxo_in[0].owner == utxo_in[1].owner, "owner must be same");
-  assert(root == MerkleTree.computeRoot(mp_sibling[0], mp_path[0], utxoHash(utxo_in[0])));
-  assert((mp_path.length == 1) && (mp_sibling.length == 1));
-
-  const txtype = (3n << 160n) + txbound;
-  return { utxo_in, utxo_out, txtype, mp_sibling, mp_path, root };
-}
+  
+  assert(root == MerkleTree.computeRoot(mp_sibling[0], mp_path[0], utxoHash(utxo_in[0]))|| 
+      (utxo_in[0].nativeAmount == 0n && utxo_in[0].amount == 0n), `Wrong merkle proof for utxo_in[0]`);
 
 
-function transfer2Compute({ utxo_in, utxo_out, txtype, mp_sibling, mp_path, root, ecvrf, eddsa }) {
+  const txtype = (3n << 224n) + (fee << 160n) + txbound;
 
-  const out_u1 = utxoHash(utxo_out[0]);
+
+  const out_u0 = utxoHash(utxo_out[0]);
   const add_utxo = utxo_out;
-  const out_u2_or_asset = utxoHash(utxo_out[1]);
+  const out_u1_or_asset = utxoHash(utxo_out[1]);
 
-  const n1 = ecvrf[0][0];
-  const n2_or_u_in = utxoHash(utxo_in[1]);
-  const add_nullifier = [n1, n2_or_u_in];
+  const n0 = getNullifier(utxo_in[0], privkey);
+  const n1_or_u_in = utxoHash(utxo_in[1]);
+  const add_nullifier = [n0];
 
   utxo_out = utxo_out.map(utxoInputs);
   utxo_in = utxo_in.map(utxoInputs);
-  ecvrf = ecvrf.map(x => x.slice(1));
+
   const inputs = _.defaultsDeep(
-    { mp_path, mp_sibling, utxo_in, root, txtype, out_u1, out_u2_or_asset, ecvrf, n1, n2_or_u_in, utxo_out, eddsa },
+    { mp_path, mp_sibling, utxo_in, root, txtype, out_u0, out_u1_or_asset, n0, n1_or_u_in, utxo_out, privkey },
     defaultInputs(proofLength)
   );
-
+  
+  trimInputs(inputs);
   return { inputs, add_utxo, add_nullifier };
 
 }
@@ -283,6 +293,6 @@ _.assign(exports, {
   depositCompute,
   withdrawalCompute,
   transferCompute,
-  transfer2Compute, transfer2PreCompute,
+  transfer2Compute,
   proofLength, packAsset, utxo
 });

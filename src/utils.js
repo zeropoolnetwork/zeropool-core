@@ -41,12 +41,12 @@ function randrange(from, to) {
 
 
 const fload = f => unstringifyBigInts(JSON.parse(fs.readFileSync(f)))
+const getCircomJson = ()=>fload(`${__dirname}/../circuitsCompiled/transaction.json`)
+const getCircomVerofierJson = ()=>fload(`${__dirname}/../circuitsCompiled/transaction_vk.json`)
+const getWebsnarkPK = () => fs.readFileSync(`${__dirname}/../circuitsCompiled/transaction_pk.bin`).buffer
 
-
-
-
-function witness(input, name) {
-  const circuit = new Circuit(fload(`${__dirname}/../circuitsCompiled/${name}.json`));
+function witness(input) {
+  const circuit = new Circuit(getCircomJson());
   const witness = circuit.calculateWitness(input);
   return witness;
 }
@@ -57,13 +57,13 @@ async function proof(input, name) {
     bn128 = await buildBn128();
   }
 
-  const circuit = new Circuit(fload(`${__dirname}/../circuitsCompiled/${name}.json`));
+  const circuit = new Circuit(getCircomJson());
   const witness = circuit.calculateWitness(input);
 
   // const pk = fload(`${__dirname}/../circuitsCompiled/${name}_pk.json`);
   // return groth.genProof(pk, witness);
 
-  const pk = fs.readFileSync(`${__dirname}/../circuitsCompiled/${name}_pk.bin`).buffer;
+  const pk = getWebsnarkPK();
   const proof = unstringifyBigInts(await bn128.groth16GenProof(buildwitness(witness), pk));
   return { proof, publicSignals: witness.slice(1, circuit.nPubInputs + circuit.nOutputs + 1) };
 
@@ -73,8 +73,7 @@ async function verify({ proof, publicSignals }, name) {
   if (typeof (bn128) === "undefined") {
     bn128 = await buildBn128();
   }
-  const vk = fload(`./circuitsCompiled/${name}_vk.json`);
-  //return groth.isValid(vk, proof, publicSignals);
+  const vk = getCircomVerofierJson();
   return await bn128.groth16Verify(vk, publicSignals, proof);
 }
 

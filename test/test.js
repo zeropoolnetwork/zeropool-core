@@ -1,11 +1,11 @@
-const { randrange, witness, pedersen, pubkey, proof, verify } = require("../src/utils.js");
+const { randrange, witness, pubkey, proof, verify } = require("../src/utils.js");
 const babyJub = require("circomlib/src/babyjub.js");
 
 const _ = require("lodash");
 const { utxoRandom, utxoHash, depositCompute, utxoToAsset, addSignatures,
-  withdrawalCompute, withdrawalPreCompute,
+  withdrawalCompute,
   transferCompute, transferPreCompute,
-  transfer2Compute, transfer2PreCompute,
+  transfer2Compute,
   proofLength, packAsset, utxo
 } = require("../src/inputs.js")
 const { MerkleTree } = require("../src/merkletree.js");
@@ -14,14 +14,14 @@ const assert = require("assert");
 function depositTest() {
   const u = utxoRandom();
   const { inputs } = depositCompute({ asset: utxoToAsset(u), owner: u.owner });
-  const w = witness(inputs, "transaction");
+  const w = witness(inputs);
 }
 
 async function depositTest_Proof_and_verify() {
   const u = utxoRandom();
   const { inputs } = depositCompute({ asset: utxoToAsset(u), owner: u.owner });
-  const pi = await proof(inputs, "transaction");
-  assert(await verify(pi, "transaction"), "wrong proof or verification key.");
+  const pi = await proof(inputs);
+  assert(await verify(pi), "wrong proof or verification key.");
 
 }
 
@@ -41,29 +41,8 @@ async function withdrawalTest_Proof_and_verify() {
   const utxo_in = mp_path.map(i => st.utxos[i]);
 
   const { inputs } = withdrawalCompute({ asset, receiver, utxo_in, mp_sibling, mp_path, root, privkey:st.pk, fee });
-  //const w = witness(inputs, "transaction");
-  const pi = await proof(inputs, "transaction");
-  console.log(pi.proof, pi.publicSignals);
-  console.log(await verify(pi, "transaction"));
-
-}
-
-async function transferTest_Proof_and_verify() {
-  const st = genRandomState({ assetId: true });
-  const mp_path = Array(2).fill(0).map(() => randrange(0, st.utxos.length));
-
-  const txbound = randrange(0n, 1n << 160n);
-  const mp_sibling = mp_path.map(e => st.tree.proof(e));
-  const utxo_out = _.defaults({ amount: st.utxos[mp_path[0]].amount / 2n }, st.utxos[mp_path[0]]);
-  const root = st.tree.root;
-  const utxo_in = mp_path.map(i => st.utxos[i]);
-
-  let res = transferPreCompute({ txbound, utxo_out, utxo_in, mp_sibling, mp_path, root });
-  res = addSignatures(st.pk, res);
-  const { inputs } = transferCompute(res);
-  const pi = await proof(inputs, "transaction");
-  console.log(pi.proof, pi.publicSignals);
-  console.log(await verify(pi, "transaction"));
+  const pi = await proof(inputs);
+  assert(await verify(pi), 'Verifier should return true');
 }
 
 
@@ -104,7 +83,7 @@ async function withdrawalTest() {
   const utxo_in = mp_path.map(i => st.utxos[i]);
 
   const { inputs } = withdrawalCompute({ asset, receiver, utxo_in, mp_sibling, mp_path, root, privkey:st.pk, fee });
-  const w = witness(inputs, "transaction");
+  const w = witness(inputs);
 
 }
 
@@ -124,7 +103,7 @@ function withdrawalTest2() {
   const utxo_in = [st.utxos[mp_path[0]], utxo(u0.assetId, 0n, 0n, randrange(0n, 1n<<253n), u0.owner)];
 
   const { inputs } = withdrawalCompute({ asset, receiver, utxo_in, mp_sibling, mp_path, root, privkey:st.pk, fee });
-  const w = witness(inputs, "transaction");
+  const w = witness(inputs);
 
 }
 
@@ -145,8 +124,30 @@ function transferTest() {
   const utxo_in = mp_path.map(i => st.utxos[i]);
 
   const { inputs } = transferCompute({ utxo_in, utxo_out, mp_sibling, mp_path, root, txbound, fee, privkey:st.pk });
-  const w = witness(inputs, "transaction");
+  const w = witness(inputs);
 }
+
+
+
+function transferTest_Proof_and_verify() {
+  const st = genRandomState({ assetId: true });
+  const mp_path = randrange2(0, st.utxos.length);
+
+  const fee = 1n;
+  const txbound = randrange(0n, 1n << 160n);
+  const mp_sibling = mp_path.map(e => st.tree.proof(e));
+
+  const u0 = st.utxos[mp_path[0]];
+  const utxo_out = _.defaults({ amount:u0.amount/2n, nativeAmount:u0.nativeAmount/2n }, u0);
+
+  const root = st.tree.root;
+  const utxo_in = mp_path.map(i => st.utxos[i]);
+
+  const { inputs } = transferCompute({ utxo_in, utxo_out, mp_sibling, mp_path, root, txbound, fee, privkey:st.pk });
+  const pi = await proof(inputs);
+  assert(await verify(pi), 'Verifier should return true');
+}
+
 
 function transferTest2() {
   const st = genRandomState();
@@ -163,7 +164,7 @@ function transferTest2() {
   const utxo_in = mp_path.map(i => st.utxos[i]);
 
   const { inputs } = transferCompute({ utxo_in, utxo_out, mp_sibling, mp_path, root, txbound, fee, privkey:st.pk });
-  const w = witness(inputs, "transaction");
+  const w = witness(inputs);
 }
 
 function transferTest3() {
@@ -181,92 +182,124 @@ function transferTest3() {
   const utxo_in = [st.utxos[mp_path[0]], utxo(u0.assetId, 0n, 0n, randrange(0n, 1n<<253n), u0.owner)];
 
   const { inputs } = transferCompute({ utxo_in, utxo_out, mp_sibling, mp_path, root, txbound, fee, privkey:st.pk });
-  const w = witness(inputs, "transaction");
+  const w = witness(inputs);
 }
 
 
 function transfer2Test() {
   const st = genRandomState({ assetId: true });
-  const mp_path = Array(1).fill(0).map(() => randrange(0, st.utxos.length));
+  let [mp_path, ext] = randrange2(0, st.utxos.length);
+  mp_path = [mp_path];
+
+  const fee = 1n;
   const txbound = randrange(0n, 1n << 160n);
-  const mp_sibling = mp_path.map(e => st.tree.proof(e));
-  const utxo_out = _.defaults({ amount: st.utxos[mp_path[0]].amount / 2n }, st.utxos[mp_path[0]]);
+  const mp_sibling = [st.tree.proof(mp_path[0])];
+
+  const u0 = st.utxos[mp_path[0]];
+  const utxo_out = _.defaults({ amount:u0.amount/2n, nativeAmount:u0.nativeAmount/2n }, u0);
+
   const root = st.tree.root;
-  const utxo_in = [st.utxos[mp_path[0]], st.utxos[randrange(0, st.utxos.length)]];
+  const utxo_in = [u0, st.utxos[ext]];
 
+  const { inputs } = transfer2Compute({ utxo_in, utxo_out, mp_sibling, mp_path, root, txbound, fee, privkey:st.pk });
+  const w = witness(inputs);
+}
 
-  let res = transfer2PreCompute({ txbound, utxo_out, utxo_in, mp_sibling, mp_path, root });
-  res = addSignatures(st.pk, res);
-  const { inputs } = transfer2Compute(res);
-  const w = witness(inputs, "transaction");
+function transfer2Test_Proof_and_verify() {
+  const st = genRandomState({ assetId: true });
+  let [mp_path, ext] = randrange2(0, st.utxos.length);
+  mp_path = [mp_path];
+
+  const fee = 1n;
+  const txbound = randrange(0n, 1n << 160n);
+  const mp_sibling = [st.tree.proof(mp_path[0])];
+
+  const u0 = st.utxos[mp_path[0]];
+  const utxo_out = _.defaults({ amount:u0.amount/2n, nativeAmount:u0.nativeAmount/2n }, u0);
+
+  const root = st.tree.root;
+  const utxo_in = [u0, st.utxos[ext]];
+
+  const { inputs } = transfer2Compute({ utxo_in, utxo_out, mp_sibling, mp_path, root, txbound, fee, privkey:st.pk });
+  const pi = await proof(inputs);
+  assert(await verify(pi), 'Verifier should return true');
 }
 
 
 function transfer2Test2() {
   const st = genRandomState();
-  const mp_path = Array(1).fill(0).map(() => randrange(0, st.utxos.length));
+  let [mp_path, ext] = randrange2(0, st.utxos.length);
+  mp_path = [mp_path];
+
+  const fee = 1n;
   const txbound = randrange(0n, 1n << 160n);
-  const mp_sibling = mp_path.map(e => st.tree.proof(e));
-  const utxo_out = _.defaults({ amount: st.utxos[mp_path[0]].amount }, st.utxos[mp_path[0]]);
+  const mp_sibling = [st.tree.proof(mp_path[0])];
+
+  const u0 = st.utxos[mp_path[0]];
+  const utxo_out = _.defaults({ amount:u0.amount, nativeAmount:u0.nativeAmount/2n }, u0);
+
   const root = st.tree.root;
-  const utxo_in = [st.utxos[mp_path[0]], st.utxos[randrange(0, st.utxos.length)]];
+  const utxo_in = [u0, st.utxos[ext]];
 
-
-  let res = transfer2PreCompute({ txbound, utxo_out, utxo_in, mp_sibling, mp_path, root });
-  res = addSignatures(st.pk, res);
-  const { inputs } = transfer2Compute(res);
-  const w = witness(inputs, "transaction");
+  const { inputs } = transfer2Compute({ utxo_in, utxo_out, mp_sibling, mp_path, root, txbound, fee, privkey:st.pk });
+  const w = witness(inputs);
 }
+
+
+
+
 
 function transfer2Test3() {
-  const st = genRandomState();
-  const mp_path = Array(1).fill(0).map(() => randrange(0, st.utxos.length));
+  const st = genRandomState({ assetId: true });
+  let ext = randrange(0, st.utxos.length);
+  let mp_path = [0];
+
+  const fee = 1n;
   const txbound = randrange(0n, 1n << 160n);
-  const mp_sibling = mp_path.map(e => st.tree.proof(e));
-  const utxo_out = _.defaults({ amount: st.utxos[mp_path[0]].amount / 2n }, st.utxos[mp_path[0]]);
+  const mp_sibling = [Array(proofLength).fill(0n)];
+
+  const u1 = st.utxos[ext];
+  const utxo_out = _.defaults({ amount:u1.amount, nativeAmount:u1.nativeAmount/2n }, u1);
+
   const root = st.tree.root;
-  const utxo_in = [st.utxos[mp_path[0]], st.utxos[mp_path[0]]];
+  const utxo_in = [utxo(u1.assetId, 0n, 0n, randrange(0n, 1n<<253n), u1.owner), u1];
 
-
-  let res = transfer2PreCompute({ txbound, utxo_out, utxo_in, mp_sibling, mp_path, root });
-  res = addSignatures(st.pk, res);
-  const { inputs } = transfer2Compute(res);
-  const w = witness(inputs, "transaction");
+  const { inputs } = transfer2Compute({ utxo_in, utxo_out, mp_sibling, mp_path, root, txbound, fee, privkey:st.pk });
+  const w = witness(inputs);
 }
 
 
 
 
 
-// describe("Deposit", function () {
-//   this.timeout(80000000);
-//   // it("Should prove deposit", depositTest)
-//   // it("Should prove and verify transfer", transferTest_Proof_and_verify);
-//   it("Should prove and verify deposit", depositTest_Proof_and_verify);
-// })
 
-// describe("Withdrawal", function () {
-//   this.timeout(80000000); 
-  // it("Should prove and verify withdrawal", withdrawalTest_Proof_and_verify);
-  // it("Should withdraw for 2 inputs", withdrawalTest);
-//   it("Should withdraw for 1 input", withdrawalTest2);
-// })
 
-// describe("Transfer", function () {
-//   this.timeout(80000000); 
-//   it("Should transfer for 2 same asset type inputs", transferTest);
-//   it("Should transfer for 2 different asset inputs", transferTest2);
-//   it("Should transfer for 1 input", transferTest3);
-// })
+describe("Deposit", function () {
+  this.timeout(80000000);
+  it("Should prove deposit", depositTest)
+  it("Should prove and verify deposit", depositTest_Proof_and_verify);
+})
 
-// describe("Partial transfer", function () {
-//   this.timeout(80000);
-//   it("Should process partial transfer for 2 same asset type inputs", transfer2Test);
-//   it("Should process partial transfer for 2 different asset inputs", transfer2Test2);
-//   it("Should process partial transfer for 1 input", transfer2Test3);
-// })
+describe("Withdrawal", function () {
+  this.timeout(80000000);
+  it("Should prove and verify withdrawal", withdrawalTest_Proof_and_verify);
+  it("Should withdraw for 2 inputs", withdrawalTest);
+  it("Should withdraw for 1 input", withdrawalTest2);
+})
 
-// (async () => {
-//   await depositTest_Proof_and_verify()
-//   process.exit();
-// })();
+describe("Transfer", function () {
+  this.timeout(80000000);
+  it("Should prove and verify transfer", transferTest_Proof_and_verify);
+  it("Should transfer for 2 same asset type inputs", transferTest);
+  it("Should transfer for 2 different asset inputs", transferTest2);
+  it("Should transfer for 1 input", transferTest3);
+})
+
+describe("Partial transfer", function () {
+  this.timeout(80000000);
+  it("Should prove and verify partial transfer", transfer2Test_Proof_and_verify);
+  it("Should process partial transfer for 2 same asset type inputs", transfer2Test);
+  it("Should process partial transfer for 2 different asset inputs", transfer2Test2);
+  it("Should process partial transfer for 1 input", transfer2Test3);
+})
+
