@@ -28,7 +28,7 @@ describe("MerkleTree", function () {
     tree2.pushMany(test_pre_elements);
     test_elements.forEach(u=>tree1.push(u));
     tree2.pushMany(test_elements);
-    assert(tree1.root==tree2.root, "trees must be the same");
+    assert(tree1.root===tree2.root, "trees must be the same");
   });
 
   it("Updating root in memory-only mode", ()=>{
@@ -47,7 +47,24 @@ describe("MerkleTree", function () {
     const proof = tree2.proof(index);
     const newroot = MerkleTree.updateRoot(proof, index, test_elements);
 
-    assert(tree1.root==newroot, "trees roots must be the same");
+    assert(tree1.root===newroot, "trees roots must be the same");
+  })
+
+  it("Updating root in case updates of elements in the middle of tree", ()=>{
+    const proofLength = 5;
+    const before = Array(207n, 133n, 83n, 0n, 0n, 0n, 183n, 168n, 12n, 42n, 235n);
+    const after = Array(207n, 133n, 83n, 90n, 242n, 181n, 183n, 168n, 12n, 42n, 235n);
+    const elements_for_update = Array(90n, 242n, 181n);
+
+    const update_index = 3;
+    const tree2 = new MerkleTree(proofLength + 1);
+    tree2.pushMany(before);
+    const first_update_element_proof = tree2.proof(update_index);
+    const newroot = MerkleTree.updateRoot(first_update_element_proof, update_index, elements_for_update);
+
+    const tree1 = new MerkleTree(proofLength + 1);
+    tree1.pushMany(after);
+    assert(tree1.root===newroot, "trees roots must be the same");
   })
 
 })
