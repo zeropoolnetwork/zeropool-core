@@ -11,7 +11,7 @@
   "dependencies": {
     "big-integer": "^1.6.42",
     "circom": "^0.0.34",
-    "circomlib": "github:snjax/circomlib#master",
+    "circomlib": "github:zeropoolnetwork/circomlib#master",
     "lodash": "^4.17.15",
     "snarkjs": "^0.1.20",
     "truffle-hdwallet-provider": "1.0.5",
