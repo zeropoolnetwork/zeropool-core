@@ -4,11 +4,13 @@ const babyJub = require("circomlib/src/babyjub.js");
 const _ = require("lodash");
 const { utxoRandom, utxoHash, depositCompute, utxoToAsset, addSignatures,
   withdrawalCompute,
+  utxoInputs,
   transferCompute, transferPreCompute,
   transfer2Compute,
   proofLength, packAsset, utxo
 } = require("../src/inputs.js")
 const { MerkleTree } = require("../src/merkletree.js");
+const { encrypt, decrypt } = require("../src/encryption.js");
 const assert = require("assert");
 
 function depositTest() {
@@ -129,7 +131,7 @@ function transferTest() {
 
 
 
-function transferTest_Proof_and_verify() {
+async function transferTest_Proof_and_verify() {
   const st = genRandomState({ assetId: true });
   const mp_path = randrange2(0, st.utxos.length);
 
@@ -205,7 +207,7 @@ function transfer2Test() {
   const w = witness(inputs);
 }
 
-function transfer2Test_Proof_and_verify() {
+async function transfer2Test_Proof_and_verify() {
   const st = genRandomState({ assetId: true });
   let [mp_path, ext] = randrange2(0, st.utxos.length);
   mp_path = [mp_path];
@@ -245,10 +247,6 @@ function transfer2Test2() {
   const w = witness(inputs);
 }
 
-
-
-
-
 function transfer2Test3() {
   const st = genRandomState({ assetId: true });
   let ext = randrange(0, st.utxos.length);
@@ -268,24 +266,68 @@ function transfer2Test3() {
   const w = witness(inputs);
 }
 
+function encryptTest() {
+  const pubKey = [
+    9179550441814258414336739131252062158057167577995767508431647464699901649684n,
+    15092101126901756937911767887030010246302360884612259821573390588901923188459n
+  ];
+  const utxo = {
+    assetId: 85n,
+    amount: 4219925223n,
+    nativeAmount: 3320827541n,
+    uid: 2082071685281033905346184349328171758866971813771434328771816734846992666050n,
+    owner: 3791958887471292474768165332220121304066918570773855424825239064715169170912n
+  };
+  encrypt(utxoInputs(utxo), pubKey[0]);
+}
 
+function decryptTest() {
+  const privKey = 1879139644264711098766524847951922888129634477451845645281549573079289595793n;
+  const cypherText = [
+    4652674298416466529380278059742373018567225081978321523336324598911986394519n,
+    5875917077606016595684830479902113782199608844796571149660504968149660461958n,
+    21268892945616729527714043385654305481204489065351999684973631197118060542201n,
+    12006926897408637333958989009586988976344511963094674180406328153307436346731n,
+    6447936968145025969248643070791583287713322321125327116717405805231721367300n,
+    17131268120344785447103148324642364326991087945185634145279029420381856170484n,
+    12648392855612686137378097586828308290123122709667222747462743578855591884458n
+  ];
+  decrypt(cypherText, privKey);
+}
 
+function encryptionTest() {
+  const privKey = 1879139644264711098766524847951922888129634477451845645281549573079289595793n;
+  const pubKey = [
+    9179550441814258414336739131252062158057167577995767508431647464699901649684n,
+    15092101126901756937911767887030010246302360884612259821573390588901923188459n
+  ];
 
+  const utxo = utxoInputs({
+    assetId: 85n,
+    amount: 4219925223n,
+    nativeAmount: 3320827541n,
+    uid: 2082071685281033905346184349328171758866971813771434328771816734846992666050n,
+    owner: 3791958887471292474768165332220121304066918570773855424825239064715169170912n
+  });
 
+  const encryptedUtxo = encrypt(utxo, pubKey[0]);
+  const decryptedUtxo = decrypt(encryptedUtxo, privKey);
 
+  assert.deepStrictEqual(utxo, decryptedUtxo, "Decrypted utxo should be the same as a previous one");
+}
 
 describe("Deposit", function () {
   this.timeout(80000000);
-  it("Should prove deposit", depositTest)
+  it("Should prove deposit", depositTest);
   it("Should prove and verify deposit", depositTest_Proof_and_verify);
-})
+});
 
 describe("Withdrawal", function () {
   this.timeout(80000000);
   it("Should prove and verify withdrawal", withdrawalTest_Proof_and_verify);
   it("Should withdraw for 2 inputs", withdrawalTest);
   it("Should withdraw for 1 input", withdrawalTest2);
-})
+});
 
 describe("Transfer", function () {
   this.timeout(80000000);
@@ -293,7 +335,7 @@ describe("Transfer", function () {
   it("Should transfer for 2 same asset type inputs", transferTest);
   it("Should transfer for 2 different asset inputs", transferTest2);
   it("Should transfer for 1 input", transferTest3);
-})
+});
 
 describe("Partial transfer", function () {
   this.timeout(80000000);
@@ -301,5 +343,11 @@ describe("Partial transfer", function () {
   it("Should process partial transfer for 2 same asset type inputs", transfer2Test);
   it("Should process partial transfer for 2 different asset inputs", transfer2Test2);
   it("Should process partial transfer for 1 input", transfer2Test3);
-})
+});
 
+describe("Ecryption", function () {
+  this.timeout(80000000);
+  it("Should encrypt", encryptTest);
+  it("Should decrypt", decryptTest);
+  it("Should encrypt and decrypt", encryptionTest);
+});

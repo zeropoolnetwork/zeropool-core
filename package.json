@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "mocha  --experimental-worker test/test.js",
     "build:browser": "npx mkdirp browser; npm run browserify:index",
     "browserify:index": "npx browserify -d -s txcircuit ./src/index.js > ./browser/txcircuit.js --exclude worker_threads"
   },
@@ -17,6 +17,7 @@
     "big-integer": "^1.6.42",
     "circom": "^0.0.34",
     "circomlib": "github:zeropoolnetwork/circomlib#master",
+    "crypto": "^1.0.1",
     "lodash": "^4.17.15",
     "snarkjs": "^0.1.20",
     "truffle-hdwallet-provider": "1.0.5",
