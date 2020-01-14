@@ -1,56 +1,79 @@
-include "../node_modules/circomlib/circuits/pedersen.circom";
-include "../node_modules/circomlib/circuits/bitify.circom";
+include "lib/poseidon.circom";
+include "../node_modules/circomlib/circuits/pointbits.circom";
+include "../node_modules/circomlib/circuits/compconstant.circom";
 
 
-template utxo() {
-  signal input in[5];
-  //signal input assetid;         //assetId 16 bit
-  //signal input amount;          //amount  64 bit
-  //signal input native_amount;   //native_amount 64 bit
-  //signal input uid;             //uid     253 bit
-  //signal input owner;           //owner   254 bit
+template Pubkey() {
+    var BABYJUB_SUBORDER = 2736030358979909402780800718157159386076813972158567259200215660948447373041;
+    var BABYJUB_G8 = [
+        5299619240641551281634865583518297030282874472190772894086521144482721001553,
+        16950150798460657717958625567821834550301663161624707787222815936182638968203
+    ];
 
-  signal output out;
+    signal input in;
+    signal output out;
 
-  component hasher = Pedersen(651);
+    component secret_invalid = CompConstant(BABYJUB_SUBORDER-1);
+    component secret_bits = Num2Bits(251);
+    secret_bits.in <== in;
 
-  component assetid_bits = Num2Bits(16);
-  assetid_bits.in <== in[0];
-
-
-  for(var i = 0; i<16; i++) {
-    hasher.in[i] <== assetid_bits.out[i];
-  }
-
-  component amount_bits = Num2Bits(64);
-  amount_bits.in <== in[1];
-
-  for(var i = 0; i<64; i++) {
-    hasher.in[i+16] <== amount_bits.out[i];
-  }
-
-  component native_amount_bits = Num2Bits(64);
-  native_amount_bits.in <== in[2];
-
-  for(var i = 0; i<64; i++) {
-    hasher.in[i+80] <== native_amount_bits.out[i];
-  }
-
-  component uid_bits = Num2Bits(253);
-  uid_bits.in <== in[3];
-
-  for(var i = 0; i<253; i++) {
-    hasher.in[i+144] <== uid_bits.out[i];
-  }
-
-  component owner_bits = Num2Bits_strict();
-  owner_bits.in <== in[4];
-
-  for(var i = 0; i<254; i++) {
-    hasher.in[i+397] <== owner_bits.out[i];
-  }
+    for (var i=0; i<251; i++) {
+        secret_invalid.in[i] <== secret_bits.out[i];
+    }
+    for (var i = 251; i<254; i++) {
+        secret_invalid.in[i] <== 0;
+    }
+    secret_invalid.out === 0;
 
 
-  out <== hasher.out[0];
+    component pubkey = EscalarMulFix(251, BABYJUB_G8);
+    for(var i=0; i<251; i++){
+        pubkey.e[i] <== secret_bits.out[i];
+    }
 
+    out <== pubkey.out[0];
+
+}
+
+template UTXO_hasher() {
+    signal input token_address;
+    signal input token_balance;
+    signal input native_balance;
+    signal input owner_commit;
+
+    signal output out;
+
+    component hasher = Poseidon_4(4);
+    hasher.inputs[0] <== token_address;
+    hasher.inputs[1] <== token_balance;
+    hasher.inputs[2] <== native_balance;
+    hasher.inputs[3] <== owner_commit;
+
+    out <== hasher.out;
+}
+
+template Owner_commit() {
+    signal input pubkey;
+    signal input blinding;
+
+    signal output out;
+
+    component hasher1 = Poseidon_2(2);
+    hasher1.inputs[0] <== pubkey;
+    hasher1.inputs[1] <== blinding;
+
+    out <== hasher1.out;
+}
+
+template Nullifier() {
+    signal input secret;
+    signal input utxo_hash;
+
+    signal output out;
+    
+    component hasher = Poseidon_2(2);
+    hasher.inputs[0] <== secret;
+    hasher.inputs[1] <== utxo_hash;
+
+    out <== hasher.out;
 }
