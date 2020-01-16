@@ -36,18 +36,16 @@ template Pubkey() {
 }
 
 template UTXO_hasher() {
-    signal input token_address;
-    signal input token_balance;
-    signal input native_balance;
+    signal input token;
+    signal input amount;
     signal input owner_commit;
 
     signal output out;
 
-    component hasher = Poseidon_4(4);
-    hasher.inputs[0] <== token_address;
-    hasher.inputs[1] <== token_balance;
-    hasher.inputs[2] <== native_balance;
-    hasher.inputs[3] <== owner_commit;
+    component hasher = Poseidon_3(3);
+    hasher.inputs[0] <== token;
+    hasher.inputs[1] <== amount;
+    hasher.inputs[2] <== owner_commit;
 
     out <== hasher.out;
 }
