@@ -1,11 +1,11 @@
 pragma solidity >= 0.6.0;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts/ownership/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import "lib/AbstractERC20.sol";
-import "lib/MerkleProof.sol";
+import "./lib/IERC20.sol";
+import "./lib/Ownable.sol";
+import "./lib/AbstractERC20.sol";
+import "./lib/MerkleProof.sol";
 
 
 contract Zeropool is Ownable{
@@ -67,9 +67,11 @@ contract Zeropool is Ownable{
     mapping (bytes32 => uint256) public deposit_state;
     mapping (bytes32 => uint256) public withdraw_state;
 
+    
+
     uint256 public rollup_tx_num;
-    VK public tx_vk;
-    VK public tree_update_vk;
+    VK tx_vk;
+    VK tree_update_vk;
     
 
     function groth16verify(VK memory vk, Proof memory proof, uint256[] memory inputs) internal view returns(bool) {
@@ -93,45 +95,45 @@ contract Zeropool is Ownable{
 
     function depositCancel(PayNote memory d) public payable returns(bool) {
         bytes32 deposit_hash = keccak256(abi.encode(d));
-        require(deposit_state[deposit_hash] >= rollup_tx_num, 800);
-        require(d.blocknumber < block.number - DEPOSIT_EXPIRES_BLOCKS, 810);
+        require(deposit_state[deposit_hash] >= rollup_tx_num);
+        require(d.blocknumber < block.number - DEPOSIT_EXPIRES_BLOCKS);
         delete deposit_state[deposit_hash];
         d.utxo.token.abstractTransfer(d.utxo.owner, d.utxo.amount);
         return true;
     }
 
-    function withdraw(PayNote w) public returns(bool) {
+    function withdraw(PayNote memory w) public returns(bool) {
         bytes32 withdraw_hash = keccak256(abi.encode(w));
-        require(withdraw_state[withdraw_hash] < rollup_tx_num, 900);
-        require(w.blocknumber < block.number - CHALLENGE_EXPIRES_BLOCKS, 910);
+        require(withdraw_state[withdraw_hash] < rollup_tx_num);
+        require(w.blocknumber < block.number - CHALLENGE_EXPIRES_BLOCKS);
         delete withdraw_state[withdraw_hash];
         w.utxo.token.abstractTransfer(w.utxo.owner, w.utxo.amount);
         return true;
     }
 
     function publishBlock(BlockItem[] memory items, uint rollup_cur_block_num, uint blocknumber_expires) public returns(bool) {
-        require(rollup_cur_block_num == rollup_tx_num >> 8, 1000);
-        require(block.number < blocknumber_expires, 1010);
+        require(rollup_cur_block_num == rollup_tx_num >> 8);
+        require(block.number < blocknumber_expires);
         uint256 nitems = items.length;
-        require(nitems > 0 && nitems <= 256, 1100);
+        require(nitems > 0 && nitems <= 256);
         bytes32[] memory hashes = new bytes32[](nitems);
         for(uint i = 0; i<nitems; i++) {
             BlockItem memory item = items[i];
             bytes32 txhash = keccak256(abi.encode(item));
-            if (items.ctx.delta == 0) {
-                require(items.deposit_blocknumber == 0, 1210);
-                require(items.ctx.token == IERC20(0), 1220);
-                require(items.ctx.ext.owner == address(0), 1230);
+            if (item.ctx.delta == 0) {
+                require(item.deposit_blocknumber == 0);
+                require(item.ctx.token == IERC20(0));
+                require(item.ctx.ext.owner == address(0));
             } else if (item.ctx.delta < MAX_AMOUNT) {
-                bytes32 deposit_hash = keccak256(abi.encode(items.ctx.ext.owner, items.ctx.token, item.ctx.delta, items.deposit_blocknumber, txhash));
-                require(deposit_state[deposit_hash]==DEPOSIT_EXISTS, 1240);
+                bytes32 deposit_hash = keccak256(abi.encode(item.ctx.ext.owner, item.ctx.token, item.ctx.delta, item.deposit_blocknumber, txhash));
+                require(deposit_state[deposit_hash]==DEPOSIT_EXISTS);
                 deposit_state[deposit_hash] = rollup_tx_num+i;
             } else if (item.ctx.delta > BN254_ORDER-MAX_AMOUNT && item.ctx.delta < MAX_AMOUNT) {
-                require(items.deposit_blocknumber == 0, 1210);
-                bytes32 withdraw_hash = keccak256(abi.encode(items.ctx.ext.owner, items.ctx.token, BN254_ORDER-item.ctx.delta, block.number, txhash));
-                require(!withdraw_state[withdraw_hash], 1250);
-                withdraw_state[withdraw_hash] = true;
-            } else revert(1260);
+                require(item.deposit_blocknumber == 0);
+                bytes32 withdraw_hash = keccak256(abi.encode(item.ctx.ext.owner, item.ctx.token, BN254_ORDER-item.ctx.delta, block.number, txhash));
+                require(withdraw_state[withdraw_hash] == 0);
+                withdraw_state[withdraw_hash] = rollup_tx_num + i;
+            } else revert();
 
             hashes[i] = txhash;
         }

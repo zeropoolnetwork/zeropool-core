@@ -3,7 +3,7 @@ pragma solidity >=0.6.0;
 library MerkleProof {
     function keccak256MerkleProof(bytes32[8] memory proof, uint8 path, bytes32 leaf) internal pure returns(bytes32) {
         bytes32 root = leaf;
-        for(uint8 i=0; i<8 i++) {
+        for(uint8 i=0; i<8; i++) {
             root = path >> i & 1 == 0 ?  keccak256(abi.encode(leaf, proof[i])) : keccak256(abi.encode(proof[i], leaf));
         }
         return root;
@@ -45,17 +45,16 @@ library MerkleProof {
     //compute merkle tree for up to 256 leaves
     function keccak256MerkleTree(bytes32[] memory buff) internal pure returns(bytes32) {
         uint buffsz = buff.length;
-        for (uint level = 1; level < 8; level++) {
+        for (uint8 level = 1; level < 8; level++) {
             bool buffparity = (buffsz & 1 == 0);
             buffsz = (buffsz >> 1) + (buffsz & 1);
 
             for (uint i = 0; i < buffsz-1; i++) {
                 buff[i] = keccak256(abi.encode(buff[2*i], buff[2*i+1]));
             }
-            buff[buffsz-1] = buffparity ? keccak256(abi.encode(leaves[2*buffsz-2], leaves[2*buffsz-1])) : 
-                keccak256(abi.encode(leaves[2*buffsz-2], keccak256ProofDefault(level)));
+            buff[buffsz-1] = buffparity ? keccak256(abi.encode(buff[2*buffsz-2], buff[2*buffsz-1])) :
+                keccak256(abi.encode(buff[2*buffsz-2], keccak256ProofDefault(level)));
         }
         return buff[0];
-
     }
 }

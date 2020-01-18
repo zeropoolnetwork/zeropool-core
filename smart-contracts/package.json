@@ -20,8 +20,9 @@
   },
   "homepage": "https://github.com/zeropoolnetwork/poseidon-solidity-benchmark#readme",
   "dependencies": {
-    "@openzeppelin/contracts": "^2.4.0",
+    "@truffle/artifactor": "^4.0.44",
+    "@truffle/hdwallet-provider": "^1.0.29",
     "circomlib": "0.0.20",
-    "truffle-artifactor": "^4.0.30"
+    "dotenv": "^8.2.0"
   }
 }
