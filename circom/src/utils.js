@@ -11,15 +11,9 @@ const buildwitness = require("./buildwitness.js");
 const crypto = require("crypto");
 
 
-const _pedersen = require("circomlib/src/pedersenHash.js");
 const babyJub = require("circomlib/src/babyjub.js");
 const _ = require("lodash");
 
-
-
-function pedersen(x, size) {
-  return babyJub.unpackPoint(_pedersen.hash(bigInt.leInt2Buff(x, Math.ceil(size / 8)), size))[0];
-}
 
 
 function randrange(from, to) {
@@ -52,7 +46,7 @@ function witness(input) {
 }
 
 let bn128 = undefined;
-async function proof(input, name) {
+async function proof(input) {
   if (typeof (bn128) === "undefined") {
     bn128 = await buildBn128();
   }
@@ -60,16 +54,13 @@ async function proof(input, name) {
   const circuit = new Circuit(getCircomJson());
   const witness = circuit.calculateWitness(input);
 
-  // const pk = fload(`${__dirname}/../circuitsCompiled/${name}_pk.json`);
-  // return groth.genProof(pk, witness);
-
   const pk = getWebsnarkPK();
   const proof = unstringifyBigInts(await bn128.groth16GenProof(buildwitness(witness), pk));
   return { proof, publicSignals: witness.slice(1, circuit.nPubInputs + circuit.nOutputs + 1) };
 
 }
 
-async function verify({ proof, publicSignals }, name) {
+async function verify({ proof, publicSignals }) {
   if (typeof (bn128) === "undefined") {
     bn128 = await buildBn128();
   }
@@ -126,7 +117,21 @@ function linearize_proof(proof) {
 }
 
 
+function subgroupDecompress(x) {
+    x = bigInt(x);
+    const p = babyJub.p;
+    const x2 = x.mul(x, p);
+    const t = babyJub.A.mul(x2).sub(bigInt.one).mul(babyJub.D.mul(x2).sub(bigInt.one).inverse(p)).affine(p);
+    const y = bn128.Fr.sqrt(t);
+
+    if(babyJub.inSubgroup([x,y]))
+        return [x,y];
+    
+    if(babyJub.inSubgroup([x,-y]))
+        return [x,-y];
+    
+    throw("Not a compressed point at subgroup");
+}
 
 
-
-_.assign(exports, { randrange, pedersen, witness, fload, verify, pubkey, linearize_vk_verifier, linearize_proof, proof });
+_.assign(exports, { randrange, witness, fload, verify, pubkey, linearize_vk_verifier, linearize_proof, proof, subgroupDecompress });

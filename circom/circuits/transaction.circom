@@ -12,6 +12,7 @@ template Transaction(n) {
     signal input root;
     signal input nullifier[2];
     signal input utxo_out_hash[2];
+    signal input token;
     signal input delta;
     signal input message_hash;
 
@@ -23,8 +24,7 @@ template Transaction(n) {
     signal private input utxo_in_data[2][2];
     signal private input utxo_out_data[2][2];
     signal private input secret;
-    signal private input token;
-
+    signal private input secret_token;
 
 
     component mp[2];
@@ -85,6 +85,7 @@ template Transaction(n) {
 
 
     utxo_in[0].amount + utxo_in[1].amount + delta === utxo_out[0].amount + utxo_out[1].amount;
+    (secret_token - token) * delta === 0;
 }
 
 component main = Transaction(32);
