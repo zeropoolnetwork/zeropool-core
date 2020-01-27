@@ -1,8 +1,10 @@
 const _ = require("lodash");
 const assert = require("assert");
 const babyJub = require("circomlib/src/babyjub.js");
+const poseidon = require("circomlib/src/poseidon");
 const { bn128 } = require("snarkjs");
 const { MerkleTree } = require("./merkletree.js");
+const { randrange, fr_random, fs_random, u160_random } = require("./utils");
 
 
 const hash2 = poseidon.createHash(2, 8, 53);
@@ -15,7 +17,7 @@ const MAX_AMOUNT = 1n << 240n;
 
 
 
-function pubkey(secret) {
+function get_pubkey(secret) {
     return babyJub.mulPointEscalar(babyJub.Base8, secret)[0];
 }
 
@@ -45,39 +47,47 @@ function out_utxo_inputs({ token, amount, pubkey, blinding }) {
 
 function in_utxo_inputs({ token, amount, blinding }) {
     return [ token, amount, blinding ];
-  }
+}
+
+function obj_utxo_inputs({ token, amount, pubkey, blinding }) {
+    return {
+        token,
+        amount,
+        owner_commit: owner_commit(pubkey, blinding)
+    }
+}
 
 function utxo_random(fixed) {
-  return _.defaults(
-    fixed,
-    utxo(randrange(0n, 1n << 160n), randrange(0n, 1n << 128n), randrange(0n, bn128.r))
-  );
+  return {
+      token: u160_random(),
+      amount: u160_random(),
+      pubkey: fr_random(),
+      blinding:fr_random(),
+      ...fixed
+  };
 }
 
 
-function fr_random() {
-  return randrange(0n, bn128.r);
-}
 
 
 function nullifier(utxo, secret) {
-    return hash2(utxo_hash(utxo), secret);
+    return hash2([utxo_hash(utxo), secret]);
 }
 
 
-function transfer_compute({root, utxo_in, utxo_out, token, delta, message_hash, secret}) {
+function transfer_compute(root, utxo_in, utxo_out, token, delta, message_hash, secret) {
     assert(delta > MIN_AMOUNT && delta < MAX_AMOUNT);
     for(let i in utxo_in) assert(utxo_in[i].amount >= 0n && utxo_in[i].amount < MAX_AMOUNT);
     for(let i in utxo_out) assert(utxo_out[i].amount >= 0n && utxo_out[i].amount < MAX_AMOUNT);
 
-    const pubk = pubkey(secret);
+    const pubk = get_pubkey(secret);
     utxo_in = _.concat(utxo_in, Array(2-utxo_in.length).fill(0).map(_=>empty_utxo(token, pubk)));
     
     if (utxo_out.length==0) {
         assert(utxo_in[0].amount + utxo_in[1].amount + delta == 0n);
         utxo_out = Array(2).fill(0).map(_=>empty_utxo(token, pubk));
     } else if (utxo_out.length==1) {
-        const new_amount = delta + utxo_in[0].amount+utxo_in[1].amount - utxo_in[0].amount;
+        const new_amount = delta + utxo_in[0].amount+utxo_in[1].amount - utxo_out[0].amount;
         assert(new_amount >= 0n);
         utxo_out.push(utxo(token, new_amount, pubk));
     } else {
@@ -88,23 +98,7 @@ function transfer_compute({root, utxo_in, utxo_out, token, delta, message_hash, 
     const secret_token = token;
     token = delta!=0n ? token : 0n;
     delta = delta < 0n ? bn128.r + delta : delta;
-
-/*
-    signal input root;
-    signal input nullifier[2];
-    signal input utxo_out_hash[2];
-    signal input token;
-    signal input delta;
-    signal input message_hash;
-
-
-    signal private input mp_sibling[2][n]; 
-    signal private input mp_path[2]; 
-    signal private input utxo_in_data[2][2];
-    signal private input utxo_out_data[2][2];
-    signal private input secret;
-    signal private input secret_token;
-*/
+    
 
     const inputs = {
         root,
@@ -114,7 +108,7 @@ function transfer_compute({root, utxo_in, utxo_out, token, delta, message_hash, 
         delta,
         message_hash,
         mp_sibling: utxo_in.map(u => u.mp_sibling),
-        mp_path: utxo_in.map(u => mp_path),
+        mp_path: utxo_in.map(u => u.mp_path),
         utxo_in_data: utxo_in.map(u => in_utxo_inputs(u).slice(1)),
         utxo_out_data: utxo_out.map(u => out_utxo_inputs(u).slice(1)),
         secret,
@@ -130,7 +124,7 @@ function transfer_compute({root, utxo_in, utxo_out, token, delta, message_hash, 
 
 
 module.exports = {
-    pubkey,
+    get_pubkey,
     owner_commit,
     empty_utxo,
     PROOF_LENGTH,
@@ -138,6 +132,7 @@ module.exports = {
     utxo_hash,
     out_utxo_inputs,
     in_utxo_inputs,
+    obj_utxo_inputs,
     utxo_random,
     fr_random,
     nullifier,

@@ -6,7 +6,6 @@ const { groth, Circuit, bigInt } = snarkjs;
 const { stringifyBigInts, unstringifyBigInts } = require("snarkjs/src/stringifybigint");
 
 const buildBn128 = require("websnark/src/bn128.js");
-const buildpkey = require("./buildpkey.js");
 const buildwitness = require("./buildwitness.js");
 const crypto = require("crypto");
 
@@ -22,10 +21,8 @@ function randrange(from, to) {
   if (from > to)
     [from, to] = [to, from];
   const interval = to - from;
-
   if (typeof from === "number")
     return from + Math.floor(Math.random() * interval);
-
   let t = 0;
   while (interval > bigInt.one.shl(t*8))
     t++;
@@ -133,5 +130,19 @@ function subgroupDecompress(x) {
     throw("Not a compressed point at subgroup");
 }
 
+function fr_random() {
+    return randrange(0n, snarkjs.bn128.r);
+}
 
-_.assign(exports, { randrange, witness, fload, verify, pubkey, linearize_vk_verifier, linearize_proof, proof, subgroupDecompress });
+function fs_random() {
+    return randrange(0n, babyJub.subOrder);
+}
+
+function u160_random() {
+    return randrange(0n, 1n<<160n);
+}
+
+  
+
+
+module.exports = { fr_random, fs_random, u160_random, randrange, witness, fload, verify, pubkey, linearize_vk_verifier, linearize_proof, proof, subgroupDecompress };

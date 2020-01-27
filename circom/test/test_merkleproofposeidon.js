@@ -29,9 +29,9 @@ const randrange = function(from, to) {
 }
 
 
-describe("Merkle proof test test", () => {
+describe("Merkle proof circuit test", () => {
   
-    it("Should create a merkle proof circuit", async () => {
+    it("Should create and test a merkle proof circuit", async () => {
 
         const n = 10;
         const leaf = randrange(0n, babyJub.p);

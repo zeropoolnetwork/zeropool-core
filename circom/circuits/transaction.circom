@@ -17,8 +17,6 @@ template Transaction(n) {
     signal input message_hash;
 
 
-    
-
     signal private input mp_sibling[2][n]; 
     signal private input mp_path[2]; 
     signal private input utxo_in_data[2][2];
@@ -54,7 +52,7 @@ template Transaction(n) {
         utxo_in_commit[i] = Owner_commit();
         utxo_in_commit[i].pubkey <== pubkey.out;
         utxo_in_commit[i].blinding <== utxo_in_data[i][1];
-        utxo_in[i].token <== token;
+        utxo_in[i].token <== secret_token;
         utxo_in[i].amount <== utxo_in_data[i][0];
         utxo_in[i].owner_commit <== utxo_in_commit[i].out;
 
@@ -70,7 +68,7 @@ template Transaction(n) {
     component utxo_out_invalid[2];
     for(var i=0; i<2; i++) {
         utxo_out[i] = UTXO_hasher();
-        utxo_out[i].token <== token;
+        utxo_out[i].token <== secret_token;
         utxo_out[i].amount <== utxo_out_data[i][0];
         utxo_out[i].owner_commit <== utxo_out_data[i][1];
 
