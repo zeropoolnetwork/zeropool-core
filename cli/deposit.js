@@ -17,16 +17,8 @@ const fs = require('fs'),
 
 const zrpPath = 'm/44\'/0\'/0\'/0/0';
 
-const zpMnemonic = process.env.MNEMONIC;
-if (!zpMnemonic) {
-  throw new Error('you do not entered zero pool mnemonic');
-}
-const ethPrivateKey = process.env.PRIVATE_KEY;
-if (!ethPrivateKey) {
-  throw new Error('you do not entered Ethereum private key');
-}
-
 const web3 = new Web3('https://mainnet.infura.io');
+const { zpMnemonic, ethPrivateKey, contractAddress } = initEnvironments();
 
 (async function main() {
   const keyPair = getKeyPair(zpMnemonic);
@@ -118,4 +110,41 @@ function getEthereumAddress(privateKey) {
   const addressBuffer = privateToAddress(Buffer.from(privateKey, 'hex'));
   const hexAddress = addressBuffer.toString('hex');
   return addHexPrefix(toChecksumAddress(hexAddress));
+}
+
+function initEnvironments() {
+  const zpMnemonic = process.env.MNEMONIC;
+  if (!zpMnemonic) {
+    throw new Error('MNEMONIC env not defined');
+  }
+
+  const ethPrivateKey = process.env.PRIVATE_KEY;
+  if (!ethPrivateKey) {
+    throw new Error('PRIVATE_KEY env not defined');
+  }
+
+  const contractAddress = process.env.CONTRACT_ADDRESS;
+  if (!contractAddress) {
+    throw new Error('CONTRACT_ADDRESS env not defined');
+  }
+
+  return {
+    zpMnemonic,
+    ethPrivateKey,
+    contractAddress
+  }
+}
+
+function encodeAbi() {
+  return web3.eth.abi.encodeFunctionSignature({
+    name: 'myMethod',
+    type: 'function',
+    inputs: [{
+      type: 'uint256',
+      name: 'myNumber'
+    },{
+      type: 'string',
+      name: 'myString'
+    }]
+  })
 }
