@@ -38,8 +38,8 @@ describe("Transaction test", () => {
 
         const utxo_out = [utxo(token, input_amount, pubkey, fr_random())];
 
-        const delta = 0n;
-        const message_hash = 0n;
+        const delta = u160_random();
+        const message_hash = fr_random();
         
         
         const {inputs} = transfer_compute(root, utxo_in, utxo_out, token, delta, message_hash, secret);

@@ -102,7 +102,7 @@ contract Zeropool is Ownable{
 
 
 
-    function deposit(IERC20 token, uint256 amount, bytes32 txhash) public returns(bool) {
+    function deposit(IERC20 token, uint256 amount, bytes32 txhash) public payable returns(bool) {
         uint256 _amount = token.abstractReceive(amount);
         bytes32 deposit_hash = keccak256(abi.encode(msg.sender, token, _amount, block.number, txhash));
         deposit_state[deposit_hash] = DEPOSIT_EXISTS;
@@ -127,7 +127,7 @@ contract Zeropool is Ownable{
         return true;
     }
 
-    function publishBlock(BlockItem[] memory items, uint rollup_cur_block_num, uint blocknumber_expires) public returns(bool) {
+    function publishBlock(BlockItem[] memory items, uint rollup_cur_block_num, uint blocknumber_expires) public onlyOwner returns(bool) {
         require(rollup_cur_block_num == rollup_tx_num >> 8);
         require(block.number < blocknumber_expires);
         uint256 nitems = items.length;
@@ -145,7 +145,7 @@ contract Zeropool is Ownable{
                 bytes32 deposit_hash = keccak256(abi.encode(item.ctx.ext.owner, item.ctx.token, item.ctx.delta, item.deposit_blocknumber, txhash));
                 require(deposit_state[deposit_hash]==DEPOSIT_EXISTS);
                 deposit_state[deposit_hash] = rollup_tx_num+i;
-            } else if (item.ctx.delta > BN254_ORDER-MAX_AMOUNT && item.ctx.delta < MAX_AMOUNT) {
+            } else if (item.ctx.delta > BN254_ORDER-MAX_AMOUNT && item.ctx.delta < BN254_ORDER) {
                 require(item.deposit_blocknumber == 0);
                 bytes32 withdraw_hash = keccak256(abi.encode(item.ctx.ext.owner, item.ctx.token, BN254_ORDER-item.ctx.delta, block.number, txhash));
                 require(withdraw_state[withdraw_hash] == 0);
