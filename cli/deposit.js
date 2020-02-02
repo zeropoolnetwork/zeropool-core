@@ -5,8 +5,9 @@ const snarkjs = require('snarkjs');
 const { unstringifyBigInts } = require("snarkjs/src/stringifybigint");
 const buildBn128 = require("websnark/src/bn128.js");
 
-const { utxo_hash, PROOF_LENGTH, transfer_compute, utxo } = require('../circom/src/inputs');
-const { linearize_proof } = require('../circom/src/utils');
+const { utxo_hash, PROOF_LENGTH, transfer_compute, utxo, in_utxo_inputs } = require('../circom/src/inputs');
+const { encrypt_message, decrypt_message } = require("../circom/src/encryption");
+const { linearize_proof, get_pubkey } = require('../circom/src/utils');
 const { MerkleTree, merkleDefaults } = require('../circom/src/merkletree');
 const buildwitness = require('../circom/src/buildwitness');
 
@@ -39,11 +40,21 @@ const { zpMnemonic, ethPrivateKey, contractAddress } = initEnvironments();
 async function getDepositData({ privateKey, publicKey }, { ethereum_address, token_address, input_amount, root }) {
 
   const utxo_in = [];
-  const utxo_out = [utxo(token_address, input_amount, publicKey)];
-
+  const utxo_out = [
+    utxo(token_address, input_amount, publicKey),
+    utxo(token_address, 0n, publicKey)
+  ];
   const delta = input_amount;
-  const message_hash = 0n;
 
+  const encryptedUTXOs = utxo_out.map(utxo => encryptUtxo(publicKey, utxo));
+
+  const tx_external_fields = {
+    owner: ethereum_address,
+    Message: encryptedUTXOs
+  };
+  const encoded_tx_external_fields = encodeTxExternalFields(ethereum_address, encryptedUTXOs);
+
+  const message_hash = web3.utils.keccak256(encoded_tx_external_fields);
 
   const { inputs } = transfer_compute(root, utxo_in, utxo_out, token_address, delta, message_hash, privateKey);
   const proof = await getProof(inputs, proover_key);
@@ -75,13 +86,7 @@ async function getDepositData({ privateKey, publicKey }, { ethereum_address, tok
     utxo: inputs.utxo_out_hash,
     token: inputs.token,
     delta: inputs.delta,
-    TxExternalFields: {
-      owner: ethereum_address,
-      Message: [
-        [0n, 0n, 0n, 0n],
-        [0n, 0n, 0n, 0n]
-      ]
-    },
+    TxExternalFields: tx_external_fields,
     proof: proof
   }
 }
@@ -97,9 +102,10 @@ async function getProof(inputs, pk) {
 }
 
 function getKeyPair(mnemonic) {
+  const privK = HdWallet.Privkey(mnemonic, zrpPath).k;
   return {
-    privateKey: HdWallet.Privkey(mnemonic, zrpPath).k,
-    publicKey: HdWallet.Pubkey(mnemonic, zrpPath).K[0]
+    privateKey: privK,
+    publicKey: get_pubkey(privK)
   }
 }
 
@@ -110,6 +116,24 @@ function getEthereumAddress(privateKey) {
   const addressBuffer = privateToAddress(Buffer.from(privateKey, 'hex'));
   const hexAddress = addressBuffer.toString('hex');
   return addHexPrefix(toChecksumAddress(hexAddress));
+}
+
+function encryptUtxo(pubK, utxo) {
+  const dataToEncrypt = in_utxo_inputs(utxo);
+  const dataHash = utxo_hash(utxo);
+
+  return encrypt_message(dataToEncrypt, pubK, dataHash);
+}
+
+function decryptUtxo(privK, cipher_text, hash) {
+  const decrypted_message = decrypt_message(cipher_text, privK, hash);
+  console.log(decrypted_message)
+  const receiver_public = get_pubkey(privK);
+  const _utxo_rec = utxo(decrypted_message[0], decrypted_message[1], receiver_public, decrypted_message[2]);
+  if (utxo_hash(_utxo_rec) !== hash) {
+    throw new Error('failed to decrypt utxo');
+  }
+  return _utxo_rec;
 }
 
 function initEnvironments() {
@@ -135,16 +159,31 @@ function initEnvironments() {
   }
 }
 
-function encodeAbi() {
-  return web3.eth.abi.encodeFunctionSignature({
-    name: 'myMethod',
-    type: 'function',
-    inputs: [{
-      type: 'uint256',
-      name: 'myNumber'
-    },{
-      type: 'string',
-      name: 'myString'
-    }]
-  })
+function encodeTxExternalFields(owner, encryptedUTXOs) {
+  return web3.eth.abi.encodeParameter(
+    {
+      "TxExternalFields": {
+        "owner": 'address',
+        "Message": [
+          {
+            "data": 'uint256[4]',
+          },
+          {
+            "data": 'uint256[4]',
+          },
+        ]
+      }
+    },
+    {
+      "owner": owner.substring(2),
+      "Message": [
+        {
+          "data": encryptedUTXOs[0].map(x => x.toString()),
+        },
+        {
+          "data": encryptedUTXOs[1].map(x => x.toString()),
+        },
+      ]
+    }
+  );
 }
