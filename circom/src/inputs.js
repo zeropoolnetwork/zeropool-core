@@ -114,7 +114,6 @@ function transfer_compute(root, utxo_in, utxo_out, token, delta, message_hash, s
 
     const add_utxo = utxo_out;
     const add_nullifier = utxo_in.map(u => nullifier(u, secret));
-
     return {inputs, add_utxo, add_nullifier}
 }
 

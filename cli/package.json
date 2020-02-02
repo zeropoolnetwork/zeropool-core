@@ -1,0 +1,20 @@
+{
+  "name": "cli-zeropool",
+  "version": "1.0.0",
+  "description": "",
+  "main": "deposit.js",
+  "scripts": {
+    "start:deposit": "node --experimental-worker deposit.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "ethereumjs-util": "^6.2.0",
+    "fs": "0.0.1-security",
+    "hdwallet-babyjub": "0.0.1",
+    "lodash": "^4.17.15",
+    "snarkjs": "^0.1.20",
+    "web3": "^1.2.5",
+    "websnark": "0.0.5"
+  }
+}
