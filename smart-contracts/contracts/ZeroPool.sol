@@ -42,7 +42,7 @@ contract Zeropool is Ownable{
         IERC20 token;
         uint256 delta;
         TxExternalFields ext;
-        uint256[8] proof;
+        Proof proof;
     }
 
     struct BlockItem {
@@ -80,12 +80,12 @@ contract Zeropool is Ownable{
     VK tree_update_vk;
     
 
-    function blokItemNoteVerify(BlockItemNote memory note) internal view returns(bool) {
-        (bytes32 itemhash, bytes32) = blockItemHash(note.item);
+    function blockItemNoteVerify(BlockItemNote memory note) internal view returns(bool) {
+        (bytes32 itemhash, bytes32 _) = blockItemHash(note.item);
         return MerkleProof.keccak256MerkleProof(note.proof, note.id & 0xff, itemhash) == rollup_block[note.id>>8];
     }
 
-    function blockItemHash(BlockItem memory item) internal view returns(bytes32 itemhash, bytes32 txhash) {
+    function blockItemHash(BlockItem memory item) internal pure returns(bytes32 itemhash, bytes32 txhash) {
         txhash = keccak256(abi.encode(item.ctx));
         itemhash = keccak256(abi.encode(txhash, item.new_root, item.deposit_blocknumber));
     }
@@ -163,7 +163,7 @@ contract Zeropool is Ownable{
         //TODO implement rollup stop logic
     }
 
-    function challengeTx(BlockItemNote memory cur, BlockItemNote memory base) public returns(true) {
+    function challengeTx(BlockItemNote memory cur, BlockItemNote memory base) public returns(bool) {
         require(blockItemNoteVerify(cur) && blockItemNoteVerify(base));
         require(cur.item.ctx.rootptr == base.id);
         uint256[] memory inputs = new uint256[](8);
@@ -172,7 +172,7 @@ contract Zeropool is Ownable{
         inputs[2] = cur.item.ctx.nullifier[1];
         inputs[3] = cur.item.ctx.utxo[0];
         inputs[4] = cur.item.ctx.utxo[1];
-        inputs[5] = uint256(cur.item.ctx.token);
+        inputs[5] = uint256(address(cur.item.ctx.token));
         inputs[6] = cur.item.ctx.delta;
         inputs[7] = uint256(keccak256(abi.encode(cur.item.ctx.ext)));
         require(!groth16verify(tx_vk, cur.item.ctx.proof, inputs) || cur.item.ctx.rootptr >= cur.id);
@@ -180,21 +180,21 @@ contract Zeropool is Ownable{
         return true;
     }
 
-    function challengeUTXOTreeUpdate(BlockItemNote memory cur, BlockItemNote memory prev) public {
+    function challengeUTXOTreeUpdate(BlockItemNote memory cur, BlockItemNote memory prev) public returns(bool) {
         require(blockItemNoteVerify(cur) && blockItemNoteVerify(prev));
         require(cur.id == prev.id+1);
-        uint256[] memory inputes = new uint256[](5);
-        inputs[0] = prev.new_root;
-        inputs[1] = cur.new_root;
+        uint256[] memory inputs = new uint256[](5);
+        inputs[0] = prev.item.new_root;
+        inputs[1] = cur.item.new_root;
         inputs[2] = prev.id;
-        inputs[3] = cur.utxo[0];
-        inputs[4] = cur.utxo[1];
+        inputs[3] = cur.item.ctx.utxo[0];
+        inputs[4] = cur.item.ctx.utxo[1];
         require(!groth16verify(tree_update_vk, cur.item.ctx.proof, inputs));
         stopRollup();
         return true;
     }
 
-    function challengeDoubleSpend(BlockItemNote memory cur, BlockItemNote memory prev) public {
+    function challengeDoubleSpend(BlockItemNote memory cur, BlockItemNote memory prev) public returns(bool) {
         require(blockItemNoteVerify(cur) && blockItemNoteVerify(prev));
         require(cur.id > prev.id);
         require(cur.item.ctx.nullifier[0] == prev.item.ctx.nullifier[0] ||
