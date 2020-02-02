@@ -6,9 +6,9 @@ const {utxo_random, obj_utxo_inputs, utxo_hash} = require("../src/inputs");
 
 
 
-describe("UTXO hasing proof test", () => {
-  
-    it("Should create a merkle proof circuit", async () => {
+describe("UTXO hasing circuit test", function() {
+    this.timeout(200000);
+    it("Should create a utxo hashing circuit", async () => {
 
         
         const cirDef = await compiler(path.join(__dirname, "circuits", "test_utxo.circom"));

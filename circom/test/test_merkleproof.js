@@ -2,7 +2,8 @@ const {MerkleTree} = require("../src/merkletree");
 const {fr_random, randrange} = require("../src/utils");
 const assert = require("assert");
 
-describe("Merkle proof functions test", () => {
+describe("Merkle proof functions test", function() {
+    this.timeout(200000);
     const last = e => e[e.length-1];
     const shift = (a, b) => [a instanceof Array ? a[a.length-1] : a, ... b.slice(0, -1)];
     

@@ -65,7 +65,7 @@ async function verify({ proof, publicSignals }) {
   return await bn128.groth16Verify(vk, publicSignals, proof);
 }
 
-function pubkey(pk) {
+function get_pubkey(pk) {
   return babyJub.mulPointEscalar(babyJub.Base8, pk)[0];
 }
 
@@ -119,7 +119,7 @@ function subgroupDecompress(x) {
     const p = babyJub.p;
     const x2 = x.mul(x, p);
     const t = babyJub.A.mul(x2).sub(bigInt.one).mul(babyJub.D.mul(x2).sub(bigInt.one).inverse(p)).affine(p);
-    const y = bn128.Fr.sqrt(t);
+    const y = snarkjs.bn128.Fr.sqrt(t);
 
     if(babyJub.inSubgroup([x,y]))
         return [x,y];
@@ -145,4 +145,4 @@ function u160_random() {
   
 
 
-module.exports = { fr_random, fs_random, u160_random, randrange, witness, fload, verify, pubkey, linearize_vk_verifier, linearize_proof, proof, subgroupDecompress };
+module.exports = { fr_random, fs_random, u160_random, randrange, witness, fload, verify, get_pubkey, linearize_vk_verifier, linearize_proof, proof, subgroupDecompress };

@@ -4,7 +4,7 @@ const babyJub = require("circomlib/src/babyjub.js");
 const poseidon = require("circomlib/src/poseidon");
 const { bn128 } = require("snarkjs");
 const { MerkleTree } = require("./merkletree.js");
-const { randrange, fr_random, fs_random, u160_random } = require("./utils");
+const { randrange, fr_random, fs_random, u160_random, get_pubkey } = require("./utils");
 
 
 const hash2 = poseidon.createHash(2, 8, 53);
@@ -17,9 +17,6 @@ const MAX_AMOUNT = 1n << 240n;
 
 
 
-function get_pubkey(secret) {
-    return babyJub.mulPointEscalar(babyJub.Base8, secret)[0];
-}
 
 function owner_commit(pubkey, blinding) {
     return hash2([pubkey, blinding]);
@@ -124,7 +121,6 @@ function transfer_compute(root, utxo_in, utxo_out, token, delta, message_hash, s
 
 
 module.exports = {
-    get_pubkey,
     owner_commit,
     empty_utxo,
     PROOF_LENGTH,

@@ -29,7 +29,8 @@ const randrange = function(from, to) {
 }
 
 
-describe("Merkle proof circuit test", () => {
+describe("Merkle proof circuit test", function() {
+    this.timeout(200000);
   
     it("Should create and test a merkle proof circuit", async () => {
 
