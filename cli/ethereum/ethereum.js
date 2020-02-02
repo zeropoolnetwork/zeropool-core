@@ -1,23 +1,16 @@
 const Web3 = require('web3');
 const { privateToAddress, addHexPrefix, toChecksumAddress } = require('ethereumjs-util');
 const ethereumjs = require('ethereumjs-tx');
-const zeropool_abi = require('./zeropool.abi');
+const { web3ProviderUrl } = require("../init-env");
+const { BigNumber } = require('bignumber.js');
 
-const web3 = new Web3('https://mainnet.infura.io');
+const web3 = new Web3(web3ProviderUrl);
 const keccak256 = web3.utils.keccak256;
 
+const tbn = BigNumber;
+const tw = (x) => BigNumber.isBigNumber(x) ? x.times(1e18).integerValue() : tbn(x).times(1e18).integerValue();
+const fw = (x) => BigNumber.isBigNumber(x) ? x.times(1e-18).toNumber() : tbn(x).times(1e-18).toNumber();
 
-function zeropool(contractAddress) {
-  const instance = new web3.eth.Contract(zeropool_abi, contractAddress);
-
-  return {
-    deposit
-  };
-}
-
-function deposit() {
-
-}
 
 function getCallData(instance, methodName, parameters) {
   if (!instance.methods[methodName])
@@ -25,15 +18,27 @@ function getCallData(instance, methodName, parameters) {
   return instance.methods[methodName](...parameters).encodeABI();
 }
 
+function sendTransaction(rawTx) {
+  if (rawTx.indexOf('0x') !== 0) {
+    rawTx = '0x' + rawTx;
+  }
+  return web3.eth.sendSignedTransaction(rawTx);
+}
+
 async function signTransaction(privateKey, to, value, data = "") {
-  const from = getAddress(privateKey);
-  const nonce = await web3.eth.getTransactionCount(from);
-  const gasPrice = await web3.eth.getGasPrice();
-  const gasLimit = data
-    ? await web3.eth.estimateGas({ to, data })
+  const from = getEthereumAddress(privateKey);
+  let nonce = await web3.eth.getTransactionCount(from);
+  let gasPrice = await web3.eth.getGasPrice();
+  let gas = data
+    ? await web3.eth.estimateGas({ to, data, gas: 5000000, from, value })
     : 21000;
 
-  const txParam = { from, nonce, to, value, data, gasPrice, gasLimit };
+  gas = "0x" + gas.toString(16);
+  value = "0x" + tbn(value).toString(16);
+  nonce = "0x" + nonce.toString(16);
+  gasPrice = "0x" + tbn(gasPrice).toString(16);
+
+  const txParam = { from, nonce, to, value, data, gasPrice, gasLimit: gas };
 
   return sign(txParam, privateKey);
 }
@@ -43,40 +48,23 @@ function sign(txParam, privateKey) {
     privateKey = privateKey.substring(2);
   }
 
-  const tx = new ethereumjs.Transaction(txParam);
+  const tx = new ethereumjs.Transaction(txParam, {'chain':'rinkeby'});
   const privateKeyBuffer = Buffer.from(privateKey, 'hex');
   tx.sign(privateKeyBuffer);
   const serializedTx = tx.serialize();
   return serializedTx.toString('hex');
 }
 
-function encodeTxExternalFields(owner, encryptedUTXOs) {
-  return web3.eth.abi.encodeParameter(
-    {
-      "TxExternalFields": {
-        "owner": 'address',
-        "Message": [
-          {
-            "data": 'uint256[4]',
-          },
-          {
-            "data": 'uint256[4]',
-          },
-        ]
-      }
-    },
-    {
-      "owner": owner.substring(2),
-      "Message": [
-        {
-          "data": encryptedUTXOs[0].map(x => x.toString()),
-        },
-        {
-          "data": encryptedUTXOs[1].map(x => x.toString()),
-        },
-      ]
-    }
-  );
+function gaslessCall(instance, methodName, addressFrom, parameters) {
+  return instance.methods[methodName](...parameters).call({ from: addressFrom });
+}
+
+function encodeParameter(param, value) {
+  return web3.eth.abi.encodeParameter(param, value)
+}
+
+function createInstance(abi, address) {
+  return new web3.eth.Contract(abi, address);
 }
 
 function getEthereumAddress(privateKey) {
@@ -88,4 +76,16 @@ function getEthereumAddress(privateKey) {
   return addHexPrefix(toChecksumAddress(hexAddress));
 }
 
-module.exports = { zeropool, keccak256, encodeTxExternalFields, getEthereumAddress };
+module.exports = {
+  getCallData,
+  signTransaction,
+  sendTransaction,
+  gaslessCall,
+  encodeParameter,
+  createInstance,
+  keccak256,
+  getEthereumAddress,
+  tbn,
+  tw,
+  fw
+};
