@@ -1,45 +1,30 @@
 const { babyJub, poseidon } = require("circomlib");
-const { bigInt } = require("snarkjs");
-const crypto = require("crypto");
 const assert = require("assert");
+const {fs_random, subgroupDecompress, get_pubkey} = require("./utils")
 
-function randrange(from, to) {
-  if (from === to)
-    return from;
-  if (from > to)
-    [from, to] = [to, from];
-  const interval = to - from;
-
-  if (typeof from === "number")
-    return from + Math.floor(Math.random() * interval);
-
-  let t = 0;
-  while (interval > bigInt.one.shl(t))
-    t++;
-  return from + bigInt.leBuff2int(crypto.randomBytes(t)) % interval;
-}
 
 const hash2 = poseidon.createHash(2, 8, 53);
 const hash3 = poseidon.createHash(3, 8, 53);
 
-function encrypt_message(message, pubkey) {
-    assert(message.length == 3);
-    const privkey = randrange(0n, babyJub.subOrder);
-    const sender_pubkey = babyJub.mulPointEscalar(babyJub.Base8, privkey);
-    pubkey = babyJub.subgroupDecompress(pubkey);
-    const edh = babyJub.mulPointEscalar(pubkey, privkey)[0];
-    const iv = hash3(message);
-    return [sender_pubkey[0], iv, ...message.map((e, i) => e + hash2(edh, iv + BigInt(i)))];
+function encrypt_message(message, pubkey, iv) {
+  assert(message.length == 3);
+  const ephemeral_secret = fs_random();
+  const ephemeral_public = get_pubkey(ephemeral_secret);
+  
+  pubkey = subgroupDecompress(pubkey);
+  const edh = babyJub.mulPointEscalar(pubkey, ephemeral_secret)[0];
+  return [ephemeral_public, ...message.map((e, i) => e + hash2([edh, iv + BigInt(i)]))];
+
 }
 
-function decrypt_message(message, privkey) {
-    const pubkey = babyJub.subgroupDecompress(message[0]);
-    const iv = message[1];
-    const edh = babyJub.mulPointEscalar(pubkey, privkey)[0];
-    const decrypted_message = message.slice(2).map((e, i) => e - hash2(edh, iv + BigInt(i)));
-    assert(decrypt_message.length == 3);
-    const ivc = hash3(decrypted_message);
-    return iv === ivc ? decrypted_message : null;
+function decrypt_message(encrypted_message, secret, iv) {
+  assert(encrypted_message.length == 4);
+  const ephemeral_public = encrypted_message[0];
+  const pubkey = subgroupDecompress(ephemeral_public);
+
+  const edh = babyJub.mulPointEscalar(pubkey, secret)[0];
+  const decrypted_message = encrypted_message.slice(1).map((e, i) => e - hash2([edh, iv + BigInt(i)]));
+  return decrypted_message;
 }
 
 module.exports = { encrypt_message, decrypt_message };

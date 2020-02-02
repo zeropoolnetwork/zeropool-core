@@ -2,16 +2,16 @@ const path = require("path");
 const snarkjs = require("snarkjs");
 const compiler = require("circom");
 const assert = require("assert");
-const {utxo, utxo_random, obj_utxo_inputs, utxo_hash, get_pubkey, transfer_compute, PROOF_LENGTH} = require("../src/inputs");
-const {randrange, fr_random, u160_random, fs_random, proof, verify} = require("../src/utils");
+const {utxo, utxo_random, obj_utxo_inputs, utxo_hash, transfer_compute, PROOF_LENGTH} = require("../src/inputs");
+const {randrange, fr_random, u160_random, fs_random, proof, verify, get_pubkey} = require("../src/utils");
 const babyJub = require("circomlib/src/babyjub.js");
 const {MerkleTree} = require("../src/merkletree");
 const {stringifyBigInts} = require("snarkjs/src/stringifybigint");
 
 
 
-describe("Transaction test", () => {
-
+describe("Transaction test", function() {
+    this.timeout(200000);
     const pick2 = (a,b) => {const t1 = randrange(a,b); const t2 = randrange(a,b-1); return [t1, t1 <= t2 ? t2+1:t2]};
   
     it("Should create a transaction circuit and compute witness", async () => {
@@ -78,9 +78,6 @@ describe("Transaction test", () => {
         
         
         const {inputs} = transfer_compute(root, utxo_in, utxo_out, token, delta, message_hash, secret);
-        const circuit = new snarkjs.Circuit(cirDef);
-
-
         const pi = await proof(inputs);
         assert(await verify(pi), 'Verifier should return true');
 
