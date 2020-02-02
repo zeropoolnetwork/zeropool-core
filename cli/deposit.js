@@ -1,14 +1,13 @@
-const Web3 = require('web3');
-const { privateToAddress, addHexPrefix, toChecksumAddress } = require('ethereumjs-util');
+const { getEthereumAddress, keccak256, encodeTxExternalFields } = require('./ethereum/ethereum');
+
 const HdWallet = require('hdwallet-babyjub');
 const snarkjs = require('snarkjs');
 const { unstringifyBigInts } = require("snarkjs/src/stringifybigint");
 const buildBn128 = require("websnark/src/bn128.js");
 
-const { utxo_hash, PROOF_LENGTH, transfer_compute, utxo, in_utxo_inputs } = require('../circom/src/inputs');
+const { utxo_hash, transfer_compute, utxo, in_utxo_inputs } = require('../circom/src/inputs');
 const { encrypt_message, decrypt_message } = require("../circom/src/encryption");
 const { linearize_proof, get_pubkey } = require('../circom/src/utils');
-const { MerkleTree, merkleDefaults } = require('../circom/src/merkletree');
 const buildwitness = require('../circom/src/buildwitness');
 
 
@@ -18,10 +17,11 @@ const fs = require('fs'),
 
 const zrpPath = 'm/44\'/0\'/0\'/0/0';
 
-const web3 = new Web3('https://mainnet.infura.io');
 const { zpMnemonic, ethPrivateKey, contractAddress } = initEnvironments();
 
 (async function main() {
+
+
   const keyPair = getKeyPair(zpMnemonic);
   const depositData = await getDepositData(
     {
@@ -36,6 +36,7 @@ const { zpMnemonic, ethPrivateKey, contractAddress } = initEnvironments();
     });
   console.log(depositData)
 })();
+
 
 async function getDepositData({ privateKey, publicKey }, { ethereum_address, token_address, input_amount, root }) {
 
@@ -54,7 +55,7 @@ async function getDepositData({ privateKey, publicKey }, { ethereum_address, tok
   };
   const encoded_tx_external_fields = encodeTxExternalFields(ethereum_address, encryptedUTXOs);
 
-  const message_hash = web3.utils.keccak256(encoded_tx_external_fields);
+  const message_hash = keccak256(encoded_tx_external_fields);
 
   const { inputs } = transfer_compute(root, utxo_in, utxo_out, token_address, delta, message_hash, privateKey);
   const proof = await getProof(inputs, proover_key);
@@ -109,15 +110,6 @@ function getKeyPair(mnemonic) {
   }
 }
 
-function getEthereumAddress(privateKey) {
-  if (privateKey.indexOf('0x') === 0) {
-    privateKey = privateKey.substring(2);
-  }
-  const addressBuffer = privateToAddress(Buffer.from(privateKey, 'hex'));
-  const hexAddress = addressBuffer.toString('hex');
-  return addHexPrefix(toChecksumAddress(hexAddress));
-}
-
 function encryptUtxo(pubK, utxo) {
   const dataToEncrypt = in_utxo_inputs(utxo);
   const dataHash = utxo_hash(utxo);
@@ -159,31 +151,4 @@ function initEnvironments() {
   }
 }
 
-function encodeTxExternalFields(owner, encryptedUTXOs) {
-  return web3.eth.abi.encodeParameter(
-    {
-      "TxExternalFields": {
-        "owner": 'address',
-        "Message": [
-          {
-            "data": 'uint256[4]',
-          },
-          {
-            "data": 'uint256[4]',
-          },
-        ]
-      }
-    },
-    {
-      "owner": owner.substring(2),
-      "Message": [
-        {
-          "data": encryptedUTXOs[0].map(x => x.toString()),
-        },
-        {
-          "data": encryptedUTXOs[1].map(x => x.toString()),
-        },
-      ]
-    }
-  );
-}
+
