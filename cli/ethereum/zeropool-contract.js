@@ -1,19 +1,71 @@
-const { createInstance, encodeParameter, getCallData, signTransaction, sendTransaction } = require("./ethereum");
+const {
+  createInstance, encodeParameter,
+  getCallData, signTransaction,
+  sendTransaction, fetchEvent,
+  decodeParameters, tbn
+} = require("./ethereum");
 const zeropool_abi = require('./zeropool.abi').abi;
 
 function zeropool(contractAddress, privateKey) {
   const instance = createInstance(zeropool_abi, contractAddress);
   return {
-    deposit: prepareDeposit(instance, privateKey)
+    deposit: prepareDeposit(instance, privateKey),
+    cancelDeposit: prepareCancelDeposit(instance, privateKey),
+    depositEvents: fetchDepositEvents(instance),
+    decodeDeposit
   };
 }
 
 function prepareDeposit(instance, privateKey) {
-    return async function ({token, amount, txhash}) {
-      const data = getCallData(instance, 'deposit', [token, amount, txhash]);
-      const signedTransaction = await signTransaction(privateKey, instance._address, amount, data);
-      return sendTransaction(signedTransaction);
-    };
+  return async function ({ token, amount, txhash }) {
+    const data = getCallData(instance, 'deposit', [token, '0x' + tbn(amount).toString(16), txhash]);
+    const signedTransaction = await signTransaction(privateKey, instance._address, amount, data);
+    return sendTransaction(signedTransaction);
+  };
+}
+
+/*
+  struct UTXO {
+      address owner;
+      IERC20 token;
+      uint256 amount;
+  }
+
+  struct PayNote {
+      UTXO utxo;
+      uint256 blocknumber;
+      uint256 txhash;
+  }
+ */
+function prepareCancelDeposit(instance, privateKey) {
+  return async function ({ owner, token, amount, blocknumber, txhash }) {
+    const data = getCallData(instance, 'depositCancel', [[
+      [
+        owner,
+        token,
+        '0x' + tbn(amount).toString(16)
+      ],
+      '0x' + blocknumber.toString(16),
+      txhash
+    ]]);
+    const signedTransaction = await signTransaction(privateKey, instance._address, 0, data);
+    return sendTransaction(signedTransaction);
+  };
+}
+
+function fetchDepositEvents(instance) {
+  return function () {
+    return fetchEvent(instance, 'Deposit');
+  }
+}
+
+function decodeDeposit(hex) {
+  const decodedParameters = decodeParameters(['address', 'uint256', 'bytes32'], hex.substring(11));
+  return {
+    token: decodedParameters['0'],
+    amount: decodedParameters['1'],
+    txhash: decodedParameters['2']
+  }
 }
 
 function encodeTxExternalFields(owner, encryptedUTXOs) {

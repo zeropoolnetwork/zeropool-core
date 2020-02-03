@@ -18,6 +18,8 @@ contract Zeropool is Ownable{
     uint256 constant MAX_AMOUNT = 1766847064778384329583297500742918515827483896875618958121606201292619776;
     bytes32 constant EMPTY_BLOCK_HASH = 0x9867cc5f7f196b93bae1e27e6320742445d290f2263827498b54fec539f756af;
 
+    event Deposit();
+
     struct Message {
         uint256[4] data;
     }
@@ -100,12 +102,11 @@ contract Zeropool is Ownable{
         rollup_tx_num = 256;
     }
 
-
-
     function deposit(IERC20 token, uint256 amount, bytes32 txhash) public payable returns(bool) {
         uint256 _amount = token.abstractReceive(amount);
         bytes32 deposit_hash = keccak256(abi.encode(msg.sender, token, _amount, block.number, txhash));
         deposit_state[deposit_hash] = DEPOSIT_EXISTS;
+        emit Deposit();
         return true;
     }
 

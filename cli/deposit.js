@@ -1,13 +1,15 @@
-const { getEthereumAddress, keccak256 } = require('./ethereum/ethereum');
+const { getEthereumAddress, keccak256, getTransaction } = require('./ethereum/ethereum');
 const { ethPrivateKey, zpMnemonic, contractAddress } = require('./init-env');
 const { encodeTxExternalFields, encodeTx, zeropool } = require('./ethereum/zeropool-contract');
 const { transfer_compute, utxo } = require('../circom/src/inputs');
 const { getProof, encryptUtxo, getKeyPair } = require("./utils");
+const fs = require('fs'), proover_key = fs.readFileSync('./../circom/circuitsCompiled/transaction_pk.bin').buffer;
 
-const fs = require('fs'),
-  proover_key = fs.readFileSync('./../circom/circuitsCompiled/transaction_pk.bin').buffer;
+// to test you should uncomment it
+// depositCancel()
+// deposit()
 
-(async function main() {
+async function deposit() {
   const ZeroPool = zeropool(contractAddress, ethPrivateKey);
 
   const keyPair = getKeyPair(zpMnemonic);
@@ -25,8 +27,32 @@ const fs = require('fs'),
 
   const txData = await ZeroPool.deposit(depositData);
   console.log(txData);
-})();
+}
 
+async function depositCancel() {
+  const ZeroPool = zeropool(contractAddress, ethPrivateKey);
+
+  const events = await ZeroPool.depositEvents();
+  if (!events) {
+    return;
+  }
+
+  // for example, let's cancel last deposit
+  const event = events[events.length - 1];
+  const transaction = await getTransaction(event.transactionHash);
+  const blocknumber = transaction.blockNumber;
+  const owner = transaction.from;
+  const depositData = ZeroPool.decodeDeposit(transaction.input);
+
+  const txData = await ZeroPool.cancelDeposit({
+    token: depositData.token,
+    amount: depositData.amount,
+    txhash: depositData.txhash,
+    owner,
+    blocknumber
+  });
+  console.log(txData);
+}
 
 async function getDepositData({ privateKey, publicKey }, { ethereum_address, token_address, deposit_amount, root }) {
 

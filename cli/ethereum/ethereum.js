@@ -59,8 +59,24 @@ function gaslessCall(instance, methodName, addressFrom, parameters) {
   return instance.methods[methodName](...parameters).call({ from: addressFrom });
 }
 
+function fetchEvent(instance, event) {
+  return instance.getPastEvents(event, {fromBlock: 0, toBlock: 'latest'})
+}
+
+function getTransaction(txHash) {
+  return web3.eth.getTransaction(txHash);
+}
+
 function encodeParameter(param, value) {
   return web3.eth.abi.encodeParameter(param, value)
+}
+
+function decodeParameter(param, hex) {
+  return web3.eth.abi.decodeParameter(param, hex)
+}
+
+function decodeParameters(types, hex) {
+  return web3.eth.abi.decodeParameters(types, hex)
 }
 
 function createInstance(abi, address) {
@@ -80,11 +96,15 @@ module.exports = {
   getCallData,
   signTransaction,
   sendTransaction,
+  getTransaction,
   gaslessCall,
+  fetchEvent,
   encodeParameter,
+  decodeParameter,
+  decodeParameters,
   createInstance,
-  keccak256,
   getEthereumAddress,
+  keccak256,
   tbn,
   tw,
   fw
