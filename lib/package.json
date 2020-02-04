@@ -2,13 +2,15 @@
   "name": "cli-zeropool",
   "version": "1.0.0",
   "description": "",
-  "main": "deposit.js",
+  "main": "zero-pool-network.js",
   "scripts": {
-    "start:deposit": "node --experimental-worker deposit.js"
+    "start": "node --experimental-worker test.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "bignumber.js": "^9.0.0",
+    "ethereumjs-tx": "^2.1.2",
     "ethereumjs-util": "^6.2.0",
     "fs": "0.0.1-security",
     "hdwallet-babyjub": "0.0.1",
