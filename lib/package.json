@@ -10,6 +10,8 @@
   "license": "ISC",
   "dependencies": {
     "bignumber.js": "^9.0.0",
+    "circomlib": "0.0.20",
+    "ethereum-input-data-decoder": "^0.3.0",
     "ethereumjs-tx": "^2.1.2",
     "ethereumjs-util": "^6.2.0",
     "fs": "0.0.1-security",

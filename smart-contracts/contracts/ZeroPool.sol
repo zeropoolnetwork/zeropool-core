@@ -19,6 +19,7 @@ contract Zeropool is Ownable{
     bytes32 constant EMPTY_BLOCK_HASH = 0x9867cc5f7f196b93bae1e27e6320742445d290f2263827498b54fec539f756af;
 
     event Deposit();
+    event NewBlockPack();
 
     struct Message {
         uint256[4] data;
@@ -157,6 +158,7 @@ contract Zeropool is Ownable{
         }
         rollup_block[rollup_tx_num >> 8] = MerkleProof.keccak256MerkleTree(hashes);
         rollup_tx_num += 256;
+        emit NewBlockPack();
         return true;
     }
 
