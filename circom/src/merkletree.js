@@ -16,10 +16,11 @@ for (let i = 1; i < maxheight; i++) {
 class MerkleTree {
 
   constructor(height) {
-    assert(height <= maxheight, "height should be less or equal 256");
+    assert(height <= maxheight, `height should be less or equal ${maxheight}`);
     this.height = height;
     this._merkleState = Array(this.height).fill(0).map(() => []);
   }
+
   _cell(row, index) {
     return index < this._merkleState[row].length ? this._merkleState[row][index] : merkleDefaults[row];
   }
@@ -46,7 +47,7 @@ class MerkleTree {
   }
 
   get root() {
-    return this._merkleState[this.height - 1][0];
+    return this._cell(this.height - 1, 0);
   }
 
   pushMany(elements) {
