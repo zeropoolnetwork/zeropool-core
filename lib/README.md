@@ -13,7 +13,9 @@ const zp = new ZeroPoolNetwork(contractAddress, ethPrivateKey, zpMnemonic);
 
 ### Deposit
 ```javascript
-zp.deposit("0x0000000000000000000000000000000000000000", 10000002)
+const token = "0x0000000000000000000000000000000000000000";
+const amount = 10000002;
+zp.deposit(token, amount)
   .then(console.log)
   
 /*
