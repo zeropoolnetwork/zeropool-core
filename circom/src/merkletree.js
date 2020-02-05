@@ -166,7 +166,7 @@ class MerkleTree {
   static getRoot(proof, index, leaf) {
       let root = leaf;
       for(let i in proof) {
-          root = (index >>> i) & 0x1 == 1 ? hash2([proof[i], root]) : hash2([root, proof[i]]);
+          root = ((index >>> i) & 0x1) == 1 ? hash2([proof[i], root]) : hash2([root, proof[i]]);
       }
       return root;
   }
