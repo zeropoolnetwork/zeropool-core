@@ -27,4 +27,14 @@ describe("Merkle proof functions test", function() {
         let root_all = MerkleTree.getRoot(p_all, index + elements_all.length, last(elements_all));
         assert(root01 == root_all);
     })
+
+    it("Should check merke proof for MerkleTree structure ", async () => {
+        let mt = new MerkleTree(32+1);
+        let sz = randrange(10, 100);
+        let leaves = Array(sz).fill(0).map(()=>fr_random());
+        mt.pushMany(leaves);
+        let index = randrange(0,sz);
+        let proof = mt.proof(index);
+        assert(mt.root == MerkleTree.getRoot(proof, index, leaves[index]), "merkle roots should be the same");
+    })
 })
