@@ -1,31 +1,28 @@
-import {Command, flags} from '@oclif/command'
+import Base from '../base'
+import cli from 'cli-ux'
 
-export default class Deposit extends Command {
-  static description = 'Deposit asset to ZeroPool'
+async function wait2sec(): Promise<boolean> {
+  return new Promise(resolve => {
+    setTimeout(() => resolve(true), 2000)
+  })
+}
+
+export default class Deposit extends Base {
+  static description = 'Show ZeroPool tx history'
 
   static examples = [
-    `$ zp deposit
-hello world from ./src/hello.ts!
+    `$ zp deposit --amount='...' --contract='...' --mnemonic='...'
+TODO: put example of response
 `,
   ]
 
-  static flags = {
-    help: flags.help({char: 'h'}),
-    // flag with a value (-n, --name=VALUE)
-    name: flags.string({char: 'n', description: 'name to print'}),
-    // flag with no value (-f, --force)
-    force: flags.boolean({char: 'f'}),
-  }
-
-  static args = [{name: 'file'}]
-
   async run() {
-    const {args, flags} = this.parse(Deposit)
+    super.run()
+    cli.action.start(`Making deposit ${this.amountOfAsset} ${this.assetAddress}`)
 
-    const name = flags.name || 'world'
-    this.log(`hello ${name} from ./src/commands/hello.ts`)
-    if (args.file && flags.force) {
-      this.log(`you input --force and --file: ${args.file}`)
-    }
+    await wait2sec()
+
+    cli.action.stop('finished deposit')
+    await cli.url('https://etherscan.io/tx/0x3fd80cffa3c06ff693d8685e8feb3526fb23ad7caa62186d46e718492351fcf3', 'https://etherscan.io/tx/0x3fd80cffa3c06ff693d8685e8feb3526fb23ad7caa62186d46e718492351fcf3')
   }
 }
