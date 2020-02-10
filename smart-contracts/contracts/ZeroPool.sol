@@ -6,7 +6,7 @@ import "./lib/IERC20.sol";
 import "./lib/Ownable.sol";
 import "./lib/AbstractERC20.sol";
 import "./lib/MerkleProof.sol";
-
+import "./lib/Groth16Verifier.sol";
 
 contract Zeropool is Ownable{
     using AbstractERC20 for IERC20;
@@ -94,8 +94,7 @@ contract Zeropool is Ownable{
     }
 
     function groth16verify(VK memory vk, Proof memory proof, uint256[] memory inputs) internal view returns(bool) {
-        // TODO bind groth16verifier
-        return true;
+        return Groth16Verifier.verify(vk.data, proof.data, inputs);
     }
 
     constructor() public {
