@@ -8,7 +8,8 @@
     "posttest": "eslint . --ext .ts --config .eslintrc",
     "prepack": "rm -rf lib && tsc -b && oclif-dev manifest && oclif-dev readme",
     "test": "nyc --extension .ts mocha --forbid-only \"test/**/*.test.ts\"",
-    "version": "oclif-dev readme && git add README.md"
+    "version": "oclif-dev readme && git add README.md",
+    "history:test": "node --inspect-brk ./bin/run history --contract='0x28cc2Dee39C990C6105016080e2eb3b87AE53f50' --mnemonic='fly lift online march much aisle fiction ladder cheap circle donate vacuum lady cream upon'"
   },
   "bin": {
     "zp": "./bin/run"
