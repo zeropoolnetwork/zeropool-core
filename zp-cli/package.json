@@ -3,6 +3,9 @@
   "description": "ZeroPool CLI based wallet",
   "version": "0.0.0",
   "author": "zeropool",
+  "scripts": {
+    "history:test": "node --inspect-brk ./bin/run history --contract='0x28cc2Dee39C990C6105016080e2eb3b87AE53f50' --mnemonic='fly lift online march much aisle fiction ladder cheap circle donate vacuum lady cream upon'"
+  },
   "bin": {
     "zp": "./bin/run"
   },
@@ -11,6 +14,8 @@
     "@oclif/command": "^1.5.19",
     "@oclif/config": "^1.14.0",
     "@oclif/plugin-help": "^2.2.3",
+    "cosmiconfig": "^6.0.0",
+    "debug": "^4.1.1",
     "tslib": "^1.10.0"
   },
   "devDependencies": {
