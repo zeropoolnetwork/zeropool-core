@@ -94,7 +94,9 @@ export default class Base extends Command {
     this.amountOfAsset = flags.value || args.value || this.getFromConfigIfExists('value')
     this.assetAddress = flags.asset || args.asset || this.getFromConfigIfExists('asset')
 
+    this.log('-------------------------------------------------')
     this.log(`Mnemonic = ${this.mnemonic} from ./src/base.ts`)
     this.log(`Contract Address = ${this.contractAddress} from ./src/base.ts`)
+    this.log('-------------------------------------------------')
   }
 }
