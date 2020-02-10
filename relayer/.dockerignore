@@ -1,0 +1,10 @@
+.git
+node_modules/
+dist/
+.tscache
+package-lock.json
+
+npm-debug.log
+docker-volumes
+e2e
+test
