@@ -12,6 +12,18 @@ ZeroPool CLI based wallet
 * [Usage](#usage)
 * [Commands](#commands)
 <!-- tocstop -->
+# Development
+
+```
+npm i
+npm link
+# With params from config:
+zp history
+
+# With params as flags:
+zp history -a='contract address' -m='some mnemonic'
+```
+
 # Usage
 <!-- usage -->
 ```sh-session
