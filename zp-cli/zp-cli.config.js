@@ -1,6 +1,8 @@
 module.exports = {
-  contract: '0x3EE6c7C228C135C31Fc5Dc0d94948f0F75504F40',
-  mnemonic: 'weekend tornado gentle advance smile ensure purse meadow system you nature gallery capital spoil feed',
+  contract: '0x04f4D781Ba5F29603595a8f23c7E9aA00FBF3F86',
+  mnemonic: 'salute grocery glass box cloth pull wedding measure bright tilt shield over',
   value: 0.1,
   asset: 'ETH',
+  rpc: 'http://127.0.0.1:8545',
+  relayer: 'http://127.0.0.1:3000'
 }

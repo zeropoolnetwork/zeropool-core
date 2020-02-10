@@ -1,5 +1,5 @@
-import {Command} from '@oclif/command'
-import {flags} from '@oclif/command'
+import { Command } from '@oclif/command'
+import { flags } from '@oclif/command'
 
 const {cosmiconfig} = require('cosmiconfig')
 const explorer = cosmiconfig('zp-cli')
@@ -10,6 +10,8 @@ type ConfigType = {
   mnemonic?: string;
   value?: string;
   asset?: string;
+  rpc: string;
+  relayer?: string;
 };
 
 export default class Base extends Command {
@@ -41,6 +43,16 @@ export default class Base extends Command {
       char: 'z',
       description: 'ZeroPool smart contract address',
     }),
+
+    rpc: flags.string({
+      char: 'e',
+      description: 'Ethereum JSON-RPC endpoint',
+    }),
+
+    relayer: flags.string({
+      char: 'r',
+      description: 'Relayer endpoint',
+    }),
   }
 
   static args = [
@@ -61,6 +73,14 @@ export default class Base extends Command {
       name: 'value',
       description: 'Amount of asset to deposit in ETH (10^18 Wei)',
     },
+    {
+      name: 'rpc',
+      description: 'Ethereum JSON-RPC endpoint',
+    },
+    {
+      name: 'relayer',
+      description: 'Relayer endpoint',
+    },
   ]
 
   // ZeroPool contract address
@@ -69,11 +89,14 @@ export default class Base extends Command {
   // Mnemonic that we use for both ZeroPool and Ethereum
   mnemonic = '';
 
-  amountOfAsset = 0;
+  amount = 0;
 
-  assetAddress: string | 'ETH' = 'ETH';
+  asset: string | 'ETH' = 'ETH';
+  rpcEndpoint = '';
+  relayerEndpoint = '';
 
   async init() {
+
     const result = await explorer.search()
     if (result) {
       const {config, filepath} = result
@@ -91,8 +114,10 @@ export default class Base extends Command {
 
     this.contractAddress = flags.contract || args.contract || this.getFromConfigIfExists('contract')
     this.mnemonic = flags.mnemonic || args.mnemonic || this.getFromConfigIfExists('mnemonic')
-    this.amountOfAsset = flags.value || args.value || this.getFromConfigIfExists('value')
-    this.assetAddress = flags.asset || args.asset || this.getFromConfigIfExists('asset')
+    this.amount = flags.value || args.value || this.getFromConfigIfExists('value')
+    this.asset = flags.asset || args.asset || this.getFromConfigIfExists('asset')
+    this.rpcEndpoint = flags.rpc || args.rpc || this.getFromConfigIfExists('rpc')
+    this.relayerEndpoint = flags.relayer || args.relayer || this.getFromConfigIfExists('relayer')
 
     this.log('-------------------------------------------------')
     this.log(`Mnemonic = ${this.mnemonic} from ./src/base.ts`)
