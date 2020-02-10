@@ -2,7 +2,7 @@ const _ = require("lodash");
 const assert = require("assert");
 const babyJub = require("circomlib/src/babyjub.js");
 const poseidon = require("circomlib/src/poseidon");
-const { bn128 } = require("snarkjs");
+const { bn128, bn254 } = require("snarkjs");
 const { MerkleTree } = require("./merkletree.js");
 const { randrange, fr_random, fs_random, u160_random, get_pubkey } = require("./utils");
 

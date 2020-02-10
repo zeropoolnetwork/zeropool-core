@@ -70,8 +70,8 @@ export default class Base extends Command {
     this.mnemonic = flags.mnemonic || args.mnemonic || this.getFromConfigIfExists('mnemonic');
 
     this.log('------------------------------------------------');
-    this.log(`Mnemonic = ${this.mnemonic} from ./src/commands/history.ts`);
-    this.log(`Contract Address = ${this.contractAddress} from ./src/commands/history.ts`);
+    this.log(`Mnemonic = ${this.mnemonic}`);
+    this.log(`Contract Address = ${this.contractAddress}`);
     this.log('------------------------------------------------');
   }
 }
