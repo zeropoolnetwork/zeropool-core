@@ -6,7 +6,7 @@ import "./lib/IERC20.sol";
 import "./lib/Ownable.sol";
 import "./lib/AbstractERC20.sol";
 import "./lib/MerkleProof.sol";
-
+import "./lib/Groth16Verifier.sol";
 
 contract Zeropool is Ownable{
     using AbstractERC20 for IERC20;
@@ -14,7 +14,7 @@ contract Zeropool is Ownable{
     uint256 constant DEPOSIT_EXISTS = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
     uint256 constant DEPOSIT_EXPIRES_BLOCKS = 500;
     uint256 constant CHALLENGE_EXPIRES_BLOCKS = 5760;
-    uint256 constant BN254_ORDER = 16798108731015832284940804142231733909759579603404752749028378864165570215949;
+    uint256 constant BN254_ORDER = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
     uint256 constant MAX_AMOUNT = 1766847064778384329583297500742918515827483896875618958121606201292619776;
     bytes32 constant EMPTY_BLOCK_HASH = 0x9867cc5f7f196b93bae1e27e6320742445d290f2263827498b54fec539f756af;
 
@@ -94,8 +94,7 @@ contract Zeropool is Ownable{
     }
 
     function groth16verify(VK memory vk, Proof memory proof, uint256[] memory inputs) internal view returns(bool) {
-        // TODO bind groth16verifier
-        return true;
+        return Groth16Verifier.verify(vk.data, proof.data, inputs);
     }
 
     constructor() public {
