@@ -25,9 +25,7 @@ TODO: put example of response
     const eth = wallet.generateKeyPair(DomainEthereum.Instance(), 0);
     const zp = new ZeroPoolNetwork(contract, eth.privateKey, mnemonic, 'http://127.0.0.1:8545');
 
-    const deposits = await zp.myDeposits();
-    const utxos = await zp.myUtxos();
-
+    const history = await zp.myHistory();
     /*
         Actions:
         1. Deposit ETH/Token
@@ -38,10 +36,11 @@ TODO: put example of response
         5. Withdraw
      */
 
+    // todo: we can have utxos from ZP mnemonic but didn't have deposits from new private key
     // todo: fetch token decimals
     // todo: fetch token names
     // todo: sort by block number
-    for (const d of deposits) {
+    for (const d of history.deposits) {
       let msg = `Deposit ${d.deposit.amount} wei\nBlock number: ${d.deposit.blocknumber}\n`;
 
       msg += d.spentInTx === '0'
@@ -51,7 +50,7 @@ TODO: put example of response
       this.log(msg + '\n');
     }
 
-    for (const utxo of utxos) {
+    for (const utxo of history.utxos) {
       const msg = `UTXO ${utxo.amount} wei\nBlock number: ${utxo.blocknumber}`;
 
       this.log(msg + '\n');
