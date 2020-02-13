@@ -18,7 +18,7 @@ TODO: put example of response
     cli.action.start(`Prepare deposit transaction ${this.amount} ${this.asset}`)
 
     const amountOfAsset = ethUtils.tw(this.amount);
-    const blockItemObj = this.zp.deposit(this.assetAddress, amountOfAsset);
+    const blockItemObj = await this.zp.deposit(this.assetAddress, amountOfAsset);
 
     cli.action.start(`Send transaction to relayer ${this.relayerEndpoint}`)
 

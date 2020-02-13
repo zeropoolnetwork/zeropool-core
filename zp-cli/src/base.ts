@@ -4,7 +4,7 @@ import { DomainEthereum, HdWallet, Keys } from "@buttonwallet/blockchain-ts-wall
 import * as ZeroPoolNetwork from '../../lib/zero-pool-network';
 
 // For other assets we use contract address, for ethereum use 0x0000000000000000000000000000000000000000
-const ETH_ASSET_ADDRESS = '0x0000000000000000000000000000000000000000
+const ETH_ASSET_ADDRESS = '0x0000000000000000000000000000000000000000'
 
 const { cosmiconfig } = require('cosmiconfig');
 const explorer = cosmiconfig('zp-cli');
