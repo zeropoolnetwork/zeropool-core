@@ -58,6 +58,11 @@ export default class Base extends Command {
       char: 'r',
       description: 'Relayer endpoint',
     }),
+
+    to: flags.string({
+      char: 't',
+      description: 'Destination address (public key)',
+    }),
   };
 
   static args = [
@@ -85,7 +90,12 @@ export default class Base extends Command {
       name: 'relayer',
       description: 'Relayer endpoint',
     },
+    {
+      name: 'to',
+      description: 'Destination address (public key)',
+    },
   ];
+
 
   // ZeroPool contract address
   contractAddress = '';
@@ -94,6 +104,8 @@ export default class Base extends Command {
   mnemonic = '';
 
   amount = 0;
+
+  to = '';
 
   asset = ''; // Address or 'ETH'
   rpcEndpoint = '';
@@ -131,10 +143,7 @@ export default class Base extends Command {
     this.rpcEndpoint = flags.rpc || args.rpc || this.getFromConfigIfExists('rpc')
     this.relayerEndpoint = flags.relayer || args.relayer || this.getFromConfigIfExists('relayer')
 
-    this.log('-------------------------------------------------')
-    this.log(`Mnemonic = ${this.mnemonic}`)
-    this.log(`Contract Address = ${this.contractAddress}`)
-    this.log('-------------------------------------------------')
+    this.to = flags.to || args.to || this.getFromConfigIfExists('to')
 
     this.wallet = new HdWallet(this.mnemonic, '');
 
@@ -146,12 +155,19 @@ export default class Base extends Command {
     //    address: string;
     // }
 
+
     this.zp = new ZeroPoolNetwork(
       this.contractAddress,
       this.ethAccount.privateKey,
       this.mnemonic,
       this.rpcEndpoint
     );
+
+    this.log('-------------------------------------------------')
+    this.log(`Mnemonic = ${this.mnemonic}`)
+    this.log(`Contract Address = ${this.contractAddress}`)
+    this.log(`Your zp address = ${"0x" + this.zp.zpKeyPair.publicKey.toString(16)}`)
+    this.log('-------------------------------------------------')
 
     this.assetAddress = this.asset === 'ETH'
       ? ETH_ASSET_ADDRESS
