@@ -13,7 +13,7 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "start:prod:rinkeby": "NODE_ENV=rinkeby node dist/main",
-    "forever:prod:rinkeby": "NODE_ENV=rinkeby PORT=80 forever start dist/main.js",
+    "forever:prod:rinkeby": "NODE_ENV=rinkeby forever start dist/main.js",
     "forever:stopall": "forever stopall",
     "lint": "eslint '{src,apps,libs,test}/**/*.ts' --fix"
   },
