@@ -5,11 +5,11 @@ import * as ZeroPoolNetwork from '../../lib/zero-pool-network';
 
 
 // For other assets we use contract address, for ethereum use 0x0000000000000000000000000000000000000000
-const ETH_ASSET_ADDRESS = '0x0000000000000000000000000000000000000000'
+const ETH_ASSET_ADDRESS = '0x0000000000000000000000000000000000000000
 
-const {cosmiconfig} = require('cosmiconfig')
-const explorer = cosmiconfig('zp-cli')
-const debug = require('debug')('zp-cli:base')
+const { cosmiconfig } = require('cosmiconfig');
+const explorer = cosmiconfig('zp-cli');
+const debug = require('debug')('zp-cli:base');
 
 type ConfigType = {
   contact?: string;
@@ -24,7 +24,7 @@ export default class Base extends Command {
   static config: null | ConfigType;
 
   static flags = {
-    help: flags.help({char: 'h'}),
+    help: flags.help({ char: 'h' }),
 
     // flag with a value (-v, --value=VALUE)
     value: flags.string({
@@ -59,7 +59,7 @@ export default class Base extends Command {
       char: 'r',
       description: 'Relayer endpoint',
     }),
-  }
+  };
 
   static args = [
     {
@@ -86,7 +86,7 @@ export default class Base extends Command {
       name: 'relayer',
       description: 'Relayer endpoint',
     },
-  ]
+  ];
 
   // ZeroPool contract address
   contractAddress = '';
@@ -106,21 +106,20 @@ export default class Base extends Command {
   zp: ZeroPoolNetwork; // ZeroPool
 
   async init() {
-
-    const result = await explorer.search()
+    const result = await explorer.search();
     if (result) {
-      const {config, filepath} = result
-      debug('parsing config', {config, filepath})
-      this.config = config
+      const { config, filepath } = result;
+      debug('parsing config', { config, filepath });
+      this.config = config;
     }
   }
 
   getFromConfigIfExists(argName: string): string {
-    return (this.config && this.config as any)[argName]
+    return (this.config && this.config as any)[argName];
   }
 
   async run(): Promise<void> {
-    const {args, flags} = this.parse(Base)
+    const { args, flags } = this.parse(Base)
 
     this.contractAddress = flags.contract || args.contract || this.getFromConfigIfExists('contract')
     this.mnemonic = flags.mnemonic || args.mnemonic || this.getFromConfigIfExists('mnemonic')
