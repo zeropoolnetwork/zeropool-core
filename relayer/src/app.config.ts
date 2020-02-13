@@ -4,8 +4,8 @@
 // const networkConfig = config.get('network');
 
 export const AppConfig = {
-  port: process.env.PORT || 3000,
-  txAggregationTime: process.env.BLOCK_TIME || 2000,
+  port: +process.env.PORT || 3000,
+  txAggregationTime: +process.env.BLOCK_TIME || 2000,
 };
 
 export const NetworkConfig = {

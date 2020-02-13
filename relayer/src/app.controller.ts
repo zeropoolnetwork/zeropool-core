@@ -3,11 +3,12 @@ import { ApiCreatedResponse, ApiExcludeEndpoint, ApiTags } from '@nestjs/swagger
 import { AppService } from './app.service';
 import { TransactionDto } from './transactgion.dto';
 import { NetworkConfig } from './app.config';
+import { AppServiceRx } from "./app.service-rx";
 
 @ApiTags('RelayerAPI')
 @Controller()
 export class AppController {
-    constructor(private readonly appService: AppService) {
+    constructor(private readonly appService: AppService, private readonly appServiceRx: AppServiceRx) {
     }
 
     @Get()
@@ -35,9 +36,17 @@ export class AppController {
         description: 'Accepts signed transaction to include it into a block. ' +
             'Returns hash of Ethereum transaction that post a block on the smart contract'
     })
-    async postTransactions(@Body() tx: TransactionDto): Promise<string> {
-        await this.appService.publishBlockItem(tx);
-        return 'Ok';
+    async postTransactions(@Body() tx: TransactionDto): Promise<any> {
+        return this.appService.publishBlockItem(tx);
+    }
+
+    @Post('tx-rx')
+    @ApiCreatedResponse({
+        description: 'Accepts signed transaction to include it into a block. ' +
+            'Returns hash of Ethereum transaction that post a block on the smart contract'
+    })
+    async postTransactionsRx(@Body() tx: TransactionDto): Promise<any> {
+        return this.appServiceRx.handleTx(tx);
     }
 
 }
