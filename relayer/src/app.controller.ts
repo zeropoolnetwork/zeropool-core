@@ -37,7 +37,7 @@ export class AppController {
             'Returns hash of Ethereum transaction that post a block on the smart contract'
     })
     async postTransactions(@Body() tx: TransactionDto): Promise<any> {
-        return this.appService.publishBlockItem(tx);
+        return await this.appService.publishBlockItem(tx);
     }
 
     @Post('tx-rx')
@@ -46,7 +46,7 @@ export class AppController {
             'Returns hash of Ethereum transaction that post a block on the smart contract'
     })
     async postTransactionsRx(@Body() tx: TransactionDto): Promise<any> {
-        return this.appServiceRx.handleTx(tx);
+        return await this.appServiceRx.handleTx(tx);
     }
 
 }

@@ -6,7 +6,7 @@ import { cosmiconfig } from "cosmiconfig";
 import { Config } from "cosmiconfig/dist/types";
 
 // For other assets we use contract address, for ethereum use 0x0000000000000000000000000000000000000000
-const ETH_ASSET_ADDRESS = '0x0000000000000000000000000000000000000000'
+const ETH_ASSET_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 const debug = require('debug')('zp-cli:base');
 
@@ -20,6 +20,8 @@ type ConfigType = {
 };
 
 export default class Base extends Command {
+  etherscanPrefix = 'https://rinkeby.etherscan.io/tx/';
+
   static config: null | ConfigType = null;
 
   static flags = {

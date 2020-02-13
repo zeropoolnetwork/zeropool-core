@@ -21,18 +21,16 @@ TODO: put example of response
     const numOfInputs = 1;
     const myUtxo = await this.zp.myUtxos();
     // @ts-ignore
-    const withdrawAmount = myUtxo.slice(numOfInputs - 1).reduce((acc: any, item: any) => {
+    const withdrawAmount = myUtxo.slice(0, numOfInputs).reduce((acc: any, item: any) => {
       return acc + item.amount;
     }, 0n);
     const blockItemObj = await this.zp.prepareWithdraw(this.assetAddress, numOfInputs);
 
-    cli.action.start(`Send transaction to relayer ${this.relayerEndpoint}`);
-
+    cli.action.start(`Send transaction to relayer (waiting 2 confirmations) ${this.relayerEndpoint}`);
     const res = await axios.post(`${this.relayerEndpoint}/tx`, blockItemObj);
+    cli.url('View transaction on Etherscan', this.etherscanPrefix + res.data.transactionHash);
 
-    this.log("Prepare withdraw - Transaction hash: " + res.data.transactionHash);
-
-    cli.action.start(`Withdraw ${this.relayerEndpoint}`);
+    cli.action.start(`Withdraw (waiting 2 confirmations)`);
     const withdrawRes = await this.zp.withdraw({
       token: this.assetAddress,
       amount: Number(withdrawAmount),
@@ -40,22 +38,11 @@ TODO: put example of response
       blocknumber: res.data.blockNumber - 1,
       txhash: blockItemObj.tx_hash
     });
+    cli.url('View Withdraw on Etherscan', this.etherscanPrefix + withdrawRes.transactionHash);
 
-    this.log("Withdraw - Transaction hash: " + withdrawRes.transactionHash);
+    cli.action.stop();
 
-
-    //
-    // TODO: some print in a console
-    // const blockItemObj2 = await this.makeDeposit();
-    // publishBlockItems
-
-    // TODO: return eth transaction hash from relayer if possible
-    // cli.url('https://etherscan.io/tx/0x3fd80cffa3c06ff693d8685e8feb3526fb23ad7caa62186d46e718492351fcf3', 'https://etherscan.io/tx/0x3fd80cffa3c06ff693d8685e8feb3526fb23ad7caa62186d46e718492351fcf3')
-
-    cli.action.stop()
-
-    // TODO: Fix, we shouldn't call this,
-    //  NodeJs process doesn't exit occurs some were in ZeroPoolNetwork or depper
     process.exit();
+
   }
 }
