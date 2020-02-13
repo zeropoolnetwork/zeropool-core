@@ -22,7 +22,7 @@ TODO: put example of response
     // TODO: log tx object
     cli.action.start(`Send transaction to relayer ${this.relayerEndpoint}`)
     // TODO: put actual relayer call in place
-    const blockItemObj2 = await this.makeDeposit();
+    // const blockItemObj2 = await this.makeDeposit();
     // publishBlockItems
     // cli.url('https://etherscan.io/tx/0x3fd80cffa3c06ff693d8685e8feb3526fb23ad7caa62186d46e718492351fcf3', 'https://etherscan.io/tx/0x3fd80cffa3c06ff693d8685e8feb3526fb23ad7caa62186d46e718492351fcf3')
 
@@ -36,7 +36,7 @@ TODO: put example of response
   async makeDeposit(): Promise<any> {
     const wallet = new HdWallet(this.mnemonic, '');
     const eth = wallet.generateKeyPair(DomainEthereum.Instance(), 0);
-    const zp = new ZeroPoolNetwork(this.contractAddress, eth.privateKey, this.mnemonic, 'http://127.0.0.1:8545');
+    const zp = new ZeroPoolNetwork(this.contractAddress, eth.privateKey, this.mnemonic, this.rpcEndpoint);
 
     const assetAddress = this.asset === 'ETH'
       // TODO: Define constant
