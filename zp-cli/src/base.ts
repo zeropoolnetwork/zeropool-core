@@ -2,12 +2,12 @@ import { Command } from '@oclif/command'
 import { flags } from '@oclif/command'
 import { DomainEthereum, HdWallet, Keys } from "@buttonwallet/blockchain-ts-wallet-core";
 import * as ZeroPoolNetwork from '../../lib/zero-pool-network';
+import { cosmiconfig } from "cosmiconfig";
+import { Config } from "cosmiconfig/dist/types";
 
 // For other assets we use contract address, for ethereum use 0x0000000000000000000000000000000000000000
 const ETH_ASSET_ADDRESS = '0x0000000000000000000000000000000000000000'
 
-const { cosmiconfig } = require('cosmiconfig');
-const explorer = cosmiconfig('zp-cli');
 const debug = require('debug')('zp-cli:base');
 
 type ConfigType = {
@@ -20,10 +20,16 @@ type ConfigType = {
 };
 
 export default class Base extends Command {
-  static config: null | ConfigType;
+  static config: null | ConfigType = null;
 
   static flags = {
     help: flags.help({ char: 'h' }),
+
+    // flag with a value (-c, --config=VALUE)
+    config: flags.string({
+      char: 'c',
+      description: 'Path to config',
+    }),
 
     // flag with a value (-v, --value=VALUE)
     value: flags.string({
@@ -66,6 +72,10 @@ export default class Base extends Command {
   };
 
   static args = [
+    {
+      name: 'config',
+      description: 'path to config file',
+    },
     {
       name: 'contract',
       description: 'Address of ZeroPool smart contract',
@@ -120,30 +130,34 @@ export default class Base extends Command {
   // @ts-ignore
   zp: ZeroPoolNetwork;
 
-  async init() {
-    const result = await explorer.search();
-    if (result) {
-      const { config, filepath } = result;
-      debug('parsing config', { config, filepath });
-      this.config = config;
-    }
-  }
+  async loadConfig(pathToConfig?: string): Promise<Config> {
+      const explorer = cosmiconfig('zp-cli');
+      const result = pathToConfig
+        ? await explorer.load(pathToConfig)
+        : await explorer.search();
 
-  getFromConfigIfExists(argName: string): string {
-    return (this.config && this.config as any)[argName];
+      if (result) {
+        const { config, filepath } = result;
+        debug('parsing config', { config, filepath });
+        return config;
+      }
   }
 
   async run(): Promise<void> {
     const { args, flags } = this.parse(Base)
 
-    this.contractAddress = flags.contract || args.contract || this.getFromConfigIfExists('contract')
-    this.mnemonic = flags.mnemonic || args.mnemonic || this.getFromConfigIfExists('mnemonic')
-    this.amount = flags.value || args.value || this.getFromConfigIfExists('value')
-    this.asset = flags.asset || args.asset || this.getFromConfigIfExists('asset')
-    this.rpcEndpoint = flags.rpc || args.rpc || this.getFromConfigIfExists('rpc')
-    this.relayerEndpoint = flags.relayer || args.relayer || this.getFromConfigIfExists('relayer')
+    const pathToConfig = flags.config || args.config;
 
-    this.to = flags.to || args.to || this.getFromConfigIfExists('to')
+    const config = await this.loadConfig(pathToConfig);
+    const fromConfigSafe = (argName: string) => config && config[argName];
+
+    this.contractAddress = flags.contract || args.contract || fromConfigSafe('contract')
+    this.mnemonic = flags.mnemonic || args.mnemonic || fromConfigSafe('mnemonic')
+    this.amount = flags.value || args.value || fromConfigSafe('value')
+    this.asset = flags.asset || args.asset || fromConfigSafe('asset')
+    this.rpcEndpoint = flags.rpc || args.rpc || fromConfigSafe('rpc')
+    this.relayerEndpoint = flags.relayer || args.relayer || fromConfigSafe('relayer')
+    this.to = flags.to || args.to;
 
     this.wallet = new HdWallet(this.mnemonic, '');
 
