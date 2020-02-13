@@ -179,11 +179,10 @@ export default class Base extends Command {
       this.rpcEndpoint
     );
 
-    this.log('-------------------------------------------------')
-    this.log(`Mnemonic = ${this.mnemonic}`)
-    this.log(`Contract Address = ${this.contractAddress}`)
-    this.log(`Your zp address = ${"0x" + this.zp.zpKeyPair.publicKey.toString(16)}`)
-    this.log('-------------------------------------------------')
+    this.log('-------------------------------------------------');
+    this.log(`ZeroPool contract address = ${this.contractAddress}`);
+    this.log(`Your zp address = ${"0x" + this.zp.zpKeyPair.publicKey.toString(16)}`);
+    this.log('-------------------------------------------------');
 
     this.assetAddress = this.asset === 'ETH'
       ? ETH_ASSET_ADDRESS

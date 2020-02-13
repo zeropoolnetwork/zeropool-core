@@ -14,9 +14,10 @@ TODO: put example of response
 
   async run(): Promise<void> {
     await super.run();
+    // todo: check not enough funds
 
     cli.action.start(`Prepare transfer transaction ${this.amount} ${this.asset}`)
-    const amountOfAsset = ethUtils.tw(this.amount);
+    const amountOfAsset = ethUtils.tw(this.amount).toNumber();
     const blockItemObj = await this.zp.transfer(this.assetAddress, this.to, amountOfAsset);
 
     cli.action.start(`Send transaction to relayer (waiting 2 confirmations) ${this.relayerEndpoint}`)
