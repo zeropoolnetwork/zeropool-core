@@ -3,7 +3,6 @@ import { flags } from '@oclif/command'
 import { DomainEthereum, HdWallet, Keys } from "@buttonwallet/blockchain-ts-wallet-core";
 import * as ZeroPoolNetwork from '../../lib/zero-pool-network';
 
-
 // For other assets we use contract address, for ethereum use 0x0000000000000000000000000000000000000000
 const ETH_ASSET_ADDRESS = '0x0000000000000000000000000000000000000000
 
@@ -100,10 +99,14 @@ export default class Base extends Command {
   rpcEndpoint = '';
   relayerEndpoint = '';
 
+  // @ts-ignore
   wallet: HdWallet;
+  // @ts-ignore
   ethAccount: Keys;
+  // @ts-ignore
   assetAddress: string;
-  zp: ZeroPoolNetwork; // ZeroPool
+  // @ts-ignore
+  zp: ZeroPoolNetwork;
 
   async init() {
     const result = await explorer.search();

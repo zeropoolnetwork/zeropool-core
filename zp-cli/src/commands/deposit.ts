@@ -39,23 +39,4 @@ TODO: put example of response
     //  NodeJs process doesn't exit occurs some were in ZeroPoolNetwork or depper
     process.exit();
   }
-
-  makeDeposit(): Promise<any> {
-    // TODO: move to base class
-    const wallet = new HdWallet(this.mnemonic, '');
-    const eth = wallet.generateKeyPair(DomainEthereum.Instance(), 0);
-    const zp = new ZeroPoolNetwork(this.contractAddress, eth.privateKey, this.mnemonic, this.rpcEndpoint);
-
-    // TODO: move to base class
-    const assetAddress = this.asset === 'ETH'
-      ? ETH_ASSET_ADDRESS
-      : this.asset // TODO: In case of main-net (by endpoint or flag) resolve 'DAI' into addresses
-
-    // TODO: move to base class
-    const amountOfAsset = ethUtils.tw(this.amount);
-
-    return zp.deposit(assetAddress, amountOfAsset);
-  }
-
-
 }
