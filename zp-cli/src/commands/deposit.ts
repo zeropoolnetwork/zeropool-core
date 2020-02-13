@@ -3,6 +3,7 @@ import * as ethUtils from '../../../lib/ethereum/ethereum';
 import * as ZeroPoolNetwork from '../../../lib/zero-pool-network';
 import Base from '../base';
 import { HdWallet, DomainEthereum } from '@buttonwallet/blockchain-ts-wallet-core';
+
 const axios = require('axios').default;
 
 
@@ -25,7 +26,9 @@ TODO: put example of response
 
     cli.action.start(`Send transaction to relayer ${this.relayerEndpoint}`)
 
-    await axios.post(`${this.relayerEndpoint}/tx`, blockItemObj)
+    const res = await axios.post(`${this.relayerEndpoint}/tx`, blockItemObj);
+
+    this.log("Transaction hash: " + res.data.transactionHash);
     //
     // TODO: some print in a console
     // const blockItemObj2 = await this.makeDeposit();
