@@ -26,7 +26,7 @@ type Tx = {
 
 const calculateTxId = (tx: TransactionDto) => {
   hash.update(JSON.stringify(tx));
-  return hash.copy().digest('hex');
+  return hash.digest('hex');
 };
 
 type ProcessedTx = {
@@ -65,7 +65,7 @@ export class AppServiceRx {
 
         // TODO: @krvbot pad txs to 256,
         //  how we will define blocknumber_expires ??
-        const blocknumber_expires = 0;
+        const blocknumber_expires = 50000000;
         const zpTxs = txs.map((tx) => {
           // TODO: here we can remap from strings back BigInt,
           //  Or we can do that via class-transformer(validator) at DTO level
