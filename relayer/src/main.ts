@@ -7,7 +7,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   const options = new DocumentBuilder()
-    .setTitle('ZeroPool')
+    .setTitle('ZeroPool Relayer')
     .setDescription('Relayer accepts requests for publishing transactions')
     .setVersion('1.0')
     .addTag('RelayerAPI')
