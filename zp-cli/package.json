@@ -10,8 +10,9 @@
     "test": "nyc --extension .ts mocha --forbid-only \"test/**/*.test.ts\"",
     "version": "oclif-dev readme && git add README.md",
     "history:test": "node --inspect-brk ./bin/run history --contract='0x28cc2Dee39C990C6105016080e2eb3b87AE53f50' --mnemonic='fly lift online march much aisle fiction ladder cheap circle donate vacuum lady cream upon'",
-    "deposit": "DEBUG=* node --inspect-brk ./bin/run deposit",
-    "balance": "DEBUG=* node --inspect-brk ./bin/run balance"
+    "deposit": "node --experimental-worker --inspect-brk ./bin/run deposit",
+    "balance": "node --experimental-worker --inspect-brk ./bin/run balance",
+    "withdraw": "node $NODE_DEBUG_OPTION --experimental-worker ./bin/run withdraw"
   },
   "bin": {
     "zp": "./bin/run"

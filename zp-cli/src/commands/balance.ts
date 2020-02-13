@@ -28,6 +28,10 @@ hello world from ./src/hello.ts!
 
     cli.action.start(`Fetching balance`);
     const balances = await this.zp.getBalance();
+    if (Object.keys(balances).length === 0) {
+      this.log(`Your balance: 0 zpETH`);
+      return;
+    }
     this.log(`Your balance: ${ethUtils.fw(balances['0x0'])} zpETH`);
   }
 
