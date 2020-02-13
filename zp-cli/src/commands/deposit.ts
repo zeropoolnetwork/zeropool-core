@@ -1,13 +1,7 @@
 import cli from 'cli-ux'
-import * as ethUtils from '../../../lib/ethereum/ethereum';
-import * as ZeroPoolNetwork from '../../../lib/zero-pool-network';
 import Base from '../base';
-import { HdWallet, DomainEthereum } from '@buttonwallet/blockchain-ts-wallet-core';
-
+import * as ethUtils from '../../../lib/ethereum/ethereum';
 const axios = require('axios').default;
-
-
-const ETH_ASSET_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 export default class Deposit extends Base {
   static description = 'Show ZeroPool tx history'
@@ -22,7 +16,9 @@ TODO: put example of response
     await super.run()
 
     cli.action.start(`Prepare deposit transaction ${this.amount} ${this.asset}`)
-    const blockItemObj = await this.makeDeposit();
+
+    const amountOfAsset = ethUtils.tw(this.amount);
+    const blockItemObj = this.zp.deposit(this.assetAddress, amountOfAsset);
 
     cli.action.start(`Send transaction to relayer ${this.relayerEndpoint}`)
 

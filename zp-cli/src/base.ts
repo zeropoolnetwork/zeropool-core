@@ -1,5 +1,11 @@
 import { Command } from '@oclif/command'
 import { flags } from '@oclif/command'
+import { DomainEthereum, HdWallet, Keys } from "@buttonwallet/blockchain-ts-wallet-core";
+import * as ZeroPoolNetwork from '../../lib/zero-pool-network';
+
+
+// For other assets we use contract address, for ethereum use 0x0000000000000000000000000000000000000000
+const ETH_ASSET_ADDRESS = '0x0000000000000000000000000000000000000000'
 
 const {cosmiconfig} = require('cosmiconfig')
 const explorer = cosmiconfig('zp-cli')
@@ -67,7 +73,6 @@ export default class Base extends Command {
     {
       name: 'asset',
       description: 'ETH or address of asset that will be deposited',
-      default: 'ETH',
     },
     {
       name: 'value',
@@ -91,9 +96,14 @@ export default class Base extends Command {
 
   amount = 0;
 
-  asset: string | 'ETH' = 'ETH';
+  asset = ''; // Address or 'ETH'
   rpcEndpoint = '';
   relayerEndpoint = '';
+
+  wallet: HdWallet;
+  ethAccount: Keys;
+  assetAddress: string;
+  zp: ZeroPoolNetwork; // ZeroPool
 
   async init() {
 
@@ -123,5 +133,27 @@ export default class Base extends Command {
     this.log(`Mnemonic = ${this.mnemonic} from ./src/base.ts`)
     this.log(`Contract Address = ${this.contractAddress} from ./src/base.ts`)
     this.log('-------------------------------------------------')
+
+    this.wallet = new HdWallet(this.mnemonic, '');
+
+    this.ethAccount = this.wallet.generateKeyPair(DomainEthereum.Instance(), 0);
+    // ethAccount:
+    // {
+    //    privateKey: string;
+    //    publicKey: string;
+    //    address: string;
+    // }
+
+    this.zp = new ZeroPoolNetwork(
+      this.contractAddress,
+      this.ethAccount.privateKey,
+      this.mnemonic,
+      this.rpcEndpoint
+    );
+
+    // TODO: move to base class
+    this.assetAddress = this.asset === 'ETH'
+      ? ETH_ASSET_ADDRESS
+      : this.asset // TODO: In case of main-net (by endpoint or flag) resolve 'DAI' into addresses
   }
 }
