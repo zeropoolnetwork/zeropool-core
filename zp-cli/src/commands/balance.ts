@@ -1,31 +1,34 @@
-import {Command, flags} from '@oclif/command'
+import { flags } from '@oclif/command';
+import Base from '../base';
+import * as ethUtils from '../../../lib/ethereum/ethereum';
+import cli from "cli-ux";
 
-export default class Balance extends Command {
-  static description = 'Deposit asset to ZeroPool'
+export default class Balance extends Base {
+  static description = 'Deposit asset to ZeroPool';
 
   static examples = [
     `$ zp balance
 hello world from ./src/hello.ts!
 `,
-  ]
+  ];
 
   static flags = {
-    help: flags.help({char: 'h'}),
+    help: flags.help({ char: 'h' }),
     // flag with a value (-n, --name=VALUE)
-    name: flags.string({char: 'n', description: 'name to print'}),
+    name: flags.string({ char: 'n', description: 'name to print' }),
     // flag with no value (-f, --force)
-    force: flags.boolean({char: 'f'}),
-  }
+    force: flags.boolean({ char: 'f' }),
+  };
 
-  static args = [{name: 'file'}]
+  static args = [{ name: 'file' }];
 
   async run() {
-    const {args, flags} = this.parse(Balance)
+    await super.run()
+    const { args, flags } = this.parse(Balance);
 
-    const name = flags.name || 'world'
-    this.log(`hello ${name} from ./src/commands/hello.ts`)
-    if (args.file && flags.force) {
-      this.log(`you input --force and --file: ${args.file}`)
-    }
+    cli.action.start(`Fetching balance`);
+    const balances = await this.zp.getBalance();
+    this.log(`Your balance: ${ethUtils.fw(balances['0x0'])} zpETH`);
   }
+
 }

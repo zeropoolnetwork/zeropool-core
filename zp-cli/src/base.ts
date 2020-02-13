@@ -132,8 +132,8 @@ export default class Base extends Command {
     this.relayerEndpoint = flags.relayer || args.relayer || this.getFromConfigIfExists('relayer')
 
     this.log('-------------------------------------------------')
-    this.log(`Mnemonic = ${this.mnemonic} from ./src/base.ts`)
-    this.log(`Contract Address = ${this.contractAddress} from ./src/base.ts`)
+    this.log(`Mnemonic = ${this.mnemonic}`)
+    this.log(`Contract Address = ${this.contractAddress}`)
     this.log('-------------------------------------------------')
 
     this.wallet = new HdWallet(this.mnemonic, '');
@@ -153,7 +153,6 @@ export default class Base extends Command {
       this.rpcEndpoint
     );
 
-    // TODO: move to base class
     this.assetAddress = this.asset === 'ETH'
       ? ETH_ASSET_ADDRESS
       : this.asset // TODO: In case of main-net (by endpoint or flag) resolve 'DAI' into addresses
