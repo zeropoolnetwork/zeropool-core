@@ -17,7 +17,10 @@ export const NetworkConfig = {
     etherscan_prefix: process.env.ETHERSCAN_PREFIX || networkConfig.etherscan_prefix,
 };
 
-console.log('Mnemonic: #1');
+console.log('CONFIG: #1');
 export const Mnemonic = process.env.MNEMONIC || config.get('mnemonic');
 console.log(Mnemonic);
-console.log('Mnemonic: #2');
+console.log(NetworkConfig.rpc);
+console.log(NetworkConfig.contract);
+console.log(NetworkConfig.etherscan_prefix);
+console.log('CONFIG: #2');
