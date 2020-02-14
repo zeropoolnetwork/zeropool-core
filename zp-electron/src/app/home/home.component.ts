@@ -1,6 +1,7 @@
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { ElectronService } from "../core/services";
 import { BehaviorSubject } from "rxjs";
+import { LoadersCSS } from 'ngx-loaders-css';
 
 
 export function toShortAddress(address: string): string {
@@ -14,37 +15,76 @@ export function toShortAddress(address: string): string {
 })
 export class HomeComponent implements OnInit {
 
+  zpBalanceRefreshingNow: boolean = true;
+  zpBalanceReady: boolean = false;
+
+  showZpAddress = true;
+
   zpFullAddress = '';
   zpShortAddress = '';
   zpBalance = '0';
-  //zpBalance$ = new BehaviorSubject(0);
-  constructor(private electronService: ElectronService, private cd: ChangeDetectorRef) {
 
+  //zpBalance$ = new BehaviorSubject(0);
+  ethFullAddress = '';
+  ethShortAddress = '';
+
+  bgColor = 'black';
+  color = 'rgba(100, 100, 100, 0.5)';
+  loader: LoadersCSS = 'pacman';
+
+  constructor(private electronService: ElectronService, private cd: ChangeDetectorRef) {
+    //
   }
 
   ngOnInit(): void {
-    this.fetchAddress();
-    // this.refreshBalance();
+    this.fetchAddresses();
+    this.refreshZpBalance();
 
     // Fetch address from electron
   }
 
-  fetchAddress() {
+  fetchAddresses() {
     this.electronService.ipcRenderer.send('get-zp-address');
     this.electronService.ipcRenderer.on('zp-address', (event, arg) => {
       this.zpFullAddress = arg;
       this.zpShortAddress = toShortAddress(arg);
       this.cd.detectChanges();
     })
+
+    this.electronService.ipcRenderer.send('get-eth-address');
+    this.electronService.ipcRenderer.on('eth-address', (event, arg) => {
+      this.ethFullAddress = arg;
+      this.ethShortAddress = toShortAddress(arg);
+      this.cd.detectChanges();
+    })
   }
 
-  refreshBalance() {
+  // stopRefresh(): void {
+  //   console.log('stopRefresh');
+  //   this.zpBalanceRefreshingNow = false;
+  //   this.zpBalanceReady = true;
+  //
+  //   this.cd.detectChanges();
+  // }
+
+  refreshZpBalance(): void {
+    console.log('refreshZpBalance');
+
     // Fetch balance from electron
     this.electronService.ipcRenderer.send('get-balance');
+    this.zpBalanceRefreshingNow = true;
+    this.zpBalanceReady = false;
+
+    this.cd.detectChanges();
+
     this.electronService.ipcRenderer.on('balance', (event, arg) => {
       // debugger
       this.zpBalance = (+arg).toFixed(5);
+
       // this.zpBalance$.next(arg);
+      this.zpBalanceRefreshingNow = false;
+      this.zpBalanceReady = true;
+
       console.log('done');
       this.cd.detectChanges();
     })
@@ -60,5 +100,9 @@ export class HomeComponent implements OnInit {
 
   showWithdrawFrom() {
 
+  }
+
+  switchAddress() {
+    this.showZpAddress = !this.showZpAddress;
   }
 }
