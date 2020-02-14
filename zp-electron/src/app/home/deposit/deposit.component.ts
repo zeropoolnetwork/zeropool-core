@@ -1,5 +1,7 @@
 import { ChangeDetectorRef, Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { LoadersCSS } from 'ngx-loaders-css';
+import { ElectronService } from "../../core/services";
+import { toShortAddress } from "../home.component";
 
 
 @Component({
@@ -10,7 +12,10 @@ import { LoadersCSS } from 'ngx-loaders-css';
 export class DepositComponent {
 
   @Input()
-  ethAmount: number;
+  availableEthAmount: number;
+
+  depositAmount: number;
+  transactionHash: string;
 
   @Output()
   backClick = new EventEmitter<boolean>();
@@ -18,7 +23,7 @@ export class DepositComponent {
   color = 'rgba(100, 100, 100, 0.5)';
   loader: LoadersCSS = 'pacman';
 
-  constructor() {
+  constructor(  private electronService: ElectronService) {
     //
   }
 
@@ -27,7 +32,12 @@ export class DepositComponent {
   }
 
   onDepositClick() {
-    this.backClick.emit(true);
+    this.electronService.ipcRenderer.send('deposit', this.depositAmount);
+    this.electronService.ipcRenderer.on('deposit-hash', (event, hash) => {
+      console.log(hash)
+      this.transactionHash = hash;
+    });
+    // this.backClick.emit(true);
     // Emit amount to deposit ???
   }
 }

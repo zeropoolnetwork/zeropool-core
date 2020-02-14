@@ -49,7 +49,7 @@
 
 
   <ng-container *ngIf="activeForm === 'deposit' ">
-    <app-deposit [ethAmount]="0.45" (backClick)="showMainForm()"></app-deposit>
+    <app-deposit [availableEthAmount]="0.43" (backClick)="showMainForm()"></app-deposit>
   </ng-container>
 
   <ng-container *ngIf="activeForm === 'send' ">

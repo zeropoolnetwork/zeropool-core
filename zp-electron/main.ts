@@ -1,10 +1,51 @@
 import { app, BrowserWindow, screen } from 'electron';
+const axios = require('axios').default;
 import * as path from 'path';
 import * as url from 'url';
 
 import * as ZeroPoolNetwork from '../lib/zero-pool-network';
 import * as ethUtils from '../lib/ethereum/ethereum';
 import { DomainEthereum, HdWallet, Keys } from "@buttonwallet/blockchain-ts-wallet-core";
+
+///////
+// const { spawn } = require('child_process');
+// //const zpDeposit = spawn('zp deposit ', ['--value', '/usr']);
+// const zpDeposit = spawn('/Users/artemvorobev/zeropool/zp2/zp-cli/bin/run balance --config=/Users/artemvorobev/zeropool/zp2/zp-cli/alice.config.js');
+// // const zpDeposit = spawn('/Users/artemvorobev/zeropool/zp2/zp-cli/bin/run deposit --value=0.001 --config=/Users/artemvorobev/zeropool/zp2/zp-cli/alice.config.js');
+//
+// zpDeposit.stdout.on('data', (data) => {
+//   console.log(`stdout: ${data}`);
+// });
+//
+// zpDeposit.stderr.on('data', (data) => {
+//   console.error(`stderr: ${data}`);
+// });
+
+// zpDeposit.on('close', (code) => {
+//   console.log(`child process exited with code ${code}`);
+// });
+///////
+
+
+///////
+const util = require('util');
+const exec = util.promisify(require('child_process').exec);
+
+async function deposit(amount) {
+  const { stdout, stderr } = await exec(
+    `/Users/artemvorobev/zeropool/zp2/zp-cli/bin/run deposit --value=${amount} --config=/Users/artemvorobev/zeropool/zp2/zp-cli/alice.config.js`
+  );
+  if (stderr) {
+    return stderr;
+  }
+  return stdout;
+}
+deposit(0.0001)
+  .then(console.log)
+
+//////
+
+const ETH_ASSET_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 const config = {
   contract: '0xBC3b9990CE2F72a97A82913894392CadA8d9558B',
@@ -106,6 +147,25 @@ function createWindow(): BrowserWindow {
   ipc.on('get-eth-address', async (event, arg) => {
     //const balance = await zp.getBalance()
     win.webContents.send('eth-address', ethAddress);
+  });
+
+  ipc.on('deposit', async (event, amount) => {
+    // const balance = await zp.getBalance()
+    console.log(ETH_ASSET_ADDRESS, ethUtils.tw(amount).toNumber())
+    try {
+      console.log('1-------------------');
+      const blockItem = await zp.prepareWithdraw(ETH_ASSET_ADDRESS, 1)
+      console.log(blockItem)
+      console.log('2-------------------');
+
+      const res = await axios.post(`${config.relayer}/tx`, blockItem);
+      console.log('2.1-------------------');
+      win.webContents.send('deposit-hash', res.data.transactionHash);
+      console.log('3-------------------');
+    } catch (e) {
+      console.log(e)
+    }
+
   });
 
   // Emitted when the window is closed.

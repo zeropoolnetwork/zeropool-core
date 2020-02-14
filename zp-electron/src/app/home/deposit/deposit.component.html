@@ -2,12 +2,12 @@
 
   <div class="title" style="padding: 10px">Enter amount in ETH</div>
 
-  <input type="text" class="input-block-level" placeholder="0.0 ETH" style="width:290px;border-radius:5px;border:none"/>
+  <input [(ngModel)]="depositAmount" type="text" class="input-block-level" placeholder="0.0 ETH" style="width:290px;border-radius:5px;border:none"/>
 
-  <ng-container *ngIf="ethAmount">
-    <div class="title" style="padding: 10px; font-size: 0.7em">Available {{ethAmount}} ETH</div>
+  <ng-container *ngIf="availableEthAmount">
+    <div class="title" style="padding: 10px; font-size: 0.7em">Available {{availableEthAmount}} ETH</div>
   </ng-container>
-  <ng-container *ngIf="!ethAmount">
+  <ng-container *ngIf="!availableEthAmount">
     <br>
   </ng-container>
 

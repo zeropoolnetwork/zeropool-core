@@ -3,7 +3,6 @@ import { ElectronService } from "../core/services";
 import { BehaviorSubject } from "rxjs";
 import { LoadersCSS } from 'ngx-loaders-css';
 
-
 export function toShortAddress(address: string): string {
   return address.substring(0, 8) + '...' + address.substring(address.length - 8, address.length);
 }
@@ -14,6 +13,8 @@ export function toShortAddress(address: string): string {
   styleUrls: ['./home.component.scss']
 })
 export class HomeComponent implements OnInit {
+
+  depositAmount: number;
 
   zpBalanceRefreshingNow: boolean = true;
   zpBalanceReady: boolean = false;
@@ -38,7 +39,7 @@ export class HomeComponent implements OnInit {
 
   ngOnInit(): void {
     this.fetchAddresses();
-    // this.refreshZpBalance();
+    this.refreshZpBalance();
 
     // Fetch address from electron
   }
