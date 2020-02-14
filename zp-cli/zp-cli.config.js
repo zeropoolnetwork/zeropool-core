@@ -4,5 +4,5 @@ module.exports = {
   value: 0.1,
   asset: 'ETH',
   rpc: 'https://rinkeby.infura.io/v3/826fec4cbd954dfd89c714eabf4611c4',
-  relayer: 'http://127.0.0.1:3000'
+  relayer: 'http://134.209.172.229:3000'
 }
