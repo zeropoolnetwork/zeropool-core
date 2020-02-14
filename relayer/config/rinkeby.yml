@@ -4,7 +4,7 @@ app:
 
 network:
   etherscan_prefix: 'https://rinkeby.etherscan.io/'
-  rpc: 'https://rinkeby:infura:io/v3/826fec4cbd954dfd89c714eabf4611c4'
+  rpc: 'https://rinkeby.infura.io/v3/826fec4cbd954dfd89c714eabf4611c4'
   contract: '0xBC3b9990CE2F72a97A82913894392CadA8d9558B'
 
 mnemonic: 'music tired panel defense garlic tomorrow feature person december lab keen sausage tourist remember era'
