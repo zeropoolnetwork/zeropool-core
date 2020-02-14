@@ -13,7 +13,7 @@ TODO: put example of response
   ];
 
   async run() {
-    super.run();
+    await super.run();
 
     // const { args, flags } = this.parse(History);
 
