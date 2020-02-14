@@ -1,7 +1,5 @@
-import { flags } from '@oclif/command';
-import * as ZeroPoolNetwork from '../../../lib/zero-pool-network';
 import Base from '../base';
-import { HdWallet, DomainEthereum } from '@buttonwallet/blockchain-ts-wallet-core';
+import cli from "cli-ux";
 
 export default class History extends Base {
   static description = 'Show ZeroPool tx history';
@@ -16,16 +14,13 @@ TODO: put example of response
     await super.run();
 
     // const { args, flags } = this.parse(History);
-
-    await this.showHistory(this.contractAddress, this.mnemonic);
+    cli.action.start(`Fetching history`);
+    await this.showHistory();
+    cli.action.stop();
   }
 
-  private async showHistory(contract: string, mnemonic: string) {
-    const wallet = new HdWallet(mnemonic, '');
-    const eth = wallet.generateKeyPair(DomainEthereum.Instance(), 0);
-    const zp = new ZeroPoolNetwork(contract, eth.privateKey, mnemonic, 'http://127.0.0.1:8545');
-
-    const history = await zp.myHistory();
+  private async showHistory() {
+    const history = await this.zp.myHistory();
     /*
         Actions:
         1. Deposit ETH/Token
