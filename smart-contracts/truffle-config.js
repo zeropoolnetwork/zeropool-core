@@ -47,7 +47,7 @@ module.exports = {
       network_id: '*', // eslint-disable-line camelcase
     },
     rinkeby: {
-      provider: new HDWalletProvider(process.env.MNEMONIC, "https://rinkeby.infura.io/v3/826fec4cbd954dfd89c714eabf4611c4", 0, 10),
+      provider: new HDWalletProvider(process.env.MNEMONIC, "https://rinkeby.infura.io/", 0, 10),
       network_id: 4,
       skipDryRun: true
     },
