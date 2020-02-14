@@ -2,6 +2,7 @@ import { Command } from '@oclif/command'
 import { flags } from '@oclif/command'
 import { DomainEthereum, HdWallet, Keys } from "@buttonwallet/blockchain-ts-wallet-core";
 import * as ZeroPoolNetwork from '../../lib/zero-pool-network';
+import * as ethUtils from '../../lib/ethereum/ethereum';
 import { cosmiconfig } from "cosmiconfig";
 import { Config } from "cosmiconfig/dist/types";
 
@@ -12,7 +13,7 @@ const debug = require('debug')('zp-cli:base');
 
 type ConfigType = {
   contact?: string;
-  secret?: string;
+  ethSecret?: string;
   value?: string;
   asset?: string;
   rpc: string;
@@ -45,13 +46,13 @@ export default class Base extends Command {
       description: 'ETH or address of asset that will be deposited',
     }),
 
-    // flag with a value (-m, --mnemonic=VALUE)
-    mnemonic: flags.string({
+    // flag with a value (-m, --zpMnemonic=VALUE)
+    zpMnemonic: flags.string({
       char: 'm',
       description: 'Mnemonic that is used for ZeroPool address generation',
     }),
 
-    secret: flags.string({
+    ethSecret: flags.string({
       char: 's',
       description: 'Mnemonic or Private Key that is used for Ethereum address generation',
     }),
@@ -88,11 +89,11 @@ export default class Base extends Command {
       description: 'Address of ZeroPool smart contract',
     },
     {
-      name: 'mnemonic',
+      name: 'zpMnemonic',
       description: 'Mnemonic that is used for ZeroPool address generation',
     },
     {
-      name: 'secret',
+      name: 'ethSecret',
       description: 'Mnemonic or Private Key that is used for Ethereum address generation',
     },
     {
@@ -122,8 +123,8 @@ export default class Base extends Command {
   contractAddress = '';
 
   // Mnemonic that we use for both ZeroPool and Ethereum
-  mnemonic = '';
-  secret = '';
+  zpMnemonic = '';
+  ethSecret = '';
 
   amount = 0;
 
@@ -143,7 +144,7 @@ export default class Base extends Command {
   zp: ZeroPoolNetwork;
 
   async loadConfig(pathToConfig?: string): Promise<Config> {
-      const explorer = cosmiconfig('zp-cli');
+      const explorer = cosmiconfig('alice');
       const result = pathToConfig
         ? await explorer.load(pathToConfig)
         : await explorer.search();
@@ -164,20 +165,22 @@ export default class Base extends Command {
     const fromConfigSafe = (argName: string) => config && config[argName];
 
     this.contractAddress = flags.contract || args.contract || fromConfigSafe('contract');
-    this.secret = flags.secret || args.secret || fromConfigSafe('secret');
-    this.mnemonic = flags.mnemonic || args.mnemonic || fromConfigSafe('mnemonic');
+    this.ethSecret = flags.ethSecret || args.ethSecret || fromConfigSafe('ethSecret');
+    this.zpMnemonic = flags.zpMnemonic || args.zpMnemonic || fromConfigSafe('zpMnemonic');
     this.amount = flags.value || args.value || fromConfigSafe('value');
     this.asset = flags.asset || args.asset || fromConfigSafe('asset');
     this.rpcEndpoint = flags.rpc || args.rpc || fromConfigSafe('rpc');
     this.relayerEndpoint = flags.relayer || args.relayer || fromConfigSafe('relayer');
     this.to = flags.to || args.to;
 
-    if (HdWallet.isValidMnemonic(this.secret)) {
-      const hdWallet = new HdWallet(this.secret, '');
+    if (HdWallet.isValidMnemonic(this.ethSecret)) {
+      const hdWallet = new HdWallet(this.ethSecret, '');
       const wallet = hdWallet.generateKeyPair(DomainEthereum.Instance(), 0);
-      this.secret = wallet.privateKey;
+      this.ethSecret = wallet.privateKey;
 
       this.ethAddress = wallet.address;
+    } else {
+      this.ethAddress = ethUtils.getEthereumAddress(this.ethSecret);
     }
 
     // ethAccount:
@@ -190,8 +193,8 @@ export default class Base extends Command {
 
     this.zp = new ZeroPoolNetwork(
       this.contractAddress,
-      this.secret,
-      this.mnemonic,
+      this.ethSecret,
+      this.zpMnemonic,
       this.rpcEndpoint
     );
 
