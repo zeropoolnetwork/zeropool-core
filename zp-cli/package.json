@@ -13,7 +13,7 @@
     "deposit": "node $NODE_DEBUG_OPTION --experimental-worker ./bin/run deposit",
     "balance": "node $NODE_DEBUG_OPTION --experimental-worker ./bin/run balance",
     "withdraw": "node $NODE_DEBUG_OPTION --experimental-worker ./bin/run withdraw",
-    "transfer": "node $NODE_DEBUG_OPTION --experimental-worker ./bin/run transfer -v 0.001 -t 0x2409eecff9520d71c36c4dbd3a8cc63d0b55320e158ca92a32143275173a9991"
+    "transfer": "node $NODE_DEBUG_OPTION --experimental-worker ./bin/run transfer -v 0.00001 -t 0x2e6d6441261c12f37c8f8cb688754cd7e70a68b08b47246456784c107ff5a454"
   },
   "bin": {
     "zp": "./bin/run"

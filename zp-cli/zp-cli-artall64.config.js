@@ -1,8 +1,8 @@
 module.exports = {
-  contract: '0x04f4D781Ba5F29603595a8f23c7E9aA00FBF3F86',
-  mnemonic: 'salute grocery glass box cloth pull wedding measure bright tilt shield over',
+  contract: '0xBC3b9990CE2F72a97A82913894392CadA8d9558B',
+  mnemonic: 'session oppose search lunch cave enact quote wire debate knee noble drama exit way scene',
   value: 0.1,
   asset: 'ETH',
-  rpc: 'http://127.0.0.1:8545',
+  rpc: 'https://rinkeby.infura.io/v3/716d959325724d16a970e53a6bc28dc8',
   relayer: 'http://127.0.0.1:3000'
 }
