@@ -2,6 +2,11 @@ import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { ElectronService } from "../core/services";
 import { BehaviorSubject } from "rxjs";
 
+
+export function toShortAddress(address: string): string {
+  return address.substring(0, 8) + '...' + address.substring(address.length - 8, address.length);
+}
+
 @Component({
   selector: 'app-home',
   templateUrl: './home.component.html',
@@ -9,23 +14,26 @@ import { BehaviorSubject } from "rxjs";
 })
 export class HomeComponent implements OnInit {
 
-  zpAddress = '';
+  zpFullAddress = '';
+  zpShortAddress = '';
   zpBalance = 0;
   //zpBalance$ = new BehaviorSubject(0);
-  constructor(private electronService: ElectronService, private cd: ChangeDetectorRef) { }
+  constructor(private electronService: ElectronService, private cd: ChangeDetectorRef) {
+    //this.refreshBalance();
+  }
 
   ngOnInit(): void {
 
     // Fetch address from electron
     this.electronService.ipcRenderer.send('get-zp-address');
     this.electronService.ipcRenderer.on('zp-address', (event, arg) => {
-      this.zpAddress = arg;
+      this.zpFullAddress = arg;
+      this.zpShortAddress = toShortAddress(arg);
       this.cd.detectChanges();
     })
   }
 
-  getBalance() {
-
+  refreshBalance() {
     // Fetch balance from electron
     this.electronService.ipcRenderer.send('get-balance');
     this.electronService.ipcRenderer.on('balance', (event, arg) => {
@@ -35,5 +43,17 @@ export class HomeComponent implements OnInit {
       console.log('done');
       this.cd.detectChanges();
     })
+  }
+
+  showDepositFrom() {
+
+  }
+
+  showSendFrom() {
+
+  }
+
+  showWithdrawFrom() {
+
   }
 }
