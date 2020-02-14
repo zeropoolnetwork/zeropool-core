@@ -1,0 +1,24 @@
+<div class="container">
+
+  <div class="title" style="padding: 10px">Enter amount in zpETH</div>
+  <input type="text" class="input-block-level" placeholder="0.0 zpETH"/>
+
+  <ng-container *ngIf="zpEthAmount">
+    <div class="title" style="padding: 10px; font-size: 0.7em">Available {{zpEthAmount}} zpETH</div>
+  </ng-container>
+
+  <br>
+  <br>
+  <div class="title" style="padding: 10px">Receiver Address</div>
+  <input type="text" class="input-block-level" placeholder="Enter zeropool address here"/>
+  <br>
+  <br>
+  <br>
+
+  <div class="buttons_container">
+    <button (click)="onCancelClick()" class="back">Back</button>
+    <button (click)="onDepositClick()">Deposit</button>
+  </div>
+
+
+</div>

@@ -3,14 +3,14 @@ import { LoadersCSS } from 'ngx-loaders-css';
 
 
 @Component({
-  selector: 'app-deposit',
-  templateUrl: './deposit.component.html',
-  styleUrls: ['./deposit.component.scss']
+  selector: 'app-send',
+  templateUrl: './send.component.html',
+  styleUrls: ['./send.component.scss']
 })
-export class DepositComponent {
+export class SendComponent {
 
   @Input()
-  ethAmount: number;
+  zpEthAmount: number;
 
   @Output()
   backClick = new EventEmitter<boolean>();

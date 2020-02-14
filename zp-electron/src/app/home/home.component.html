@@ -53,7 +53,7 @@
   </ng-container>
 
   <ng-container *ngIf="activeForm === 'send' ">
-    <app-deposit [ethAmount]="0.45" (backClick)="showMainForm()"></app-deposit>
+    <app-send [zpEthAmount]="0.020" (backClick)="showMainForm()"></app-send>
   </ng-container>
 
   <ng-container *ngIf="activeForm === 'withdraw' ">
