@@ -12,7 +12,7 @@ const debug = require('debug')('zp-cli:base');
 
 type ConfigType = {
   contact?: string;
-  mnemonic?: string;
+  secret?: string;
   value?: string;
   asset?: string;
   rpc: string;
@@ -48,7 +48,12 @@ export default class Base extends Command {
     // flag with a value (-m, --mnemonic=VALUE)
     mnemonic: flags.string({
       char: 'm',
-      description: 'Mnemonic that is used for both Ethereum and ZeroPool address generation',
+      description: 'Mnemonic that is used for ZeroPool address generation',
+    }),
+
+    secret: flags.string({
+      char: 's',
+      description: 'Mnemonic or Private Key that is used for Ethereum address generation',
     }),
 
     // flag with a value (-z, --contract=VALUE)
@@ -84,7 +89,11 @@ export default class Base extends Command {
     },
     {
       name: 'mnemonic',
-      description: 'Mnemonic that wallet use for both Ethereum and ZeroPool',
+      description: 'Mnemonic that is used for ZeroPool address generation',
+    },
+    {
+      name: 'secret',
+      description: 'Mnemonic or Private Key that is used for Ethereum address generation',
     },
     {
       name: 'asset',
@@ -114,6 +123,7 @@ export default class Base extends Command {
 
   // Mnemonic that we use for both ZeroPool and Ethereum
   mnemonic = '';
+  secret = '';
 
   amount = 0;
 
@@ -126,7 +136,7 @@ export default class Base extends Command {
   // @ts-ignore
   wallet: HdWallet;
   // @ts-ignore
-  ethAccount: Keys;
+  ethAddress: string;
   // @ts-ignore
   assetAddress: string;
   // @ts-ignore
@@ -153,17 +163,23 @@ export default class Base extends Command {
     const config = await this.loadConfig(pathToConfig);
     const fromConfigSafe = (argName: string) => config && config[argName];
 
-    this.contractAddress = flags.contract || args.contract || fromConfigSafe('contract')
-    this.mnemonic = flags.mnemonic || args.mnemonic || fromConfigSafe('mnemonic')
-    this.amount = flags.value || args.value || fromConfigSafe('value')
-    this.asset = flags.asset || args.asset || fromConfigSafe('asset')
-    this.rpcEndpoint = flags.rpc || args.rpc || fromConfigSafe('rpc')
-    this.relayerEndpoint = flags.relayer || args.relayer || fromConfigSafe('relayer')
+    this.contractAddress = flags.contract || args.contract || fromConfigSafe('contract');
+    this.secret = flags.secret || args.secret || fromConfigSafe('secret');
+    this.mnemonic = flags.mnemonic || args.mnemonic || fromConfigSafe('mnemonic');
+    this.amount = flags.value || args.value || fromConfigSafe('value');
+    this.asset = flags.asset || args.asset || fromConfigSafe('asset');
+    this.rpcEndpoint = flags.rpc || args.rpc || fromConfigSafe('rpc');
+    this.relayerEndpoint = flags.relayer || args.relayer || fromConfigSafe('relayer');
     this.to = flags.to || args.to;
 
-    this.wallet = new HdWallet(this.mnemonic, '');
+    if (HdWallet.isValidMnemonic(this.secret)) {
+      const hdWallet = new HdWallet(this.secret, '');
+      const wallet = hdWallet.generateKeyPair(DomainEthereum.Instance(), 0);
+      this.secret = wallet.privateKey;
 
-    this.ethAccount = this.wallet.generateKeyPair(DomainEthereum.Instance(), 0);
+      this.ethAddress = wallet.address;
+    }
+
     // ethAccount:
     // {
     //    privateKey: string;
@@ -174,14 +190,14 @@ export default class Base extends Command {
 
     this.zp = new ZeroPoolNetwork(
       this.contractAddress,
-      this.ethAccount.privateKey,
+      this.secret,
       this.mnemonic,
       this.rpcEndpoint
     );
 
     this.log('-------------------------------------------------');
     this.log(`ZeroPool contract address = ${this.contractAddress}`);
-    this.log(`Your eth address = ${this.ethAccount.address}`);
+    this.log(`Your eth address = ${this.ethAddress}`);
     this.log(`Your zp address = ${"0x" + this.zp.zpKeyPair.publicKey.toString(16)}`);
     this.log('-------------------------------------------------');
 
