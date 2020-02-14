@@ -1,0 +1,62 @@
+.container {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+
+  font-family: "Roboto";
+  background: #000000;
+  //background: url(../../assets/background.jpg) no-repeat center fixed;
+
+  -webkit-background-size: cover; /* pour anciens Chrome et Safari */
+  background-size: cover; /* version standardisée */
+
+  div, p {
+    color: white;
+    margin: 0;
+  }
+
+  .balance {
+    font-size: 4em;
+  }
+}
+
+.input-block-level {
+  border: none;
+  font-size: 1.2em;
+  padding: 10px;
+  background-color: #d1d1d1;
+
+  //
+  width: 290px;
+  border-radius: 5px;
+}
+
+.buttons_container {
+  display: flex;
+  flex-direction: row;
+
+  button {
+    text-transform: uppercase;
+    font-size: 1em;
+    margin: 5px;
+    height: 40px;
+    width: 120px;
+    border-radius: 5px;
+    border: none;
+    outline: none;
+  }
+
+  button.back {
+    border: 1px solid white;
+    color: white;
+    background: black;
+  }
+
+  .title {
+    color: white;
+    margin: 0;
+    padding: 50px 20px;
+  }
+}
