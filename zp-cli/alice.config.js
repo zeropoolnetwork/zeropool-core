@@ -1,5 +1,5 @@
 module.exports = {
-  contract: '0xBC3b9990CE2F72a97A82913894392CadA8d9558B',
+  contract: '0xcc36cd2677b0f3ce67323f87819672b3bf3d68d1',
   // zeropool mnemonic
   zpMnemonic: 'salute grocery glass box cloth pull wedding measure bright tilt shield over',
   // ethereum private key or mnemonic
