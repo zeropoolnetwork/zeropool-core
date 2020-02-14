@@ -4,7 +4,8 @@
   "description": "",
   "main": "zero-pool-network.js",
   "scripts": {
-    "start": "node --experimental-worker test.js"
+    "start": "node --experimental-worker test.js",
+    "browserify": "browserify --standalone ZeroPoolNetwork zero-pool-network.js -o build/zero-pool-network.js --exclude worker_threads"
   },
   "author": "ZeroPool (kk)",
   "license": "ISC",
