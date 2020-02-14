@@ -181,6 +181,7 @@ export default class Base extends Command {
 
     this.log('-------------------------------------------------');
     this.log(`ZeroPool contract address = ${this.contractAddress}`);
+    this.log(`Your eth address = ${this.ethAccount.address}`);
     this.log(`Your zp address = ${"0x" + this.zp.zpKeyPair.publicKey.toString(16)}`);
     this.log('-------------------------------------------------');
 
