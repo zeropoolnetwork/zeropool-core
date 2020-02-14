@@ -1,0 +1,16 @@
+<div class="container">
+  <!--  <h1 class="title">-->
+  <!--    {{ 'PAGES.HOME.TITLE' | translate }}-->
+  <!--  </h1>-->
+  <div class="title">{{zpAddress}}</div>
+  <h1 class="title">
+    YOUR BALANCE IS:
+  </h1>
+  <h1 class="title">
+    {{zpBalance}} zpETH
+  </h1>
+
+  <button (click)="getBalance()">GET BALANCE</button>
+  <button>GET TX HISTORY</button>
+
+</div>
