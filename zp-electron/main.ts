@@ -4,23 +4,16 @@ import * as url from 'url';
 
 import * as ZeroPoolNetwork from '../lib/zero-pool-network';
 import * as ethUtils from '../lib/ethereum/ethereum';
-import { DomainEthereum, HdWallet, Keys } from "@buttonwallet/blockchain-ts-wallet-core";
+import { DomainEthereum, HdWallet } from "@buttonwallet/blockchain-ts-wallet-core";
 
 const config = {
   contract: '0xBC3b9990CE2F72a97A82913894392CadA8d9558B',
   mnemonic: 'session oppose search lunch cave enact quote wire debate knee noble drama exit way scene',
-  //
-  ethSecret: '0xf4c3be1dfb4f1f7a6ac4f65167aeccacb1d2e820fadfb386f536c65a0786ffff',
-  value: 0.1,
+  ethSecret: '0x4ba3ab0d4ac147ae88674bd03529f311fc54e805200d7c15b00f887e75c4c18e',
   asset: 'ETH',
   rpc: 'https://rinkeby.infura.io/v3/716d959325724d16a970e53a6bc28dc8',
   relayer: 'http://134.209.172.229:3000'
-}
-
-function factorial(n) {
-  return n ? n * factorial(n - 1) : 1;
-}
-
+};
 
 const zp = new ZeroPoolNetwork(
   config.contract,
@@ -87,14 +80,20 @@ function createWindow(): BrowserWindow {
   }
 
   const ipc = require('electron').ipcMain;
-  ipc.on('get-balance', async (event, arg) => {
+  ipc.on('get-zp-balance', async (event, arg) => {
 
     const balancePerAsset = await zp.getBalance();
     let balance = 0;
     if (balancePerAsset['0x0']) {
       balance = ethUtils.fw(balancePerAsset['0x0']);
     }
-    win.webContents.send('balance', balance);
+    win.webContents.send('zp-balance', balance);
+  });
+
+  ipc.on('get-eth-balance', async (event, arg) => {
+    const balanceInWei = await zp.ZeroPool.web3Ethereum.getBalance(ethAddress);
+    const balance = ethUtils.fw(balanceInWei);
+    win.webContents.send('eth-balance', balance);
   });
 
   ipc.on('get-zp-address', async (event, arg) => {

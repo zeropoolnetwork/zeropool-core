@@ -1,11 +1,11 @@
 <div class="header_container" (click)="switchAddress()">
   <ng-container *ngIf="showZpAddress">
-    <p class="address">ZP ADDRESS</p>
+    <p class="address" style="cursor: pointer">ZP ADDRESS</p>
     {{zpShortAddress}}
   </ng-container>
 
   <ng-container *ngIf="!showZpAddress">
-    <p class="address">ETH ADDRESS</p>
+    <p class="address" style="cursor: pointer">ETH ADDRESS</p>
     {{ethShortAddress}}
   </ng-container>
 </div>
@@ -16,20 +16,20 @@
 
   <ng-container *ngIf="activeForm === 'main' ">
 
-    <ng-container *ngIf="zpBalanceRefreshingNow">
+    <ng-container *ngIf="balanceRefreshingNow">
       <div style="margin: 20px">
         <loaders-css [loader]="loader" [bgColor]="bgColor" [color]="color" [scale]="1"></loaders-css>
       </div>
       <p>Decoding UTXOs</p>
     </ng-container>
 
-    <ng-container *ngIf="!zpBalanceRefreshingNow && zpBalanceReady">
-      <p class="balance" (click)="refreshZpBalance()">{{zpBalance}}</p>
+    <ng-container *ngIf="!balanceRefreshingNow && balanceReady">
+      <p class="balance" (click)="refreshZpBalance()">{{balance}}</p>
       <p>zpETH</p>
     </ng-container>
 
-    <ng-container *ngIf="!zpBalanceRefreshingNow && !zpBalanceReady">
-      <p class="balance" (click)="refreshZpBalance()">-/-</p>
+    <ng-container *ngIf="balanceRefreshingNow && !balanceReady">
+      <p class="balance" (click)="refreshZpBalance()"></p>
     </ng-container>
 
     <br>

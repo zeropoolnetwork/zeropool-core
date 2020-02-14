@@ -15,14 +15,14 @@ export function toShortAddress(address: string): string {
 })
 export class HomeComponent implements OnInit {
 
-  zpBalanceRefreshingNow: boolean = true;
-  zpBalanceReady: boolean = false;
+  balanceRefreshingNow: boolean = true;
+  balanceReady: boolean = false;
 
   showZpAddress = true;
 
   zpFullAddress = '';
   zpShortAddress = '';
-  zpBalance = '0';
+  balance = '0';
 
   //zpBalance$ = new BehaviorSubject(0);
   ethFullAddress = '';
@@ -38,8 +38,7 @@ export class HomeComponent implements OnInit {
 
   ngOnInit(): void {
     this.fetchAddresses();
-    // this.refreshZpBalance();
-
+    this.refreshZpBalance();
     // Fetch address from electron
   }
 
@@ -49,7 +48,7 @@ export class HomeComponent implements OnInit {
       this.zpFullAddress = arg;
       this.zpShortAddress = toShortAddress(arg);
       this.cd.detectChanges();
-    })
+    });
 
     this.electronService.ipcRenderer.send('get-eth-address');
     this.electronService.ipcRenderer.on('eth-address', (event, arg) => {
@@ -72,19 +71,42 @@ export class HomeComponent implements OnInit {
     console.log('refreshZpBalance');
 
     // Fetch balance from electron
-    this.electronService.ipcRenderer.send('get-balance');
-    this.zpBalanceRefreshingNow = true;
-    this.zpBalanceReady = false;
+    this.electronService.ipcRenderer.send('get-zp-balance');
+    this.balanceRefreshingNow = true;
+    this.balanceReady = false;
 
     this.cd.detectChanges();
 
-    this.electronService.ipcRenderer.on('balance', (event, arg) => {
+    this.electronService.ipcRenderer.on('zp-balance', (event, arg) => {
       // debugger
-      this.zpBalance = (+arg).toFixed(5);
+      this.balance = (+arg).toFixed(5);
+      console.log(this.balance)
+      // this.zpBalance$.next(arg);
+      this.balanceRefreshingNow = false;
+      this.balanceReady = true;
+
+      console.log('done');
+      this.cd.detectChanges();
+    })
+  }
+
+  refreshEthBalance(): void {
+    console.log('refreshEthBalance');
+
+    // Fetch balance from electron
+    this.electronService.ipcRenderer.send('get-eth-balance');
+    this.balanceRefreshingNow = true;
+    this.balanceReady = false;
+
+    this.cd.detectChanges();
+
+    this.electronService.ipcRenderer.on('eth-balance', (event, arg) => {
+      // debugger
+      this.balance = arg.toFixed(5);
 
       // this.zpBalance$.next(arg);
-      this.zpBalanceRefreshingNow = false;
-      this.zpBalanceReady = true;
+      this.balanceRefreshingNow = false;
+      this.balanceReady = true;
 
       console.log('done');
       this.cd.detectChanges();
@@ -105,6 +127,11 @@ export class HomeComponent implements OnInit {
 
   switchAddress() {
     this.showZpAddress = !this.showZpAddress;
+    if (this.showZpAddress) {
+      this.refreshZpBalance();
+    } else {
+      this.refreshEthBalance();
+    }
   }
 
   showMainForm() {
