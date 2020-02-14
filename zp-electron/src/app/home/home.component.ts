@@ -38,7 +38,7 @@ export class HomeComponent implements OnInit {
 
   ngOnInit(): void {
     this.fetchAddresses();
-    this.refreshZpBalance();
+    // this.refreshZpBalance();
 
     // Fetch address from electron
   }
@@ -66,6 +66,7 @@ export class HomeComponent implements OnInit {
   //
   //   this.cd.detectChanges();
   // }
+  activeForm: 'main' | 'deposit' | 'send' |'withdraw' = 'main';
 
   refreshZpBalance(): void {
     console.log('refreshZpBalance');
@@ -91,18 +92,22 @@ export class HomeComponent implements OnInit {
   }
 
   showDepositFrom() {
-
+    this.activeForm = 'deposit';
   }
 
   showSendFrom() {
-
+    this.activeForm = 'send';
   }
 
   showWithdrawFrom() {
-
+    this.activeForm = 'withdraw';
   }
 
   switchAddress() {
     this.showZpAddress = !this.showZpAddress;
+  }
+
+  showMainForm() {
+    this.activeForm = 'main';
   }
 }

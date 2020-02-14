@@ -12,37 +12,52 @@
 
 
 <div class="container">
-  <!--  <h1 class="title">-->
-  <!--    {{ 'PAGES.HOME.TITLE' | translate }}-->
-  <!--  </h1>-->
-  <!--  <div class="title">{{zpShortAddress}}</div>-->
 
-  <ng-container *ngIf="zpBalanceRefreshingNow">
-    <div style="margin: 20px">
-      <loaders-css [loader]="loader" [bgColor]="bgColor" [color]="color" [scale]="1"></loaders-css>
+
+  <ng-container *ngIf="activeForm === 'main' ">
+
+    <ng-container *ngIf="zpBalanceRefreshingNow">
+      <div style="margin: 20px">
+        <loaders-css [loader]="loader" [bgColor]="bgColor" [color]="color" [scale]="1"></loaders-css>
+      </div>
+      <p>Decoding UTXOs</p>
+    </ng-container>
+
+    <ng-container *ngIf="!zpBalanceRefreshingNow && zpBalanceReady">
+      <p class="balance" (click)="refreshZpBalance()">{{zpBalance}}</p>
+      <p>zpETH</p>
+    </ng-container>
+
+    <ng-container *ngIf="!zpBalanceRefreshingNow && !zpBalanceReady">
+      <p class="balance" (click)="refreshZpBalance()">-/-</p>
+    </ng-container>
+
+    <br>
+    <br>
+
+    <div class="buttons_container">
+      <button (click)="showDepositFrom()">Deposit</button>
+      <button (click)="showSendFrom()">Send</button>
+      <button (click)="showWithdrawFrom()">Withdraw</button>
     </div>
+
+
+    <br>
+    <div class="title">Transaction history</div>
+
   </ng-container>
 
-  <ng-container *ngIf="!zpBalanceRefreshingNow && zpBalanceReady">
-    <p class="balance" (click)="refreshZpBalance()">{{zpBalance}}</p>
+
+  <ng-container *ngIf="activeForm === 'deposit' ">
+    <app-deposit [ethAmount]="0.45" (backClick)="showMainForm()"></app-deposit>
   </ng-container>
 
-  <ng-container *ngIf="!zpBalanceRefreshingNow && !zpBalanceReady">
-    <p class="balance" (click)="refreshZpBalance()">-/-</p>
+  <ng-container *ngIf="activeForm === 'send' ">
+    <app-deposit [ethAmount]="0.45" (backClick)="showMainForm()"></app-deposit>
   </ng-container>
 
-  <p>zpETH</p>
-  <br>
-  <br>
-
-
-  <div class="buttons_container">
-    <button (click)="showDepositFrom()">Deposit</button>
-    <button (click)="showSendFrom()">Send</button>
-    <button (click)="showWithdrawFrom()">Withdraw</button>
-  </div>
-
-  <br>
-  <div class="title">Transaction history</div>
+  <ng-container *ngIf="activeForm === 'withdraw' ">
+    <app-deposit [ethAmount]="0.45" (backClick)="showMainForm()"></app-deposit>
+  </ng-container>
 
 </div>

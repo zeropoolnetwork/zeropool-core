@@ -1,0 +1,20 @@
+<div class="container">
+
+  <div class="title" style="padding: 10px">Enter amount in ETH</div>
+
+  <input type="text" class="input-block-level" placeholder="0.0 ETH" style="width:290px;border-radius:5px;border:none"/>
+
+  <ng-container *ngIf="ethAmount">
+    <div class="title" style="padding: 10px; font-size: 0.7em">Available {{ethAmount}} ETH</div>
+  </ng-container>
+  <ng-container *ngIf="!ethAmount">
+    <br>
+  </ng-container>
+
+  <div class="buttons_container">
+    <button (click)="onCancelClick()" class="back">Back</button>
+    <button (click)="onDepositClick()">Deposit</button>
+  </div>
+
+
+</div>
