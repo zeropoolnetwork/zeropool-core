@@ -3,13 +3,14 @@
   {{zpShortAddress}}
 </div>
 
+
 <div class="container">
   <!--  <h1 class="title">-->
   <!--    {{ 'PAGES.HOME.TITLE' | translate }}-->
   <!--  </h1>-->
   <!--  <div class="title">{{zpShortAddress}}</div>-->
 
-  <p class="balance">{{zpBalance}}</p>
+  <p class="balance" (click)="refreshBalance()">{{zpBalance}}</p>
   <p>zpETH</p>
   <br>
   <br>

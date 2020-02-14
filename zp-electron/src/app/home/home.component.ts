@@ -16,15 +16,20 @@ export class HomeComponent implements OnInit {
 
   zpFullAddress = '';
   zpShortAddress = '';
-  zpBalance = 0;
+  zpBalance = '0';
   //zpBalance$ = new BehaviorSubject(0);
   constructor(private electronService: ElectronService, private cd: ChangeDetectorRef) {
-    //this.refreshBalance();
+
   }
 
   ngOnInit(): void {
+    this.fetchAddress();
+    // this.refreshBalance();
 
     // Fetch address from electron
+  }
+
+  fetchAddress() {
     this.electronService.ipcRenderer.send('get-zp-address');
     this.electronService.ipcRenderer.on('zp-address', (event, arg) => {
       this.zpFullAddress = arg;
@@ -38,7 +43,7 @@ export class HomeComponent implements OnInit {
     this.electronService.ipcRenderer.send('get-balance');
     this.electronService.ipcRenderer.on('balance', (event, arg) => {
       // debugger
-      this.zpBalance = arg;
+      this.zpBalance = (+arg).toFixed(5);
       // this.zpBalance$.next(arg);
       console.log('done');
       this.cd.detectChanges();
