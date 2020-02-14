@@ -4,34 +4,51 @@ import * as url from 'url';
 
 import * as ZeroPoolNetwork from '../lib/zero-pool-network';
 import * as ethUtils from '../lib/ethereum/ethereum';
-// import { DomainEthereum, HdWallet, Keys } from "@buttonwallet/blockchain-ts-wallet-core";
+import { DomainEthereum, HdWallet, Keys } from "@buttonwallet/blockchain-ts-wallet-core";
 
 const config = {
   contract: '0xBC3b9990CE2F72a97A82913894392CadA8d9558B',
   mnemonic: 'session oppose search lunch cave enact quote wire debate knee noble drama exit way scene',
-  secret: '0xf4c3be1dfb4f1f7a6ac4f65167aeccacb1d2e820fadfb386f536c65a0786ffff',
+  //
+  ethSecret: '0xf4c3be1dfb4f1f7a6ac4f65167aeccacb1d2e820fadfb386f536c65a0786ffff',
   value: 0.1,
   asset: 'ETH',
   rpc: 'https://rinkeby.infura.io/v3/716d959325724d16a970e53a6bc28dc8',
   relayer: 'http://134.209.172.229:3000'
 }
 
+function factorial(n) {
+  return n ? n * factorial(n - 1) : 1;
+}
+
+
 const zp = new ZeroPoolNetwork(
   config.contract,
-  config.secret,
+  config.ethSecret,
   config.mnemonic,
   config.rpc
 );
 
-console.log('Hi:', zp);
+let ethAddress = '';
+
+// Convert ethAddress to private key
+if (HdWallet.isValidMnemonic(config.ethSecret)) {
+  const hdWallet = new HdWallet(config.ethSecret, '');
+  const wallet = hdWallet.generateKeyPair(DomainEthereum.Instance(), 0);
+  config.ethSecret = wallet.privateKey;
+  ethAddress = wallet.address;
+} else {
+  ethAddress = ethUtils.getEthereumAddress(config.ethSecret);
+}
+
 console.log(`ZeroPool contract address = ${config.contract}`);
-// console.log(`Your eth address = ${this.ethAddress}`);
+console.log(`Your eth address = ${ethAddress}`);
 console.log(`Your zp address = ${"0x" + zp.zpKeyPair.publicKey.toString(16)}`);
 
 
 let win: BrowserWindow = null;
 const args = process.argv.slice(1),
-    serve = args.some(val => val === '--serve');
+  serve = args.some(val => val === '--serve');
 
 function createWindow(): BrowserWindow {
 
@@ -71,13 +88,12 @@ function createWindow(): BrowserWindow {
 
   const ipc = require('electron').ipcMain;
   ipc.on('get-balance', async (event, arg) => {
-    const balancePerAsset = await zp.getBalance();
 
+    const balancePerAsset = await zp.getBalance();
     let balance = 0;
-    if (balancePerAsset['0x0']){
+    if (balancePerAsset['0x0']) {
       balance = ethUtils.fw(balancePerAsset['0x0']);
     }
-
     win.webContents.send('balance', balance);
   });
 
@@ -85,6 +101,11 @@ function createWindow(): BrowserWindow {
     //const balance = await zp.getBalance()
     const zpAddress = `${"0x" + zp.zpKeyPair.publicKey.toString(16)}`;
     win.webContents.send('zp-address', zpAddress);
+  });
+
+  ipc.on('get-eth-address', async (event, arg) => {
+    //const balance = await zp.getBalance()
+    win.webContents.send('eth-address', ethAddress);
   });
 
   // Emitted when the window is closed.
