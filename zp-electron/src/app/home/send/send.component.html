@@ -3,29 +3,41 @@
   <div class="title" style="padding: 10px">Enter amount in zpETH</div>
   <input type="text" class="input-block-level" placeholder="0.0 zpETH"/>
 
-  <ng-container *ngIf="zpEthAmount">
-    <div class="title" style="padding: 10px; font-size: 0.7em">Available {{zpEthAmount}} zpETH</div>
+  <ng-container *ngIf="!isDone">
+
+    <ng-container *ngIf="zpEthAmount">
+      <div class="title" style="padding: 10px; font-size: 0.7em">Available {{zpEthAmount}} zpETH</div>
+    </ng-container>
+
+    <br>
+    <br>
+    <div class="title" style="padding: 10px">Receiver Address</div>
+    <input type="text" class="input-block-level" placeholder="Enter zeropool address here"/>
+    <br>
+    <br>
+    <br>
+
+    <ng-container *ngIf="!showSpinner">
+      <div class="buttons_container">
+        <button (click)="onCancelClick()" class="back">Back</button>
+        <button (click)="onSendClick()">SEND</button>
+      </div>
+    </ng-container>
+
+    <ng-container *ngIf="showSpinner">
+      <loaders-css [loader]="loader" [bgColor]="bgColor" [color]="color" [scale]="1"></loaders-css>
+      <div class="buttons_container" style="margin-top: 20px">
+        <button (click)="onCancelClick()" class="back">Back</button>
+      </div>
+    </ng-container>
+
   </ng-container>
 
-  <br>
-  <br>
-  <div class="title" style="padding: 10px">Receiver Address</div>
-  <input type="text" class="input-block-level" placeholder="Enter zeropool address here"/>
-  <br>
-  <br>
-  <br>
 
-  <ng-container *ngIf="!showSpinner">
-    <div class="buttons_container">
-      <button (click)="onCancelClick()" class="back">Back</button>
-      <button (click)="onSendClick()">SEND</button>
-    </div>
-  </ng-container>
-
-  <ng-container *ngIf="showSpinner">
-    <loaders-css [loader]="loader" [bgColor]="bgColor" [color]="color" [scale]="1"></loaders-css>
+  <ng-container *ngIf="isDone">
+    <div class="title" style="padding: 10px">Send Successful</div>
     <div class="buttons_container" style="margin-top: 20px">
-      <button (click)="onCancelClick()" class="back">Back</button>
+      <button (click)="onCancelClick()" class="back">BACK</button>
     </div>
   </ng-container>
 

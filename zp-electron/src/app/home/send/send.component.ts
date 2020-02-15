@@ -16,6 +16,7 @@ export class SendComponent {
   @Output()
   backClick = new EventEmitter<boolean>();
 
+  isDone = false;
   showSpinner = false;
   bgColor = 'black';
   color = 'rgba(100, 100, 100, 0.5)';

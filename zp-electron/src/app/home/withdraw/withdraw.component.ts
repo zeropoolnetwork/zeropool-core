@@ -20,6 +20,7 @@ export class WithdrawComponent {
   bgColor = 'black';
   color = 'rgba(100, 100, 100, 0.5)';
   loader: LoadersCSS = 'pacman';
+  private isDone = false;
 
   constructor(private electronService: ElectronService, private cd: ChangeDetectorRef) {
   }
@@ -30,6 +31,7 @@ export class WithdrawComponent {
 
   onWithdrawClick() {
     this.showSpinner = true;
+    this.isDone = true;
     this.cd.detectChanges();
   }
 }
