@@ -24,7 +24,7 @@
     </ng-container>
 
     <ng-container *ngIf="!balanceRefreshingNow && balanceReady">
-      <p class="balance" (click)="refreshZpBalance()">{{balance}}</p>
+      <p class="balance" (click)="refreshZpBalance()">{{showZpAddress ? zpBalance : ethBalance}}</p>
       <p>zpETH</p>
     </ng-container>
 
@@ -49,7 +49,7 @@
 
 
   <ng-container *ngIf="activeForm === 'deposit' ">
-    <app-deposit [availableEthAmount]="0.43" (backClick)="showMainForm()"></app-deposit>
+    <app-deposit [availableEthAmount]="ethBalance" (backClick)="showMainForm()"></app-deposit>
   </ng-container>
 
   <ng-container *ngIf="activeForm === 'send' ">

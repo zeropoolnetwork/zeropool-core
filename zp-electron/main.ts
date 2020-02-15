@@ -170,15 +170,8 @@ function createWindow(): BrowserWindow {
     // const balance = await zp.getBalance()
     console.log(ETH_ASSET_ADDRESS, ethUtils.tw(amount).toNumber())
     try {
-      console.log('1-------------------');
-      const blockItem = await zp.prepareWithdraw(ETH_ASSET_ADDRESS, 1)
-      console.log(blockItem)
-      console.log('2-------------------');
-
-      const res = await axios.post(`${config.relayer}/tx`, blockItem);
-      console.log('2.1-------------------');
-      win.webContents.send('deposit-hash', res.data.transactionHash);
-      console.log('3-------------------');
+      const std_out = await deposit(amount);
+      win.webContents.send('deposit-hash', std_out);
     } catch (e) {
       console.log(e)
     }
