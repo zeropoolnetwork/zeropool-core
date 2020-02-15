@@ -22,7 +22,8 @@ export class HomeComponent implements OnInit {
 
   zpFullAddress = '';
   zpShortAddress = '';
-  balance = '0';
+  zpBalance = '0';
+  ethBalance = '0';
 
   //zpBalance$ = new BehaviorSubject(0);
   ethFullAddress = '';
@@ -36,9 +37,10 @@ export class HomeComponent implements OnInit {
     //
   }
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     this.fetchAddresses();
-    this.refreshZpBalance();
+    await this.refreshZpBalance();
+    await this.refreshEthBalance();
     // Fetch address from electron
   }
 
@@ -65,9 +67,9 @@ export class HomeComponent implements OnInit {
   //
   //   this.cd.detectChanges();
   // }
-  activeForm: 'main' | 'deposit' | 'send' |'withdraw' = 'main';
+  activeForm: 'main' | 'deposit' | 'send' | 'withdraw' = 'main';
 
-  refreshZpBalance(): void {
+  refreshZpBalance(): Promise<void> {
     console.log('refreshZpBalance');
 
     // Fetch balance from electron
@@ -77,20 +79,24 @@ export class HomeComponent implements OnInit {
 
     this.cd.detectChanges();
 
-    this.electronService.ipcRenderer.on('zp-balance', (event, arg) => {
-      // debugger
-      this.balance = (+arg).toFixed(5);
-      console.log(this.balance)
-      // this.zpBalance$.next(arg);
-      this.balanceRefreshingNow = false;
-      this.balanceReady = true;
+    return new Promise((resolve) => {
+      // todo: get also an error
+      this.electronService.ipcRenderer.on('zp-balance', (event, arg) => {
+        // debugger
+        this.zpBalance = (+arg).toFixed(5);
+        console.log(this.zpBalance);
+        // this.zpBalance$.next(arg);
+        this.balanceRefreshingNow = false;
+        this.balanceReady = true;
 
-      console.log('done');
-      this.cd.detectChanges();
-    })
+        console.log('done');
+        this.cd.detectChanges();
+        resolve();
+      })
+    });
   }
 
-  refreshEthBalance(): void {
+  refreshEthBalance(): Promise<void> {
     console.log('refreshEthBalance');
 
     // Fetch balance from electron
@@ -100,17 +106,21 @@ export class HomeComponent implements OnInit {
 
     this.cd.detectChanges();
 
-    this.electronService.ipcRenderer.on('eth-balance', (event, arg) => {
-      // debugger
-      this.balance = arg.toFixed(5);
+    return new Promise((resolve) => {
+      // todo: get also an error
+      this.electronService.ipcRenderer.on('eth-balance', (event, arg) => {
+        // debugger
+        this.ethBalance = arg.toFixed(5);
 
-      // this.zpBalance$.next(arg);
-      this.balanceRefreshingNow = false;
-      this.balanceReady = true;
+        // this.zpBalance$.next(arg);
+        this.balanceRefreshingNow = false;
+        this.balanceReady = true;
 
-      console.log('done');
-      this.cd.detectChanges();
-    })
+        console.log('done');
+        this.cd.detectChanges();
+        resolve();
+      })
+    });
   }
 
   showDepositFrom() {
