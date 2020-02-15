@@ -125,14 +125,17 @@ export class HomeComponent implements OnInit {
 
   showDepositFrom() {
     this.activeForm = 'deposit';
+    this.cd.detectChanges();
   }
 
   showSendFrom() {
     this.activeForm = 'send';
+    this.cd.detectChanges();
   }
 
   showWithdrawFrom() {
     this.activeForm = 'withdraw';
+    this.cd.detectChanges();
   }
 
   switchAddress() {

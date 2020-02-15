@@ -108,7 +108,7 @@ function createWindow(): BrowserWindow {
     y: 0,
     // width: size.width,
     // height: size.height,
-    width: 950,
+    width: 650,
     height: 600,
     webPreferences: {
       nodeIntegration: true,
@@ -130,7 +130,7 @@ function createWindow(): BrowserWindow {
   }
 
   if (serve) {
-    win.webContents.openDevTools();
+    // win.webContents.openDevTools();
   }
 
   const ipc = require('electron').ipcMain;
