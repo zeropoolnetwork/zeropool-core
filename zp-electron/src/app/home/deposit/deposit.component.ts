@@ -11,6 +11,8 @@ import { toShortAddress } from "../home.component";
 })
 export class DepositComponent {
 
+  showSpinner = false;
+
   @Input()
   availableEthAmount: number;
 
@@ -23,7 +25,7 @@ export class DepositComponent {
   color = 'rgba(100, 100, 100, 0.5)';
   loader: LoadersCSS = 'pacman';
 
-  constructor(  private electronService: ElectronService) {
+  constructor(  private electronService: ElectronService, private cd: ChangeDetectorRef) {
     //
   }
 
@@ -33,11 +35,13 @@ export class DepositComponent {
 
   onDepositClick() {
     this.electronService.ipcRenderer.send('deposit', this.depositAmount);
+    this.showSpinner = true;
+    this.cd.detectChanges();
+
     this.electronService.ipcRenderer.on('deposit-hash', (event, std_out) => {
-      console.log(std_out);
-      this.backClick.emit(true);
+      console.log(std_out)
+      this.showSpinner = false;
+      this.cd.detectChanges();
     });
-    // this.backClick.emit(true);
-    // Emit amount to deposit ???
   }
 }
