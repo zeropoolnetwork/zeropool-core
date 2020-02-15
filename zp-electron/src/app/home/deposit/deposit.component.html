@@ -11,10 +11,19 @@
     <br>
   </ng-container>
 
-  <div class="buttons_container">
-    <button (click)="onCancelClick()" class="back">Back</button>
-    <button (click)="onDepositClick()">Deposit</button>
-  </div>
+  <ng-container *ngIf="!showSpinner">
+    <div class="buttons_container">
+      <button (click)="onCancelClick()" class="back">Back</button>
+      <button (click)="onDepositClick()">Deposit</button>
+    </div>
+  </ng-container>
+
+  <ng-container *ngIf="showSpinner">
+    <loaders-css [loader]="loader" [bgColor]="bgColor" [color]="color" [scale]="1"></loaders-css>
+    <div class="buttons_container">
+      <button (click)="onCancelClick()" class="back">Back</button>
+    </div>
+  </ng-container>
 
 
 </div>

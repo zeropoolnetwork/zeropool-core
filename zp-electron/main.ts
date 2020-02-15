@@ -168,12 +168,21 @@ function createWindow(): BrowserWindow {
 
   ipc.on('deposit', async (event, amount) => {
     // const balance = await zp.getBalance()
+    console.log(ETH_ASSET_ADDRESS, ethUtils.tw(amount).toNumber())
     try {
-      const std_out = await deposit(amount);
-      win.webContents.send('deposit-hash', std_out);
+      console.log('1-------------------');
+      const blockItem = await zp.prepareWithdraw(ETH_ASSET_ADDRESS, 1)
+      console.log(blockItem)
+      console.log('2-------------------');
+
+      const res = await axios.post(`${config.relayer}/tx`, blockItem);
+      console.log('2.1-------------------');
+      win.webContents.send('deposit-hash', res.data.transactionHash);
+      console.log('3-------------------');
     } catch (e) {
       console.log(e)
     }
+
   });
 
   // Emitted when the window is closed.
