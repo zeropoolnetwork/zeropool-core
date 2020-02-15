@@ -13,6 +13,9 @@ export class SendComponent {
   @Input()
   zpEthAmount: number;
 
+  toAmount: number;
+  toAddress: string;
+
   @Output()
   backClick = new EventEmitter<boolean>();
 
@@ -30,9 +33,15 @@ export class SendComponent {
   }
 
   onSendClick() {
-    this.showSpinner = false;
+    this.electronService.ipcRenderer.send('transfer', this.toAmount, this.toAddress);
+    this.showSpinner = true;
     this.cd.detectChanges();
 
-    // Emit amount to deposit ???
+    this.electronService.ipcRenderer.on('transfer-hash', (event, std_out) => {
+      console.log(std_out)
+      this.showSpinner = false;
+      this.isDone = true;
+      this.cd.detectChanges();
+    });
   }
 }

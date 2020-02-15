@@ -66,7 +66,7 @@ async function withdraw() {
 const ETH_ASSET_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 const config = {
-  contract: '0xBC3b9990CE2F72a97A82913894392CadA8d9558B',
+  contract: '0xF0c255b0881acDc7f1C855A823D900F3A78fA1c2',
   mnemonic: 'session oppose search lunch cave enact quote wire debate knee noble drama exit way scene',
   ethSecret: '0x4ba3ab0d4ac147ae88674bd03529f311fc54e805200d7c15b00f887e75c4c18e',
   asset: 'ETH',
@@ -167,15 +167,21 @@ function createWindow(): BrowserWindow {
   });
 
   ipc.on('deposit', async (event, amount) => {
-    // const balance = await zp.getBalance()
-    console.log(ETH_ASSET_ADDRESS, ethUtils.tw(amount).toNumber())
     try {
       const std_out = await deposit(amount);
       win.webContents.send('deposit-hash', std_out);
     } catch (e) {
       console.log(e)
     }
+  });
 
+  ipc.on('transfer', async (event, amount, address) => {
+    try {
+      const std_out = await transfer(address, amount);
+      win.webContents.send('transfer-hash', std_out);
+    } catch (e) {
+      console.log(e)
+    }
   });
 
   // Emitted when the window is closed.

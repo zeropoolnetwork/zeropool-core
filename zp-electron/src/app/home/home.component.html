@@ -53,7 +53,7 @@
   </ng-container>
 
   <ng-container *ngIf="activeForm === 'send' ">
-    <app-send [zpEthAmount]="0.020" (backClick)="showMainForm()"></app-send>
+    <app-send [zpEthAmount]="zpBalance" (backClick)="showMainForm()"></app-send>
   </ng-container>
 
   <ng-container *ngIf="activeForm === 'withdraw' ">
