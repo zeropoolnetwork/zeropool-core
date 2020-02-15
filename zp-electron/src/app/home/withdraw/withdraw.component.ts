@@ -1,5 +1,6 @@
 import { ChangeDetectorRef, Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { LoadersCSS } from 'ngx-loaders-css';
+import { ElectronService } from "../../core/services";
 
 
 @Component({
@@ -15,19 +16,20 @@ export class WithdrawComponent {
   @Output()
   backClick = new EventEmitter<boolean>();
 
+  showSpinner = false;
+  bgColor = 'black';
   color = 'rgba(100, 100, 100, 0.5)';
   loader: LoadersCSS = 'pacman';
 
-  constructor() {
-    //
+  constructor(private electronService: ElectronService, private cd: ChangeDetectorRef) {
   }
 
   onCancelClick() {
     this.backClick.emit(true);
   }
 
-  onDepositClick() {
-    this.backClick.emit(true);
-    // Emit amount to deposit ???
+  onWithdrawClick() {
+    this.showSpinner = true;
+    this.cd.detectChanges();
   }
 }

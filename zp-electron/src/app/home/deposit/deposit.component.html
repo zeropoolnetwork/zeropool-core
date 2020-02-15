@@ -1,27 +1,37 @@
 <div class="container">
 
-  <div class="title" style="padding: 10px">Enter amount in ETH</div>
+  <ng-container *ngIf="!isDone">
+    <div class="title" style="padding: 10px">Enter amount in ETH</div>
 
-  <input [(ngModel)]="depositAmount" type="text" class="input-block-level" placeholder="0.0 ETH" style="width:290px;border-radius:5px;border:none"/>
+    <input [(ngModel)]="depositAmount" type="text" class="input-block-level" placeholder="0.0 ETH"
+           style="width:290px;border-radius:5px;border:none"/>
 
-  <ng-container *ngIf="availableEthAmount">
-    <div class="title" style="padding: 10px; font-size: 0.7em">Available {{availableEthAmount}} ETH</div>
+    <ng-container *ngIf="availableEthAmount">
+      <div class="title" style="padding: 10px; font-size: 0.7em">Available {{availableEthAmount}} ETH</div>
+    </ng-container>
+    <ng-container *ngIf="!availableEthAmount">
+      <br>
+    </ng-container>
+
+    <ng-container *ngIf="!showSpinner">
+      <div class="buttons_container">
+        <button (click)="onCancelClick()" class="back">Back</button>
+        <button (click)="onDepositClick()">Deposit</button>
+      </div>
+    </ng-container>
+
+    <ng-container *ngIf="showSpinner">
+      <loaders-css [loader]="loader" [bgColor]="bgColor" [color]="color" [scale]="1"></loaders-css>
+      <div class="buttons_container" style="margin-top: 20px">
+        <button (click)="onCancelClick()" class="back">Back</button>
+      </div>
+    </ng-container>
   </ng-container>
-  <ng-container *ngIf="!availableEthAmount">
-    <br>
-  </ng-container>
 
-  <ng-container *ngIf="!showSpinner">
-    <div class="buttons_container">
-      <button (click)="onCancelClick()" class="back">Back</button>
-      <button (click)="onDepositClick()">Deposit</button>
-    </div>
-  </ng-container>
-
-  <ng-container *ngIf="showSpinner">
-    <loaders-css [loader]="loader" [bgColor]="bgColor" [color]="color" [scale]="1"></loaders-css>
-    <div class="buttons_container">
-      <button (click)="onCancelClick()" class="back">Back</button>
+  <ng-container *ngIf="isDone">
+    <div class="title" style="padding: 10px">Deposit Successful</div>
+    <div class="buttons_container" style="margin-top: 20px">
+      <button (click)="onCancelClick()" class="back">BACK</button>
     </div>
   </ng-container>
 
