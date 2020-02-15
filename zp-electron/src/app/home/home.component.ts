@@ -145,6 +145,9 @@ export class HomeComponent implements OnInit {
   }
 
   showMainForm() {
+    console.log(4)
     this.activeForm = 'main';
+    this.cd.detectChanges();
+    console.log(5)
   }
 }

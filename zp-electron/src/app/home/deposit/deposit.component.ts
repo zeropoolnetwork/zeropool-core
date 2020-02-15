@@ -30,7 +30,12 @@ export class DepositComponent {
   }
 
   onCancelClick() {
+    console.log(1)
     this.backClick.emit(true);
+    console.log(2)
+
+    console.log(3)
+
   }
 
   onDepositClick() {
