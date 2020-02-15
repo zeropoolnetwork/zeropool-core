@@ -1,4 +1,5 @@
 import { app, BrowserWindow, screen } from 'electron';
+
 const axios = require('axios').default;
 import * as path from 'path';
 import * as url from 'url';
@@ -8,19 +9,19 @@ import * as ethUtils from '../lib/ethereum/ethereum';
 import { DomainEthereum, HdWallet } from "@buttonwallet/blockchain-ts-wallet-core";
 
 // TODO: parse config if needed
-// import { cosmiconfigSync } from "cosmiconfig";
-// function loadConfig(pathToConfig?: string): Promise<any> {
-//   const explorer = cosmiconfigSync('alice');
-//   const result = pathToConfig
-//     ? explorer.load(pathToConfig)
-//     : explorer.search();
-//
-//   if (result) {
-//     const { config, filepath } = result;
-//     return config;
-//   }
-// }
-// loadConfig();
+import { cosmiconfigSync } from "cosmiconfig";
+
+function loadConfig(pathToConfig?: string): any {
+  const explorer = cosmiconfigSync('alice');
+  const result = pathToConfig
+    ? explorer.load(pathToConfig)
+    : explorer.search();
+
+  if (result) {
+    const { config, filepath } = result;
+    return config;
+  }
+}
 
 
 ///////
@@ -30,7 +31,7 @@ const exec = util.promisify(require('child_process').exec);
 
 async function deposit(amount) {
   const { stdout, stderr } = await exec(
-    `./../zp-cli/bin/run deposit --value=${amount} --config=./../zp-cli/alice.config.js`
+    `./../zp-cli/bin/run deposit --value=${amount} --config=./alice.config.js`
   );
   if (stderr) {
     return stderr;
@@ -40,7 +41,7 @@ async function deposit(amount) {
 
 async function transfer(to, amount) {
   const { stdout, stderr } = await exec(
-    `./../zp-cli/bin/run transfer --value=${amount} --to=${to} --config=./../zp-cli/alice.config.js`
+    `./../zp-cli/bin/run transfer --value=${amount} --to=${to} --config=./alice.config.js`
   );
   if (stderr) {
     return stderr;
@@ -50,7 +51,7 @@ async function transfer(to, amount) {
 
 async function withdraw() {
   const { stdout, stderr } = await exec(
-    `./../zp-cli/bin/run withdraw --config=./../zp-cli/alice.config.js`
+    `./../zp-cli/bin/run withdraw --config=./alice.config.js`
   );
   if (stderr) {
     return stderr;
@@ -58,49 +59,45 @@ async function withdraw() {
   return stdout;
 }
 
-//////
-
-const ETH_ASSET_ADDRESS = '0x0000000000000000000000000000000000000000';
-
-
-const config = {
-  contract: '0xF0c255b0881acDc7f1C855A823D900F3A78fA1c2',
-  mnemonic: 'session oppose search lunch cave enact quote wire debate knee noble drama exit way scene',
-  ethSecret: '0x4ba3ab0d4ac147ae88674bd03529f311fc54e805200d7c15b00f887e75c4c18e',
-  asset: 'ETH',
-  rpc: 'https://rinkeby.infura.io/v3/716d959325724d16a970e53a6bc28dc8',
-  relayer: 'http://134.209.172.229:3000'
-};
-
-const zp = new ZeroPoolNetwork(
-  config.contract,
-  config.ethSecret,
-  config.mnemonic,
-  config.rpc
-);
-
-let ethAddress = '';
-
-// Convert ethAddress to private key
-if (HdWallet.isValidMnemonic(config.ethSecret)) {
-  const hdWallet = new HdWallet(config.ethSecret, '');
-  const wallet = hdWallet.generateKeyPair(DomainEthereum.Instance(), 0);
-  config.ethSecret = wallet.privateKey;
-  ethAddress = wallet.address;
-} else {
-  ethAddress = ethUtils.getEthereumAddress(config.ethSecret);
-}
-
-console.log(`ZeroPool contract address = ${config.contract}`);
-console.log(`Your eth address = ${ethAddress}`);
-console.log(`Your zp address = ${"0x" + zp.zpKeyPair.publicKey.toString(16)}`);
-
-
 let win: BrowserWindow = null;
 const args = process.argv.slice(1),
   serve = args.some(val => val === '--serve');
 
 function createWindow(): BrowserWindow {
+  const cfg = loadConfig('');
+  const fromConfigSafe = (argName: string) => cfg && cfg[argName];
+
+  const config = {
+    contract: fromConfigSafe('contract'),
+    mnemonic: fromConfigSafe('zpMnemonic'),
+    ethSecret: fromConfigSafe('ethSecret'),
+    asset: fromConfigSafe('asset'),
+    rpc: fromConfigSafe('rpc'),
+    relayer: fromConfigSafe('relayer')
+  };
+
+  let ethAddress = '';
+
+  // Convert ethAddress to private key
+  if (HdWallet.isValidMnemonic(config.ethSecret)) {
+    const hdWallet = new HdWallet(config.ethSecret, '');
+    const wallet = hdWallet.generateKeyPair(DomainEthereum.Instance(), 0);
+    config.ethSecret = wallet.privateKey;
+    ethAddress = wallet.address;
+  } else {
+    ethAddress = ethUtils.getEthereumAddress(config.ethSecret);
+  }
+
+  const zp = new ZeroPoolNetwork(
+    config.contract,
+    config.ethSecret,
+    config.mnemonic,
+    config.rpc
+  );
+
+  console.log(`ZeroPool contract address = ${config.contract}`);
+  console.log(`Your eth address = ${ethAddress}`);
+  console.log(`Your zp address = ${"0x" + zp.zpKeyPair.publicKey.toString(16)}`);
 
   const electronScreen = screen;
   const size = electronScreen.getPrimaryDisplay().workAreaSize;
@@ -177,6 +174,15 @@ function createWindow(): BrowserWindow {
     try {
       const std_out = await transfer(address, amount);
       win.webContents.send('transfer-hash', std_out);
+    } catch (e) {
+      console.log(e)
+    }
+  });
+
+  ipc.on('withdraw', async (event) => {
+    try {
+      const std_out = await withdraw();
+      win.webContents.send('withdraw-hash', std_out);
     } catch (e) {
       console.log(e)
     }

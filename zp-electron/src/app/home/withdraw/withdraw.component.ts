@@ -30,8 +30,15 @@ export class WithdrawComponent {
   }
 
   onWithdrawClick() {
+    this.electronService.ipcRenderer.send('withdraw');
     this.showSpinner = true;
-    this.isDone = true;
     this.cd.detectChanges();
+
+    this.electronService.ipcRenderer.on('withdraw-hash', (event, std_out) => {
+      console.log(std_out);
+      this.showSpinner = false;
+      this.isDone = true;
+      this.cd.detectChanges();
+    });
   }
 }

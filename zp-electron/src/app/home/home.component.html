@@ -57,7 +57,7 @@
   </ng-container>
 
   <ng-container *ngIf="activeForm === 'withdraw' ">
-    <app-withdraw [zpEthAmount]="0.45" (backClick)="showMainForm()"></app-withdraw>
+    <app-withdraw [zpEthAmount]="zpBalance" (backClick)="showMainForm()"></app-withdraw>
   </ng-container>
 
 </div>
