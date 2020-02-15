@@ -33,9 +33,9 @@ export class DepositComponent {
 
   onDepositClick() {
     this.electronService.ipcRenderer.send('deposit', this.depositAmount);
-    this.electronService.ipcRenderer.on('deposit-hash', (event, hash) => {
-      console.log(hash)
-      this.transactionHash = hash;
+    this.electronService.ipcRenderer.on('deposit-hash', (event, std_out) => {
+      console.log(std_out);
+      this.backClick.emit(true);
     });
     // this.backClick.emit(true);
     // Emit amount to deposit ???

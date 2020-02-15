@@ -33,15 +33,33 @@ const exec = util.promisify(require('child_process').exec);
 
 async function deposit(amount) {
   const { stdout, stderr } = await exec(
-    `/Users/artemvorobev/zeropool/zp2/zp-cli/bin/run deposit --value=${amount} --config=/Users/artemvorobev/zeropool/zp2/zp-cli/alice.config.js`
+    `./../zp-cli/bin/run deposit --value=${amount} --config=./../zp-cli/alice.config.js`
   );
   if (stderr) {
     return stderr;
   }
   return stdout;
 }
-deposit(0.0001)
-  .then(console.log)
+
+async function transfer(to, amount) {
+  const { stdout, stderr } = await exec(
+    `./../zp-cli/bin/run transfer --value=${amount} --to=${to} --config=./../zp-cli/alice.config.js`
+  );
+  if (stderr) {
+    return stderr;
+  }
+  return stdout;
+}
+
+async function withdraw() {
+  const { stdout, stderr } = await exec(
+    `./../zp-cli/bin/run withdraw --config=./../zp-cli/alice.config.js`
+  );
+  if (stderr) {
+    return stderr;
+  }
+  return stdout;
+}
 
 //////
 
@@ -150,21 +168,12 @@ function createWindow(): BrowserWindow {
 
   ipc.on('deposit', async (event, amount) => {
     // const balance = await zp.getBalance()
-    console.log(ETH_ASSET_ADDRESS, ethUtils.tw(amount).toNumber())
     try {
-      console.log('1-------------------');
-      const blockItem = await zp.prepareWithdraw(ETH_ASSET_ADDRESS, 1)
-      console.log(blockItem)
-      console.log('2-------------------');
-
-      const res = await axios.post(`${config.relayer}/tx`, blockItem);
-      console.log('2.1-------------------');
-      win.webContents.send('deposit-hash', res.data.transactionHash);
-      console.log('3-------------------');
+      const std_out = await deposit(amount);
+      win.webContents.send('deposit-hash', std_out);
     } catch (e) {
       console.log(e)
     }
-
   });
 
   // Emitted when the window is closed.
