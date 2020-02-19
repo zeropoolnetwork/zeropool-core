@@ -2,9 +2,11 @@
   "name": "cli-zeropool",
   "version": "1.0.0",
   "description": "",
-  "main": "zero-pool-network.js",
+  "main": "src/zero-pool-network.js",
   "scripts": {
     "start": "node --experimental-worker test.js",
+    "build": "npx tsc",
+    "lint": "npx tslint -c tslint.json 'src/**/*.ts'",
     "browserify": "browserify --standalone ZeroPoolNetwork zero-pool-network.js -o build/zero-pool-network.js --exclude worker_threads"
   },
   "author": "ZeroPool (kk)",
@@ -20,5 +22,11 @@
     "snarkjs": "^0.1.20",
     "web3": "^1.2.5",
     "websnark": "0.0.5"
+  },
+  "devDependencies": {
+    "bigint-typescript-definitions": "^5.5.3-0",
+    "@types/node": "^13.7.1",
+    "tslint": "^6.0.0",
+    "typescript": "^3.7.5"
   }
 }
