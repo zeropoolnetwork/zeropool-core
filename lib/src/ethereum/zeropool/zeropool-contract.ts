@@ -167,14 +167,14 @@ export class ZeroPoolContract {
   }
 
   decodePublishedBlocks(hex: string): Block<string> {
-    const BlockItem = {
+    const item = {
       "Tx": TxStructure,
       "new_root": 'uint256',
       "deposit_blocknumber": 'uint256'
     };
 
     const decodedParameters = this.web3Ethereum.decodeParameters(
-      [{ "BlockItem[]": BlockItem }, 'uint', 'uint'],
+      [{ "BlockItem[]": item }, 'uint', 'uint'],
       cutFunctionSignature(hex)
     );
 
@@ -256,26 +256,26 @@ function cutFunctionSignature(hex: string): string {
 function packBlockItem(blockItem: BlockItem<string>): any[] {
   const Proof = [blockItem.tx.proof];
 
-  const Message = [
+  const message = [
     [blockItem.tx.txExternalFields.message[0]],
     [blockItem.tx.txExternalFields.message[1]],
   ];
 
-  const TxExternalFields = [
+  const txExternalFields = [
     blockItem.tx.txExternalFields.owner,
-    Message
+    message
   ];
 
-  const Tx = [
+  const tx = [
     blockItem.tx.rootPointer,
     blockItem.tx.nullifier,
     blockItem.tx.utxoHashes,
     blockItem.tx.token,
     blockItem.tx.delta,
-    TxExternalFields,
+    txExternalFields,
     Proof
   ];
 
-  return [Tx, blockItem.newRoot, blockItem.depositBlockNumber];
+  return [tx, blockItem.newRoot, blockItem.depositBlockNumber];
 }
 
