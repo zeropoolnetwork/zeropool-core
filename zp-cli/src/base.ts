@@ -6,6 +6,12 @@ import * as ethUtils from '../../lib/ethereum/ethereum';
 import { cosmiconfig } from "cosmiconfig";
 import { Config } from "cosmiconfig/dist/types";
 
+import * as fs from 'fs';
+import * as path from 'path';
+const prooverKeyPath = path.join(__dirname, '../../circom/circuitsCompiled/transaction_pk.bin');
+const prooverKey = fs.readFileSync(prooverKeyPath).buffer;
+import * as transactionJson from './../../circom/circuitsCompiled/transaction.json';
+
 // For other assets we use contract address, for ethereum use 0x0000000000000000000000000000000000000000
 const ETH_ASSET_ADDRESS = '0x0000000000000000000000000000000000000000';
 
@@ -195,6 +201,8 @@ export default class Base extends Command {
       this.contractAddress,
       this.ethSecret,
       this.zpMnemonic,
+      transactionJson,
+      prooverKey,
       this.rpcEndpoint
     );
 
