@@ -1,9 +1,19 @@
 import { gasLessCall, getCallData, getEvents, hash, toHex, Web3Ethereum } from '../ethereum';
 import * as zeroPoolAbi from './zeropool.abi.json';
-import { Contract } from 'web3-eth-contract';
+import { Contract, EventData } from 'web3-eth-contract';
 import { TxExternalFieldsStructure, TxStructure } from "./eth-structures";
 import { AbiItem } from 'web3-utils';
-import { Block, BlockItem, Deposit, DepositEvent, PayNote } from "./zeropool-contract.dto";
+import {
+  Block,
+  BlockItem,
+  Deposit,
+  DepositEvent,
+  PayNote,
+  PublishBlockEvent,
+  Tx,
+  TxExternalFields
+} from "./zeropool-contract.dto";
+import { Transaction } from 'web3-core';
 
 export class ZeroPoolContract {
 
@@ -34,6 +44,7 @@ export class ZeroPoolContract {
     const data = getCallData(this.instance, 'deposit', params);
 
     const signedTransaction =
+      // @ts-ignore
       await this.web3Ethereum.signTransaction(this.privateKey, this.instance._address, deposit.amount, data);
 
     return this.web3Ethereum.sendTransaction(signedTransaction);
@@ -53,6 +64,7 @@ export class ZeroPoolContract {
     const data = getCallData(this.instance, 'depositCancel', params);
 
     const signedTransaction =
+      // @ts-ignore
       await this.web3Ethereum.signTransaction(this.privateKey, this.instance._address, 0, data);
 
     return this.web3Ethereum.sendTransaction(signedTransaction);
@@ -72,6 +84,7 @@ export class ZeroPoolContract {
     const data = getCallData(this.instance, 'withdraw', params);
 
     const signedTransaction =
+      // @ts-ignore
       await this.web3Ethereum.signTransaction(this.privateKey, this.instance._address, 0, data);
 
     return this.web3Ethereum.sendTransaction(signedTransaction);
@@ -92,6 +105,7 @@ export class ZeroPoolContract {
     const data = getCallData(this.instance, 'publishBlock', params);
 
     const signedTransaction =
+      // @ts-ignore
       await this.web3Ethereum.signTransaction(this.privateKey, this.instance._address, 0, data);
 
     return this.web3Ethereum.sendTransaction(signedTransaction);
@@ -100,36 +114,43 @@ export class ZeroPoolContract {
   async getDepositEvents(): Promise<DepositEvent[]> {
     const events = await getEvents(this.instance, 'Deposit');
 
-    const transactions = await events.map((event) => {
-      const txs = events.map(event => this.web3Ethereum.getTransaction(event.transactionHash));
-      return Promise.all(txs);
+    const transactions$: Promise<Transaction>[] = events.map((e: EventData) => {
+      return this.web3Ethereum.getTransaction(e.transactionHash);
     });
 
-    return transactions.map(tx => {
-      const depositCallData = this.decodeDeposit(tx.input);
-      return {
-        params: depositCallData,
-        owner: tx.from,
-        blockNumber: tx.blockNumber
+    const transactions: Transaction[] = await Promise.all<Transaction>(transactions$);
+
+    return transactions.map(
+      (tx: Transaction): DepositEvent => {
+        const depositCallData = this.decodeDeposit(tx.input);
+        return {
+          params: depositCallData,
+          owner: tx.from,
+          blockNumber: tx.blockNumber as number
+        }
       }
-    });
+    );
   }
 
-  async publishBlockEvents() {
+  async publishBlockEvents(): Promise<PublishBlockEvent[]> {
     const events = await getEvents(this.instance, 'NewBlockPack');
 
-    const transactions = await events.map((event) => {
-      const txs = events.map(event => this.web3Ethereum.getTransaction(event.transactionHash));
-      return Promise.all(txs);
+    const transactions$: Promise<Transaction>[] = events.map((e: EventData) => {
+      return this.web3Ethereum.getTransaction(e.transactionHash);
     });
 
-    return transactions.map(tx => {
-      return {
-        BlockItems: this.decodePublishedBlocks(tx.input).BlockItems,
-        relayer: tx.from,
-        blocknumber: tx.blockNumber
+    const transactions: Transaction[] = await Promise.all<Transaction>(transactions$);
+
+    return transactions.map(
+      (tx: Transaction): PublishBlockEvent => {
+        const publishBlockCallData = this.decodePublishedBlocks(tx.input);
+        return {
+          params: publishBlockCallData,
+          owner: tx.from,
+          blockNumber: tx.blockNumber as number
+        }
       }
-    });
+    );
   }
 
   decodeDeposit(hex: string): Deposit {
@@ -164,61 +185,61 @@ export class ZeroPoolContract {
     }
   }
 
-  getDepositTxNum({ token, amount, txhash, owner, blocknumber }) {
+  getDepositTxNum(payNote: PayNote): Promise<string> {
     const encodedData = this.web3Ethereum.encodeParameters(
       ['address', 'address', 'uint256', 'uint256', 'bytes32'],
-      [owner, token, amount, blocknumber, txhash]
+      [payNote.utxo.owner, payNote.utxo.token, payNote.utxo.amount, payNote.blockNumber, payNote.txHash]
     );
-    const h = hash(encodedData);
-    return gasLessCall(this.instance, 'deposit_state', owner, [h]);
+    const dataHash = hash(encodedData);
+    return gasLessCall(this.instance, 'deposit_state', [dataHash]);
   }
 
-  getRollupTxNum() {
-    return gasLessCall(this.instance, 'rollup_tx_num', '0x0000000000000000000000000000000000000000', []);
+  getRollupTxNum(): Promise<string> {
+    return gasLessCall(this.instance, 'rollup_tx_num', []);
   }
 
-  encodeTxExternalFields(owner, encryptedUTXOs) {
+  encodeTxExternalFields(txExternalFields: TxExternalFields<BigInt>): string {
     return this.web3Ethereum.encodeParameter(
       {
         "TxExternalFields": TxExternalFieldsStructure
       },
       {
-        "owner": owner.substring(2),
+        "owner": txExternalFields.owner.substring(2),
         "Message": [
           {
-            "data": encryptedUTXOs[0].map(x => x.toString()),
+            "data": txExternalFields.message[0].data.map(x => x.toString()),
           },
           {
-            "data": encryptedUTXOs[1].map(x => x.toString()),
+            "data": txExternalFields.message[1].data.map(x => x.toString()),
           },
         ]
       }
     );
   }
 
-  encodeTx({ rootptr, nullifier, utxo, token, delta, TxExternalFields, proof }) {
+  encodeTx(tx: Tx<BigInt>): string {
     return this.web3Ethereum.encodeParameter(
       {
         "Tx": TxStructure
       },
       {
-        "rootptr": rootptr.toString(),
-        "nullifier": nullifier.map(x => x.toString()),
-        "utxo": utxo.map(x => x.toString()),
-        "token": token.toString(),
-        "delta": delta.toString(),
+        "rootptr": tx.rootPointer.toString(),
+        "nullifier": tx.nullifier.map(x => x.toString()),
+        "utxo": tx.utxoHashes.map(x => x.toString()),
+        "token": tx.token.toString(),
+        "delta": tx.delta.toString(),
         "TxExternalFields": {
-          "owner": TxExternalFields.owner,
+          "owner": tx.txExternalFields.owner,
           "Message": [
             {
-              "data": TxExternalFields.Message[0].map(x => x.toString()),
+              "data": tx.txExternalFields.message[0].data.map(x => x.toString()),
             },
             {
-              "data": TxExternalFields.Message[1].map(x => x.toString()),
-            },
+              "data": tx.txExternalFields.message[1].data.map(x => x.toString())
+            }
           ]
         },
-        "proof": proof.map(x => x.toString())
+        "proof": tx.proof.data.map(x => x.toString())
       }
     )
   }
