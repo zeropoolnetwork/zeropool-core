@@ -1,12 +1,19 @@
-const HdWallet = require('hdwallet-babyjub');
-const snarkjs = require('snarkjs');
-const { unstringifybigints } = require("snarkjs/src/stringifybigint");
-const buildBn128 = require("websnark/src/bn128.js");
-
-const { utxo_hash, utxo, in_utxo_inputs } = require('../../circom/src/inputs');
-const { encrypt_message, decrypt_message } = require("../../circom/src/encryption");
-const { linearize_proof, get_pubkey } = require('../../circom/src/utils');
-const buildwitness = require('../../circom/src/buildwitness');
+// @ts-ignore
+import * as HdWallet from 'hdwallet-babyjub';
+// @ts-ignore
+import * as snarkjs from 'snarkjs';
+// @ts-ignore
+import { unstringifybigints } from 'snarkjs/src/stringifybigint';
+// @ts-ignore
+import * as buildBn128 from "websnark/src/bn128.js";
+// @ts-ignore
+import { in_utxo_inputs, utxo, utxo_hash } from '../../circom/src/inputs';
+// @ts-ignore
+import { decrypt_message, encrypt_message } from '../../circom/src/encryption';
+// @ts-ignore
+import { get_pubkey, linearize_proof } from '../../circom/src/utils';
+// @ts-ignore
+import * as buildwitness from '../../circom/src/buildwitness';
 
 const zrpPath = 'm/44\'/0\'/0\'/0/0';
 
@@ -42,15 +49,15 @@ export function getKeyPair(mnemonic: string): KeyPair {
   }
 }
 
-export function encryptUtxo(pubK: bigint, utxo: Utxo): bigint[] {
-  const dataToEncrypt = in_utxo_inputs(utxo);
-  const dataHash = utxo_hash(utxo);
+export function encryptUtxo(pubK: bigint, inputs: Utxo): bigint[] {
+  const dataToEncrypt = in_utxo_inputs(inputs);
+  const dataHash = utxo_hash(inputs);
   return encrypt_message(dataToEncrypt, pubK, dataHash);
 }
 
-export function decryptUtxo(privK: bigint, cipher_text: bigint[], hash: bigint): Utxo {
-  const decrypted_message = decrypt_message(cipher_text, privK, hash);
-  const receiver_public = get_pubkey(privK);
+export function decryptUtxo(privateKey: bigint, cipher_text: bigint[], hash: bigint): Utxo {
+  const decrypted_message = decrypt_message(cipher_text, privateKey, hash);
+  const receiver_public = get_pubkey(privateKey);
   const _utxo_rec = utxo(decrypted_message[0], decrypted_message[1], receiver_public, decrypted_message[2]);
   if (utxo_hash(_utxo_rec) !== hash) {
     throw new Error('failed to decrypt utxo');

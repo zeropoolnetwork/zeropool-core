@@ -42,7 +42,7 @@ export class Web3Ethereum {
         return this.web3.eth.abi.decodeParameters(types, hex)
     }
 
-    sendTransaction(rawTx: string, confirmations: number = 1): Promise<string> {
+    sendTransaction(rawTx: string, confirmations: number = 1): Promise<string | Transaction> {
         if (rawTx.indexOf('0x') !== 0) {
             rawTx = '0x' + rawTx;
         }
@@ -56,7 +56,7 @@ export class Web3Ethereum {
                 })
                 .on('confirmation', (num: any, receipt: any) => {
                     if (num === confirmations) {
-                        resolve(receipt.transactionHash);
+                        resolve(receipt);
                     }
                 });
         })

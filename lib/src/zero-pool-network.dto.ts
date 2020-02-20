@@ -1,3 +1,6 @@
+import { DepositEvent } from "./ethereum/zeropool/zeropool-contract.dto";
+import { Utxo } from "./utils";
+
 export type ContractUtxos = {
   encryptedUtxos: bigint[][],
   utxoHashes: bigint[],
@@ -6,8 +9,13 @@ export type ContractUtxos = {
 }
 
 export type DepositHistoryItem = {
-  deposit
+  deposit: DepositEvent,
   isExists: boolean,
   isSpent: boolean,
-  spentInTx: number
+  spentInTx: string
+}
+
+export type UtxoPair = {
+  utxoIn: Utxo[],
+  utxoOut: Utxo[]
 }

@@ -34,7 +34,7 @@ export default class ZeroPoolContract {
     this.instance = this.web3Ethereum.createInstance(zeroPoolAbi as AbiItem[], contractAddress);
   }
 
-  async deposit(deposit: Deposit): Promise<string> {
+  async deposit(deposit: Deposit): Promise<Transaction> {
     const params = [
       deposit.token,
       toHex(deposit.amount),
@@ -47,10 +47,10 @@ export default class ZeroPoolContract {
       // @ts-ignore
       await this.web3Ethereum.signTransaction(this.privateKey, this.instance._address, deposit.amount, data);
 
-    return this.web3Ethereum.sendTransaction(signedTransaction);
+    return (await this.web3Ethereum.sendTransaction(signedTransaction, 1)) as Transaction;
   };
 
-  async cancelDeposit(payNote: PayNote): Promise<string> {
+  async cancelDeposit(payNote: PayNote): Promise<Transaction> {
     const params = [[
       [
         payNote.utxo.owner,
@@ -67,10 +67,10 @@ export default class ZeroPoolContract {
       // @ts-ignore
       await this.web3Ethereum.signTransaction(this.privateKey, this.instance._address, 0, data);
 
-    return this.web3Ethereum.sendTransaction(signedTransaction);
+    return (await this.web3Ethereum.sendTransaction(signedTransaction, 1)) as Transaction;
   };
 
-  async withdraw(payNote: PayNote): Promise<string> {
+  async withdraw(payNote: PayNote): Promise<Transaction> {
     const params = [[
       [
         payNote.utxo.owner,
@@ -87,14 +87,14 @@ export default class ZeroPoolContract {
       // @ts-ignore
       await this.web3Ethereum.signTransaction(this.privateKey, this.instance._address, 0, data);
 
-    return this.web3Ethereum.sendTransaction(signedTransaction);
+    return (await this.web3Ethereum.sendTransaction(signedTransaction, 1)) as Transaction;
   };
 
   async publishBlock(
     blockItems: BlockItem<string>[],
     rollupCurrentBlockNumber: number,
     blockNumberExpires: number
-  ): Promise<string> {
+  ): Promise<Transaction> {
 
     const params = [
       blockItems.map(packBlockItem),
@@ -108,7 +108,7 @@ export default class ZeroPoolContract {
       // @ts-ignore
       await this.web3Ethereum.signTransaction(this.privateKey, this.instance._address, 0, data);
 
-    return this.web3Ethereum.sendTransaction(signedTransaction);
+    return (await this.web3Ethereum.sendTransaction(signedTransaction, 1)) as Transaction;
   };
 
   async getDepositEvents(): Promise<DepositEvent[]> {
