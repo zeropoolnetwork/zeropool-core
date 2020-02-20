@@ -47,11 +47,11 @@ export type Tx<T> = {
   txExternalFields: TxExternalFields<T>,
   proof: Proof<T>
 }
-export type BlockItem<T> = {
+export type BlockItem<T> = [{
   tx: Tx<T>,
   newRoot: T,
   depositBlockNumber: T
-}
+}]
 
 export type Block<T> = {
   BlockItems: BlockItem<T>[],

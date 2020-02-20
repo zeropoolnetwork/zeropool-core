@@ -103,7 +103,7 @@ function sign(txParam: TxData, privateKey: string): string {
     return serializedTx.toString('hex');
 }
 
-export function toHex(val: number | string | BigNumber): string {
+export function toHex(val: number | string | BigNumber | BigInt): string {
     if (typeof val === "string") {
         return "0x" + tbn(val).toString(16);
     }

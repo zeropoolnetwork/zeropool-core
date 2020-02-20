@@ -15,7 +15,7 @@ import {
 } from "./zeropool-contract.dto";
 import { Transaction } from 'web3-core';
 
-export class ZeroPoolContract {
+export default class ZeroPoolContract {
 
   public readonly web3Ethereum: Web3Ethereum;
 
