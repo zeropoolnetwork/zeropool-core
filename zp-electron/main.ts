@@ -4,8 +4,14 @@ const axios = require('axios').default;
 import * as path from 'path';
 import * as url from 'url';
 
-import * as ZeroPoolNetwork from '../lib/zero-pool-network';
-import * as ethUtils from '../lib/ethereum/ethereum';
+import * as fs from 'fs';
+// @ts-ignore
+import * as transactionJson from './../circom/circuitsCompiled/transaction.json';
+
+const proverKeyPath = path.join(__dirname, './../circom/circuitsCompiled/transaction_pk.bin');
+const proverKey = fs.readFileSync(proverKeyPath).buffer;
+
+import { ZeroPoolNetwork, getEthereumAddress, fw } from 'zeropool-lib';
 import { DomainEthereum, HdWallet } from "@buttonwallet/blockchain-ts-wallet-core";
 
 // TODO: parse config if needed
@@ -85,13 +91,15 @@ function createWindow(): BrowserWindow {
     config.ethSecret = wallet.privateKey;
     ethAddress = wallet.address;
   } else {
-    ethAddress = ethUtils.getEthereumAddress(config.ethSecret);
+    ethAddress = getEthereumAddress(config.ethSecret);
   }
 
   const zp = new ZeroPoolNetwork(
     config.contract,
     config.ethSecret,
     config.mnemonic,
+    transactionJson,
+    proverKey,
     config.rpc
   );
 
@@ -139,14 +147,14 @@ function createWindow(): BrowserWindow {
     const balancePerAsset = await zp.getBalance();
     let balance = 0;
     if (balancePerAsset['0x0']) {
-      balance = ethUtils.fw(balancePerAsset['0x0']);
+      balance = fw(balancePerAsset['0x0']);
     }
     win.webContents.send('zp-balance', balance);
   });
 
   ipc.on('get-eth-balance', async (event, arg) => {
     const balanceInWei = await zp.ZeroPool.web3Ethereum.getBalance(ethAddress);
-    const balance = ethUtils.fw(balanceInWei);
+    const balance = fw(balanceInWei);
     win.webContents.send('eth-balance', balance);
   });
 

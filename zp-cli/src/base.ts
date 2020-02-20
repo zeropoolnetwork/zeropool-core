@@ -10,8 +10,8 @@ import * as path from 'path';
 import * as transactionJson from './../../circom/circuitsCompiled/transaction.json';
 import { IConfig } from "@oclif/config";
 
-const prooverKeyPath = path.join(__dirname, '../../circom/circuitsCompiled/transaction_pk.bin');
-const prooverKey = fs.readFileSync(prooverKeyPath).buffer;
+const proverKeyPath = path.join(__dirname, '../../circom/circuitsCompiled/transaction_pk.bin');
+const proverKey = fs.readFileSync(proverKeyPath).buffer;
 
 // For other assets we use contract address, for ethereum use 0x0000000000000000000000000000000000000000
 const ETH_ASSET_ADDRESS = '0x0000000000000000000000000000000000000000';
@@ -209,7 +209,7 @@ export default class Base extends Command {
       this.ethSecret,
       this.zpMnemonic,
       transactionJson,
-      prooverKey,
+      proverKey,
       this.rpcEndpoint
     );
 
