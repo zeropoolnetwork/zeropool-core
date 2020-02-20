@@ -95,6 +95,7 @@
     "loaders.css": "0.1.2",
     "ngx-loaders-css": "1.0.3",
     "tslib": "1.10.0",
-    "util": "0.12.1"
+    "util": "0.12.1",
+    "zeropool-lib": "0.1.1"
   }
 }
