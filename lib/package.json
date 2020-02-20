@@ -9,7 +9,6 @@
   ],
   "scripts": {
     "clean": "rimraf dist",
-    "start": "node --experimental-worker test.js",
     "build": "npm run clean && npm run create-index && npx tsc --module commonjs",
     "build:browser": "npm run build && npm run browserify",
     "lint": "npx tslint -c tslint.json 'src/**/*.ts'",
