@@ -5,15 +5,11 @@ import * as snarkjs from 'snarkjs';
 // @ts-ignore
 import { unstringifybigints } from 'snarkjs/src/stringifybigint';
 // @ts-ignore
-import * as buildBn128 from "websnark/src/bn128.js";
-// @ts-ignore
-import { in_utxo_inputs, utxo, utxo_hash } from '../../circom/src/inputs';
-// @ts-ignore
-import { decrypt_message, encrypt_message } from '../../circom/src/encryption';
-// @ts-ignore
-import { get_pubkey, linearize_proof } from '../../circom/src/utils';
-// @ts-ignore
-import * as buildwitness from '../../circom/src/buildwitness';
+import * as buildBn128 from 'websnark/src/bn128.js';
+import { in_utxo_inputs, utxo, utxo_hash } from './circom/inputs';
+import { decrypt_message, encrypt_message } from './circom/encryption';
+import { get_pubkey, linearize_proof } from './circom/utils';
+import buildwitness from './circom/buildwitness';
 
 const zrpPath = 'm/44\'/0\'/0\'/0/0';
 
@@ -50,6 +46,7 @@ export function getKeyPair(mnemonic: string): KeyPair {
 }
 
 export function encryptUtxo(pubK: bigint, inputs: Utxo): bigint[] {
+  // @ts-ignore
   const dataToEncrypt = in_utxo_inputs(inputs);
   const dataHash = utxo_hash(inputs);
   return encrypt_message(dataToEncrypt, pubK, dataHash);

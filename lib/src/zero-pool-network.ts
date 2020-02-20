@@ -2,10 +2,8 @@ import { decryptUtxo, encryptUtxo, getKeyPair, getProof, KeyPair, Utxo } from ".
 
 import { getEthereumAddress, hash, toHex } from './ethereum';
 import ZeroPoolContract from './ethereum/zeropool/zeropool-contract';
-// @ts-ignore todo: download it from npm package
-import { nullifier, transfer_compute, utxo } from '../../circom/src/inputs';
-// @ts-ignore todo: download it from npm package
-import { MerkleTree } from '../../circom/src/merkletree';
+import { nullifier, transfer_compute, utxo } from './circom/inputs';
+import { MerkleTree } from './circom/merkletree';
 import { ContractUtxos, DepositHistoryItem, UtxoPair } from "./zero-pool-network.dto";
 import {
   BlockItem,
@@ -18,14 +16,14 @@ import {
 } from "./ethereum/zeropool";
 import { Transaction } from "web3-core";
 
-class ZeroPoolNetwork {
+export class ZeroPoolNetwork {
 
   private readonly transactionJson: any;
   private readonly proverKey: any;
 
   public readonly ethAddress: string;
   public readonly contractAddress: string;
-  private readonly zpKeyPair: KeyPair;
+  public readonly zpKeyPair: KeyPair;
 
   public readonly ZeroPool: ZeroPoolContract;
 
@@ -224,7 +222,7 @@ class ZeroPoolNetwork {
       add_utxo
     } = transfer_compute(mt.root, utxoIn, utxoOut, BigInt(token), delta, 0n, this.zpKeyPair.privateKey);
 
-    const encryptedUTXOs = add_utxo.map((input: Utxo) => encryptUtxo(utxo.pubkey, input));
+    const encryptedUTXOs = add_utxo.map((input: Utxo) => encryptUtxo(input.pubkey, input));
 
     const txExternalFields: TxExternalFields<bigint> = {
       owner: delta === 0n ? "0x0000000000000000000000000000000000000000" : this.ethAddress,
@@ -241,6 +239,7 @@ class ZeroPoolNetwork {
     const encodedTxExternalFields = this.ZeroPool.encodeTxExternalFields(txExternalFields);
     inputs.message_hash = hash(encodedTxExternalFields);
 
+    // @ts-ignore
     const proof = await getProof(this.transactionJson, inputs, this.proverKey);
     const rootPointer
       = BigInt(utxoHashes.length / 2);
@@ -432,6 +431,4 @@ function normalizeTx(tx: Tx<bigint>): Tx<string> {
     }
   };
 }
-
-export default ZeroPoolNetwork;
 
