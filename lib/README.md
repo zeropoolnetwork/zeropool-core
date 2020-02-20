@@ -4,7 +4,20 @@
 ZeroPoolNetwork is a pure JavaScript library for iterating with ZeroPool Ethereum smart contract.
 
 ## Installation
-todo
+```bash
+npm i -s zeropool-lib
+```
+
+For browser version:
+```bash
+git clone https://github.com/zeropoolnetwork/zeropool-core.git
+
+cd lib
+
+npm i
+
+npm run build:browser
+```
 
 ## Usage
 ```javascript
