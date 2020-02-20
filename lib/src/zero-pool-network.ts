@@ -7,7 +7,14 @@ import { nullifier, transfer_compute, utxo } from '../../circom/src/inputs';
 // @ts-ignore todo: download it from npm package
 import { MerkleTree } from '../../circom/src/merkletree';
 import { ContractUtxos } from "./zero-pool-network.dto";
-import { BlockItem, Message, PublishBlockEvent, Tx } from "./ethereum/zeropool/zeropool-contract.dto";
+import {
+  Block,
+  BlockItem,
+  Message,
+  PublishBlockEvent,
+  Tx,
+  TxExternalFields
+} from "./ethereum/zeropool/zeropool-contract.dto";
 
 class ZeroPoolNetwork {
 
@@ -40,9 +47,9 @@ class ZeroPoolNetwork {
   async deposit(token: string, amount: number) {
     const preparedData = await this.prepareBlockItem(
       token,
-      BigInt(amount),
+      bigint(amount),
       [],
-      [utxo(BigInt(token), BigInt(amount), this.zpKeyPair.publicKey)]
+      [utxo(bigint(token), bigint(amount), this.zpKeyPair.publicKey)]
     );
 
     const transactionDetails = await this.ZeroPool.deposit({
@@ -71,11 +78,11 @@ class ZeroPoolNetwork {
   }
 
   async transfer(token, toPubKey, amount) {
-    const utxo = await this.calculateUtxo(BigInt(token), BigInt(toPubKey), BigInt(amount));
+    const utxo = await this.calculateUtxo(bigint(token), bigint(toPubKey), bigint(amount));
     if (utxo instanceof Error) {
       return utxo;
     }
-    const utxo_zero_delta = BigInt(0);
+    const utxo_zero_delta = bigint(0);
     const preparedData = await this.prepareBlockItem(
       token,
       utxo_zero_delta,
@@ -171,10 +178,9 @@ class ZeroPoolNetwork {
     return { utxo_in, utxo_out }
   }
 
-  // Publish block
-  async publishBlockItems(blocks, blocknumber_expires) {
-    const rollup_cur_tx_num = await this.ZeroPool.getRollupTxNum();
-    return this.ZeroPool.publishBlock(blocks, rollup_cur_tx_num >> 8, blocknumber_expires)
+  async publishBlockItems(blockItems: BlockItem<string>[], blocknumberExpires: number) {
+    const rollupCurrentTxNum = await this.ZeroPool.getRollupTxNum();
+    return this.ZeroPool.publishBlock(blockItems, +rollupCurrentTxNum >> 8, blocknumberExpires)
   }
 
   async myDeposits() {
@@ -212,25 +218,26 @@ class ZeroPoolNetwork {
   }
 
   async utxoRootHash() {
-    const { _, hashes } = await this.getUtxosFromContract();
+    const { utxoHashes } = await this.getUtxosFromContract();
     const mt = new MerkleTree(32 + 1);
-    if (hashes.length === 0) {
+    if (utxoHashes.length === 0) {
       return mt.root;
     }
-    mt.pushMany(hashes);
+    mt.pushMany(utxoHashes);
     return mt.root;
   }
 
   async prepareBlockItem(
     token: string,
-    delta: BigInt,
+    delta: bigint,
     utxoIn: Utxo[] = [],
     utxoOut: Utxo[] = []
-  ) {
-    const { _, hashes } = await this.getUtxosFromContract();
+  ): Promise<[BlockItem<string>, string]> {
+
+    const { utxoHashes } = await this.getUtxosFromContract();
     const mt = new MerkleTree(32 + 1);
-    if (hashes.length !== 0) {
-      mt.pushMany(hashes);
+    if (utxoHashes.length !== 0) {
+      mt.pushMany(utxoHashes);
     }
 
     const {
@@ -238,50 +245,69 @@ class ZeroPoolNetwork {
       add_utxo
     } = transfer_compute(mt.root, utxoIn, utxoOut, BigInt(token), delta, 0n, this.zpKeyPair.privateKey);
 
-    const encryptedUTXOs = add_utxo.map(utxo => encryptUtxo(utxo.pubkey, utxo));
-    const encoded_tx_external_fields = this.ZeroPool.encodeTxExternalFields(this.ethAddress, encryptedUTXOs);
-    inputs.message_hash = hash(encoded_tx_external_fields);
+    const encryptedUTXOs = add_utxo.map((utxo: Utxo) => encryptUtxo(utxo.pubkey, utxo));
 
-    const tx_external_fields = {
+    const txExternalFields: TxExternalFields<bigint> = {
       owner: delta === 0n ? "0x0000000000000000000000000000000000000000" : this.ethAddress,
-      Message: encryptedUTXOs
+      message: [
+        {
+          data: encryptedUTXOs[0]
+        },
+        {
+          data: encryptedUTXOs[1]
+        }
+      ]
     };
+
+    const encodedTxExternalFields = this.ZeroPool.encodeTxExternalFields(txExternalFields);
+    inputs.message_hash = hash(encodedTxExternalFields);
 
     const proof = await getProof(this.transactionJson, inputs, this.proverKey);
     const rootPointer
-      = hashes.length / 2;
+      = BigInt(utxoHashes.length / 2);
 
     mt.push(...inputs.utxo_out_hash);
 
-    const Tx = {
-      rootptr: rootPointer,
+    const tx: Tx<bigint> = {
+      token,
+      rootPointer: rootPointer,
       nullifier: inputs.nullifier,
-      utxo: inputs.utxo_out_hash,
+      utxoHashes: inputs.utxo_out_hash,
       delta: inputs.delta,
-      TxExternalFields: tx_external_fields,
-      proof,
-      token
+      txExternalFields: txExternalFields,
+      proof: {
+        data: proof
+      },
     };
 
-    const encoded_tx = this.ZeroPool.encodeTx(Tx);
-    const tx_hash = hash(encoded_tx);
+    const encodedTx = this.ZeroPool.encodeTx(tx);
+    const txHash = hash(encodedTx);
 
-    return {
-      Tx: normilizeTx(Tx),
-      new_root: toHex(mt.root),
-      tx_hash
+    const blockItem: BlockItem<string> = {
+      tx: normalizeTx(tx),
+      depositBlockNumber: '0x0',
+      newRoot: toHex(mt.root)
     };
+
+    return [
+      blockItem,
+      txHash
+    ];
   }
 
   async myHistory() {
-    const { utxos, hashes, blocknumbers } = await this.getUtxosFromContract();
+    const {
+      encryptedUtxos,
+      utxoHashes,
+      blockNumbers
+    } = await this.getUtxosFromContract();
 
-    const myUtxo = [];
-    utxos.forEach((encryptedUtxo, i) => {
+    const myUtxo: Utxo[] = [];
+    encryptedUtxos.forEach((encryptedUtxo, i) => {
       try {
-        const utxo = decryptUtxo(this.zpKeyPair.privateKey, encryptedUtxo, hashes[i]);
+        const utxo = decryptUtxo(this.zpKeyPair.privateKey, encryptedUtxo, utxoHashes[i]);
         if (utxo.amount.toString() !== '0') {
-          utxo.blocknumber = blocknumbers[i];
+          utxo.blockNumber = blockNumbers[i];
           myUtxo.push(utxo);
         }
       } catch (e) {
@@ -298,7 +324,8 @@ class ZeroPoolNetwork {
   }
 
   async getBalance() {
-    const balances = {};
+    // todo: think about BigNumber
+    const balances: { [key: string]: number } = {};
     const utxos = await this.myUtxos();
 
     for (let i = 0; i < utxos.length; i++) {
@@ -313,7 +340,7 @@ class ZeroPoolNetwork {
     return balances;
   }
 
-  async myUtxos() {
+  async myUtxos(): Promise<Utxo[]> {
     const {
       encryptedUtxos,
       utxoHashes,
@@ -355,7 +382,7 @@ class ZeroPoolNetwork {
       }
     }
 
-    const sorted = myUtxo.sort((a: Utxo, b: Utxo) => {
+    return myUtxo.sort((a: Utxo, b: Utxo) => {
       const diff = b.amount - a.amount;
       if (diff < 0n) {
         return -1
@@ -365,8 +392,6 @@ class ZeroPoolNetwork {
         return 0
       }
     });
-
-    return sorted;
   }
 
   async getUtxosFromContract(): Promise<ContractUtxos> {
@@ -375,17 +400,17 @@ class ZeroPoolNetwork {
       return { encryptedUtxos: [], utxoHashes: [], blockNumbers: [], nullifiers: [] };
     }
 
-    const allEncryptedUtxos: BigInt[][] = [];
-    const allHashes: BigInt[] = [];
+    const allEncryptedUtxos: bigint[][] = [];
+    const allHashes: bigint[] = [];
     const inBlockNumber: number[] = [];
-    const nullifiers: BigInt[] = [];
+    const nullifiers: bigint[] = [];
 
     blockEvents.forEach((block: PublishBlockEvent) => {
       block.params.BlockItems.forEach((item: BlockItem<string>) => {
-        nullifiers.push(...item[0].tx.nullifier.map(BigInt));
+        nullifiers.push(...item.tx.nullifier.map(BigInt));
 
-        const hashPack = item[0].tx.utxoHashes.map(BigInt);
-        item[0].tx.txExternalFields.message.forEach((msg: Message<string>, i: number) => {
+        const hashPack = item.tx.utxoHashes.map(BigInt);
+        item.tx.txExternalFields.message.forEach((msg: Message<string>, i: number) => {
           allEncryptedUtxos.push(
             msg.data.map(BigInt)
           );
@@ -405,8 +430,8 @@ class ZeroPoolNetwork {
 
 }
 
-function normalizeTx(tx: Tx<BigInt>): Tx<string> {
-  return  {
+function normalizeTx(tx: Tx<bigint>): Tx<string> {
+  return {
     token: toHex(tx.token),
     rootPointer: toHex(tx.rootPointer),
     nullifier: tx.nullifier.map(x => toHex(x)),

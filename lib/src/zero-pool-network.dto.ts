@@ -1,8 +1,13 @@
-import { Utxo } from "./utils";
-
 export type ContractUtxos = {
-  encryptedUtxos: BigInt[][],
-  utxoHashes: BigInt[],
+  encryptedUtxos: bigint[][],
+  utxoHashes: bigint[],
   blockNumbers: number[],
-  nullifiers: BigInt[]
+  nullifiers: bigint[]
+}
+
+export type DepositHistoryItem = {
+  deposit
+  isExists: boolean,
+  isSpent: boolean,
+  spentInTx: number
 }

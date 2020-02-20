@@ -1,6 +1,6 @@
 const HdWallet = require('hdwallet-babyjub');
 const snarkjs = require('snarkjs');
-const { unstringifyBigInts } = require("snarkjs/src/stringifybigint");
+const { unstringifybigints } = require("snarkjs/src/stringifybigint");
 const buildBn128 = require("websnark/src/bn128.js");
 
 const { utxo_hash, utxo, in_utxo_inputs } = require('../../circom/src/inputs');
@@ -11,26 +11,26 @@ const buildwitness = require('../../circom/src/buildwitness');
 const zrpPath = 'm/44\'/0\'/0\'/0/0';
 
 export type Utxo = {
-  token: BigInt,
-  amount: BigInt,
-  pubkey?: BigInt,
-  blinding?: BigInt,
-  mp_sibling?: BigInt[],
+  token: bigint,
+  amount: bigint,
+  pubkey: bigint,
+  blinding?: bigint,
+  mp_sibling?: bigint[],
   mp_path?: number,
   blockNumber?: number
 }
 
 export type KeyPair = {
-  privateKey: BigInt,
-  publicKey: BigInt
+  privateKey: bigint,
+  publicKey: bigint
 }
 
-export async function getProof(transactionJson: any, inputs: Utxo[], proverKey: any): Promise<BigInt[]> {
+export async function getProof(transactionJson: any, inputs: Utxo[], proverKey: any): Promise<bigint[]> {
   const circuit = new snarkjs.Circuit(transactionJson);
   const witness = circuit.calculateWitness(inputs);
 
   const bn128 = await buildBn128();
-  const proof = unstringifyBigInts(await bn128.groth16GenProof(buildwitness(witness), proverKey));
+  const proof = unstringifybigints(await bn128.groth16GenProof(buildwitness(witness), proverKey));
   return linearize_proof(proof);
 }
 
@@ -42,13 +42,13 @@ export function getKeyPair(mnemonic: string): KeyPair {
   }
 }
 
-export function encryptUtxo(pubK: BigInt, utxo: Utxo): BigInt[] {
+export function encryptUtxo(pubK: bigint, utxo: Utxo): bigint[] {
   const dataToEncrypt = in_utxo_inputs(utxo);
   const dataHash = utxo_hash(utxo);
   return encrypt_message(dataToEncrypt, pubK, dataHash);
 }
 
-export function decryptUtxo(privK: BigInt, cipher_text: BigInt[], hash: BigInt): Utxo {
+export function decryptUtxo(privK: bigint, cipher_text: bigint[], hash: bigint): Utxo {
   const decrypted_message = decrypt_message(cipher_text, privK, hash);
   const receiver_public = get_pubkey(privK);
   const _utxo_rec = utxo(decrypted_message[0], decrypted_message[1], receiver_public, decrypted_message[2]);

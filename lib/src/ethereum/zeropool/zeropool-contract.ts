@@ -91,13 +91,13 @@ export default class ZeroPoolContract {
   };
 
   async publishBlock(
-    blocks: BlockItem<string>[],
+    blockItems: BlockItem<string>[],
     rollupCurrentBlockNumber: number,
     blockNumberExpires: number
   ): Promise<string> {
 
     const params = [
-      blocks.map(packBlockItem),
+      blockItems.map(packBlockItem),
       toHex(rollupCurrentBlockNumber),
       toHex(blockNumberExpires)
     ];
@@ -145,7 +145,12 @@ export default class ZeroPoolContract {
       (tx: Transaction): PublishBlockEvent => {
         const publishBlockCallData = this.decodePublishedBlocks(tx.input);
         return {
-          params: publishBlockCallData,
+          params: {
+            // @ts-ignore
+            BlockItems: publishBlockCallData.BlockItems.map(x => x[0]),
+            blockNumberExpires: publishBlockCallData.blockNumberExpires,
+            rollupCurrentBlockNumber: publishBlockCallData.rollupCurrentBlockNumber
+          },
           owner: tx.from,
           blockNumber: tx.blockNumber as number
         }
@@ -198,7 +203,7 @@ export default class ZeroPoolContract {
     return gasLessCall(this.instance, 'rollup_tx_num', []);
   }
 
-  encodeTxExternalFields(txExternalFields: TxExternalFields<BigInt>): string {
+  encodeTxExternalFields(txExternalFields: TxExternalFields<bigint>): string {
     return this.web3Ethereum.encodeParameter(
       {
         "TxExternalFields": TxExternalFieldsStructure
@@ -217,7 +222,7 @@ export default class ZeroPoolContract {
     );
   }
 
-  encodeTx(tx: Tx<BigInt>): string {
+  encodeTx(tx: Tx<bigint>): string {
     return this.web3Ethereum.encodeParameter(
       {
         "Tx": TxStructure
