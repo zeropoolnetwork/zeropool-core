@@ -36,7 +36,7 @@ TODO: put example of response
     // todo: fetch token names
     // todo: sort by block number
     for (const d of history.deposits) {
-      let msg = `Deposit ${d.deposit.amount} wei\nBlock number: ${d.deposit.blocknumber}\n`;
+      let msg = `Deposit ${d.deposit.params.amount} wei\nBlock number: ${d.deposit.blockNumber}\n`;
 
       msg += d.spentInTx === '0'
         ? 'Have not spent yet'
@@ -46,7 +46,7 @@ TODO: put example of response
     }
 
     for (const utxo of history.utxos) {
-      const msg = `UTXO ${utxo.amount} wei\nBlock number: ${utxo.blocknumber}`;
+      const msg = `UTXO ${utxo.amount} wei\nBlock number: ${utxo.blockNumber}`;
 
       this.log(msg + '\n');
     }
