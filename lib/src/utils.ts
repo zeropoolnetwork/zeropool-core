@@ -3,9 +3,9 @@ import * as HdWallet from 'hdwallet-babyjub';
 // @ts-ignore
 import * as snarkjs from 'snarkjs';
 // @ts-ignore
-import { unstringifybigints } from 'snarkjs/src/stringifybigint';
+import { unstringifyBigInts } from 'snarkjs/src/stringifybigint';
 // @ts-ignore
-import * as buildBn128 from 'websnark/src/bn128.js';
+import buildBn128 from 'websnark/src/bn128.js';
 import { in_utxo_inputs, utxo, utxo_hash } from './circom/inputs';
 import { decrypt_message, encrypt_message } from './circom/encryption';
 import { get_pubkey, linearize_proof } from './circom/utils';
@@ -33,7 +33,7 @@ export async function getProof(transactionJson: any, inputs: Utxo[], proverKey: 
   const witness = circuit.calculateWitness(inputs);
 
   const bn128 = await buildBn128();
-  const proof = unstringifybigints(await bn128.groth16GenProof(buildwitness(witness), proverKey));
+  const proof = unstringifyBigInts(await bn128.groth16GenProof(buildwitness(witness), proverKey));
   return linearize_proof(proof);
 }
 

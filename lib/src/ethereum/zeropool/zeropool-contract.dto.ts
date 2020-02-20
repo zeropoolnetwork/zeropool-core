@@ -59,3 +59,24 @@ export type Block<T> = {
   rollupCurrentBlockNumber: number
   blockNumberExpires: number
 }
+
+export type SmartContractBlockItemSchema = {
+  new_root: string,
+  deposit_blocknumber: string,
+  Tx: {
+    utxo: string[],
+    rootptr: string,
+    token: string,
+    delta: string,
+    nullifier: string[],
+    proof: string[],
+    TxExternalFields: {
+      owner: string,
+      Message: [{
+        data: string[]
+      },{
+        data: string[]
+      }]
+    }
+  }
+};

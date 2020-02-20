@@ -1,8 +1,6 @@
 import { gasLessCall, getCallData, getEvents, hash, toHex, Web3Ethereum } from '../ethereum';
-import * as zeroPoolAbi from './zeropool.abi.json';
 import { Contract, EventData } from 'web3-eth-contract';
 import { TxExternalFieldsStructure, TxStructure } from "./eth-structures";
-import { AbiItem } from 'web3-utils';
 import {
   Block,
   BlockItem,
@@ -10,12 +8,14 @@ import {
   DepositEvent,
   PayNote,
   PublishBlockEvent,
+  SmartContractBlockItemSchema,
   Tx,
   TxExternalFields
 } from "./zeropool-contract.dto";
 import { Transaction } from 'web3-core';
+import { ZeroPoolAbi } from "./zeropool.abi";
 
-export default class ZeroPoolContract {
+export class ZeroPoolContract {
 
   public readonly web3Ethereum: Web3Ethereum;
 
@@ -31,7 +31,7 @@ export default class ZeroPoolContract {
     this.contractAddress = contractAddress;
     this.privateKey = privateKey;
     this.web3Ethereum = new Web3Ethereum(connectionString);
-    this.instance = this.web3Ethereum.createInstance(zeroPoolAbi as AbiItem[], contractAddress);
+    this.instance = this.web3Ethereum.createInstance(ZeroPoolAbi, contractAddress);
   }
 
   async deposit(deposit: Deposit): Promise<Transaction> {
@@ -146,8 +146,7 @@ export default class ZeroPoolContract {
         const publishBlockCallData = this.decodePublishedBlocks(tx.input);
         return {
           params: {
-            // @ts-ignore
-            BlockItems: publishBlockCallData.BlockItems.map(x => x[0]),
+            BlockItems: publishBlockCallData.BlockItems,
             blockNumberExpires: publishBlockCallData.blockNumberExpires,
             rollupCurrentBlockNumber: publishBlockCallData.rollupCurrentBlockNumber
           },
@@ -183,8 +182,35 @@ export default class ZeroPoolContract {
       cutFunctionSignature(hex)
     );
 
+    const blockItems: BlockItem<string>[] = decodedParameters['0']
+      .map((item: SmartContractBlockItemSchema) => ({
+        newRoot: item.new_root,
+        depositBlockNumber: item.deposit_blocknumber,
+        tx: {
+          utxoHashes: item.Tx.utxo,
+          rootPointer: item.Tx.rootptr,
+          token: item.Tx.token,
+          delta: item.Tx.delta,
+          nullifier: item.Tx.nullifier,
+          proof: {
+            data: item.Tx.proof
+          },
+          txExternalFields: {
+            owner: item.Tx.TxExternalFields.owner,
+            message: [
+              {
+                data: item.Tx.TxExternalFields.Message[0].data
+              },
+              {
+                data: item.Tx.TxExternalFields.Message[1].data
+              }
+            ]
+          }
+        }
+      }));
+
     return {
-      BlockItems: decodedParameters['0'],
+      BlockItems: blockItems,
       rollupCurrentBlockNumber: decodedParameters['1'],
       blockNumberExpires: decodedParameters['2']
     }
@@ -259,11 +285,11 @@ function cutFunctionSignature(hex: string): string {
 }
 
 function packBlockItem(blockItem: BlockItem<string>): any[] {
-  const Proof = [blockItem.tx.proof];
+  const Proof = [blockItem.tx.proof.data];
 
   const message = [
-    [blockItem.tx.txExternalFields.message[0]],
-    [blockItem.tx.txExternalFields.message[1]],
+    [blockItem.tx.txExternalFields.message[0].data],
+    [blockItem.tx.txExternalFields.message[1].data],
   ];
 
   const txExternalFields = [

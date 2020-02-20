@@ -1,7 +1,7 @@
 import { decryptUtxo, encryptUtxo, getKeyPair, getProof, KeyPair, Utxo } from "./utils";
 
 import { getEthereumAddress, hash, toHex } from './ethereum';
-import ZeroPoolContract from './ethereum/zeropool/zeropool-contract';
+import { ZeroPoolContract } from './ethereum/zeropool';
 import { nullifier, transfer_compute, utxo } from './circom/inputs';
 import { MerkleTree } from './circom/merkletree';
 import { ContractUtxos, DepositHistoryItem, UtxoPair } from "./zero-pool-network.dto";
@@ -410,7 +410,7 @@ export class ZeroPoolNetwork {
 
 function normalizeTx(tx: Tx<bigint>): Tx<string> {
   return {
-    token: toHex(tx.token),
+    token: tx.token,
     rootPointer: toHex(tx.rootPointer),
     nullifier: tx.nullifier.map(x => toHex(x)),
     utxoHashes: tx.utxoHashes.map(x => toHex(x)),

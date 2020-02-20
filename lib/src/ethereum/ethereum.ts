@@ -79,13 +79,13 @@ export class Web3Ethereum {
         const gas = data
 
             ? await this.web3.eth.estimateGas({ to, data, gas: 5000000, from, value })
-                .then((x: number): string => toHex(tbn(x).times(1.2)))
+                .then((x: number): string => toHex(tbn(x).times(1.2).integerValue()))
 
             : toHex(21000);
 
         value = toHex(value);
 
-        const txParam: TxData = { nonce, to, value, data, gasPrice, gasLimit: gas };
+      const txParam: TxData = { nonce, to, value, data, gasPrice, gasLimit: gas };
 
         return sign(txParam, privateKey);
     }
@@ -96,7 +96,7 @@ function sign(txParam: TxData, privateKey: string): string {
         privateKey = privateKey.substring(2);
     }
 
-    const tx = new Tx(txParam);
+    const tx = new Tx(txParam, {chain: 'rinkeby'});
     const privateKeyBuffer = Buffer.from(privateKey, 'hex');
     tx.sign(privateKeyBuffer);
     const serializedTx = tx.serialize();

@@ -1,4 +1,6 @@
-[
+import { AbiItem } from 'web3-utils';
+
+export const ZeroPoolAbi: AbiItem[]  =[
   {
     "inputs": [],
     "stateMutability": "nonpayable",
