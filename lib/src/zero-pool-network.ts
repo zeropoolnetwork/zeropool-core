@@ -1,6 +1,6 @@
 import { decryptUtxo, encryptUtxo, getKeyPair, getProof, KeyPair, Utxo } from "./utils";
 
-import { getEthereumAddress, hash, toHex } from './ethereum/ethereum';
+import { getEthereumAddress, hash, toHex } from './ethereum';
 import ZeroPoolContract from './ethereum/zeropool/zeropool-contract';
 // @ts-ignore todo: download it from npm package
 import { nullifier, transfer_compute, utxo } from '../../circom/src/inputs';
@@ -15,7 +15,7 @@ import {
   PublishBlockEvent,
   Tx,
   TxExternalFields
-} from "./ethereum/zeropool/zeropool-contract.dto";
+} from "./ethereum/zeropool";
 import { Transaction } from "web3-core";
 
 class ZeroPoolNetwork {

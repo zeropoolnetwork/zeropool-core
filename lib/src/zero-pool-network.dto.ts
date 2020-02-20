@@ -1,4 +1,4 @@
-import { DepositEvent } from "./ethereum/zeropool/zeropool-contract.dto";
+import { DepositEvent } from "./ethereum/zeropool";
 import { Utxo } from "./utils";
 
 export type ContractUtxos = {

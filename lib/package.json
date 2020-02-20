@@ -2,13 +2,19 @@
   "name": "cli-zeropool",
   "version": "1.0.0",
   "description": "",
-  "main": "src/zero-pool-network.ts",
+  "main": "dist/index.js",
+  "typings": "dist/types/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "clean": "rimraf dist",
     "start": "node --experimental-worker test.js",
-    "build": "npm run clean && npx tsc",
+    "build": "npm run clean && npx tsc --module commonjs",
+    "build:browser": "npm run build && npm run browserify",
     "lint": "npx tslint -c tslint.json 'src/**/*.ts'",
-    "browserify": "browserify --standalone ZeroPoolNetwork zero-pool-network.js -o build/zero-pool-network.js --exclude worker_threads"
+    "browserify": "browserify --standalone ZeroPoolNetwork dist/index.js -o build/zero-pool-network.js --exclude worker_threads",
+    "create-index": "npx cti src"
   },
   "author": "ZeroPool (kk)",
   "license": "ISC",
@@ -26,6 +32,7 @@
   },
   "devDependencies": {
     "@types/node": "^13.7.1",
+    "create-ts-index": "^1.12.0",
     "tslint": "^6.0.0",
     "typescript": "^3.7.5"
   }
