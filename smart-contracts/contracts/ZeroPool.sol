@@ -121,7 +121,8 @@ contract Zeropool is Ownable{
 
     function withdraw(PayNote memory w) public returns(bool) {
         bytes32 withdraw_hash = keccak256(abi.encode(w));
-        require(withdraw_state[withdraw_hash] < rollup_tx_num);
+        uint256 state = withdraw_state[withdraw_hash];
+        require(state < rollup_tx_num && state != 0);
         require(w.blocknumber < block.number - CHALLENGE_EXPIRES_BLOCKS);
         delete withdraw_state[withdraw_hash];
         w.utxo.token.abstractTransfer(w.utxo.owner, w.utxo.amount);
