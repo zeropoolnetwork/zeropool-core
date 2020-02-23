@@ -53,8 +53,7 @@
           return payNote;
         }
 
-        // const txData await deposit('0x0000000000000000000000000000000000000000', 100000);
-
+        // const txData = await deposit('0x0000000000000000000000000000000000000000', 100000);
         // const txData = await transfer(
         //   '0x0000000000000000000000000000000000000000',
         //   '0x2e6d6441261c12f37c8f8cb688754cd7e70a68b08b47246456784c107ff5a454',
@@ -81,9 +80,14 @@
     const fetchedData1 = await fetch('./transaction.json');
     const transactionJson = await fetchedData1.json();
 
+    let ethereum = window.ethereum;
+    if (typeof ethereum !== 'undefined') {
+      await ethereum.enable();
+    }
+
     return new ZeroPoolNetwork.ZeroPoolNetwork(
       "0xF0c255b0881acDc7f1C855A823D900F3A78fA1c2",
-      "0x896bdb64b1ca1458a61323416f5d4ba1a96278c894f83059b02642d094a21c63",
+      window.web3.currentProvider,
       "salute grocery glass box cloth pull wedding measure bright tilt shield over",
       transactionJson,
       proverKey,

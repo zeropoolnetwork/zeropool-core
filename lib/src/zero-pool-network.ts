@@ -1,10 +1,6 @@
 import { decryptUtxo, encryptUtxo, getKeyPair, getProof, KeyPair, Utxo } from "./utils";
 
-import { getEthereumAddress, hash, toHex } from './ethereum';
-import { ZeroPoolContract } from './ethereum/zeropool';
-import { nullifier, transfer_compute, utxo } from './circom/inputs';
-import { MerkleTree } from './circom/merkletree';
-import { ContractUtxos, DepositHistoryItem, UtxoPair } from "./zero-pool-network.dto";
+import { hash, toHex } from './ethereum';
 import {
   BlockItem,
   DepositEvent,
@@ -12,16 +8,21 @@ import {
   PayNote,
   PublishBlockEvent,
   Tx,
-  TxExternalFields
-} from "./ethereum/zeropool";
+  TxExternalFields,
+  ZeroPoolContract
+} from './ethereum/zeropool';
+
+import { nullifier, transfer_compute, utxo } from './circom/inputs';
+import { MerkleTree } from './circom/merkletree';
+import { ContractUtxos, DepositHistoryItem, UtxoPair } from "./zero-pool-network.dto";
 import { Transaction } from "web3-core";
+import { HttpProvider } from 'web3-providers-http';
 
 export class ZeroPoolNetwork {
 
   private readonly transactionJson: any;
   private readonly proverKey: any;
 
-  public readonly ethAddress: string;
   public readonly contractAddress: string;
   public readonly zpKeyPair: KeyPair;
 
@@ -29,19 +30,17 @@ export class ZeroPoolNetwork {
 
   constructor(
     contractAddress: string,
-    ethPrivateKey: string,
+    web3Provider: HttpProvider,
     zpMnemonic: string,
     transactionJson: any,
     proverKey: any,
-    connectionString: string = 'http://127.0.0.1:8545'
   ) {
 
     this.transactionJson = transactionJson;
     this.proverKey = proverKey;
-    this.ethAddress = getEthereumAddress(ethPrivateKey);
     this.contractAddress = contractAddress;
     this.zpKeyPair = getKeyPair(zpMnemonic);
-    this.ZeroPool = new ZeroPoolContract(contractAddress, ethPrivateKey, connectionString);
+    this.ZeroPool = new ZeroPoolContract(contractAddress, web3Provider);
   }
 
   async deposit(token: string, amount: number) {
@@ -149,7 +148,10 @@ export class ZeroPoolNetwork {
     if (events.length === 0) {
       return [];
     }
-    const myDeposits: DepositEvent[] = events.filter(event => event.owner === this.ethAddress);
+
+    const myDeposits: DepositEvent[] = events.filter(event =>
+      event.owner === this.ZeroPool.web3Ethereum.ethAddress);
+
     const txHums$: Promise<string>[] = myDeposits.map(
       (deposit: DepositEvent): Promise<string> => {
 
@@ -225,7 +227,7 @@ export class ZeroPoolNetwork {
     const encryptedUTXOs = add_utxo.map((input: Utxo) => encryptUtxo(input.pubkey, input));
 
     const txExternalFields: TxExternalFields<bigint> = {
-      owner: delta === 0n ? "0x0000000000000000000000000000000000000000" : this.ethAddress,
+      owner: delta === 0n ? "0x0000000000000000000000000000000000000000" : this.ZeroPool.web3Ethereum.ethAddress,
       message: [
         {
           data: encryptedUTXOs[0]
