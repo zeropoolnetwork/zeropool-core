@@ -89,7 +89,7 @@ contract Zeropool is Ownable {
         view
         returns (bool)
     {
-        (bytes32 itemhash, bytes32 _) = blockItemHash(note.item);
+        (bytes32 itemhash, ) = blockItemHash(note.item);
         return
             MerkleProof.keccak256MerkleProof(
                 note.proof,
@@ -103,8 +103,8 @@ contract Zeropool is Ownable {
         BlockItemNote memory note0,
         BlockItemNote memory note1
     ) internal view returns (bool) {
-        (bytes32 itemhash0, bytes32 _0) = blockItemHash(note0.item);
-        (bytes32 itemhash1, bytes32 _1) = blockItemHash(note1.item);
+        (bytes32 itemhash0,) = blockItemHash(note0.item);
+        (bytes32 itemhash1,) = blockItemHash(note1.item);
 
         return
             MerkleProof.keccak256MerkleProof(
