@@ -144,6 +144,7 @@ contract Zeropool is Ownable {
     constructor() public {
         rollup_block[0] = EMPTY_BLOCK_HASH;
         rollup_tx_num = 256;
+        alive = true;
     }
 
     function deposit(IERC20 token, uint256 amount, bytes32 txhash)
@@ -183,19 +184,19 @@ contract Zeropool is Ownable {
         uint256 rollup_cur_block_num,
         uint256 blocknumber_expires
     ) public onlyOwner returns (bool) {
-        require(alive);
-        require(rollup_cur_block_num == rollup_tx_num >> 8);
-        require(block.number < blocknumber_expires);
+        require(alive, "contract stopped");
+        require(rollup_cur_block_num == rollup_tx_num >> 8, "wrong block number");
+        require(block.number < blocknumber_expires, "blocknumber is already expires");
         uint256 nitems = items.length;
-        require(nitems > 0 && nitems <= 256);
-        bytes32[] memory hashes = new bytes32[](nitems);
+        require(nitems > 0 && nitems <= 256, "wrong number of items");
+        bytes32[] memory hashes = new bytes32[](nitems); 
         for (uint256 i = 0; i < nitems; i++) {
             BlockItem memory item = items[i];
             bytes32 itemhash = keccak256(abi.encode(item));
             if (item.ctx.delta == 0) {
-                require(item.deposit_blocknumber == 0);
-                require(item.ctx.token == IERC20(0));
-                require(item.ctx.ext.owner == address(0));
+                require(item.deposit_blocknumber == 0, "deposit_blocknumber should be zero in transfer case");
+                require(item.ctx.token == IERC20(0), "token should be zero in transfer case");
+                require(item.ctx.ext.owner == address(0), "owner should be zero in tranfer case");
             } else if (item.ctx.delta < MAX_AMOUNT) {
                 bytes32 txhash = keccak256(abi.encode(item.ctx));
                 bytes32 deposit_hash = keccak256(
@@ -207,13 +208,13 @@ contract Zeropool is Ownable {
                         txhash
                     )
                 );
-                require(deposit_state[deposit_hash] == DEPOSIT_EXISTS);
+                require(deposit_state[deposit_hash] == DEPOSIT_EXISTS, "unexisted deposit");
                 deposit_state[deposit_hash] = rollup_tx_num + i;
             } else if (
                 item.ctx.delta > BN254_ORDER - MAX_AMOUNT &&
                 item.ctx.delta < BN254_ORDER
             ) {
-                require(item.deposit_blocknumber == 0);
+                require(item.deposit_blocknumber == 0, "deposit blocknumber should be zero");
                 bytes32 txhash = keccak256(abi.encode(item.ctx));
                 bytes32 withdraw_hash = keccak256(
                     abi.encode(
@@ -224,9 +225,9 @@ contract Zeropool is Ownable {
                         txhash
                     )
                 );
-                require(withdraw_state[withdraw_hash] == 0);
+                require(withdraw_state[withdraw_hash] == 0, "withdrawal already published");
                 withdraw_state[withdraw_hash] = rollup_tx_num + i;
-            } else revert();
+            } else revert("wrong behavior");
 
             hashes[i] = itemhash;
         }
@@ -238,10 +239,9 @@ contract Zeropool is Ownable {
         return true;
     }
 
-    function stopRollup(uint256 lastvalid) public returns (bool) {
+    function stopRollup(uint256 lastvalid) internal returns (bool) {
         alive = false;
         if (rollup_tx_num > lastvalid) rollup_tx_num = lastvalid;
-        return true;
     }
 
     function challengeTx(BlockItemNote memory cur, BlockItemNote memory base)
