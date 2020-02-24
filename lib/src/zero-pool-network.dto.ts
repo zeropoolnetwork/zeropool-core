@@ -16,7 +16,10 @@ export type MyUtxoState = {
   nullifiers: bigint[]
 };
 
-export type Action = 'deposit' | 'transfer' | 'withdraw';
+export type Action = 'deposit' | 'deposit_external' | 'deposit_cancel' |
+  'withdraw' | 'withdraw_external' | 'withdraw_force' |
+  'transfer';
+
 export type ActionType = 'in' | 'out';
 
 export type HistoryState = {

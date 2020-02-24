@@ -8,7 +8,9 @@ import { MerkleTree } from './circom/merkletree';
 import {
   Action,
   ContractUtxos,
-  DepositHistoryItem, HistoryItem, HistoryState,
+  DepositHistoryItem,
+  HistoryItem,
+  HistoryState,
   IMerkleTree,
   MyUtxoState,
   UtxoPair
@@ -42,15 +44,15 @@ export class ZeroPoolNetwork {
 
   public readonly ZeroPool: ZeroPoolContract;
 
-  private historyStateSubject: BehaviorSubject<HistoryState>;
-  public historyState$: Observable<HistoryState>;
+  private zpHistoryStateSubject: BehaviorSubject<HistoryState>;
+  public zpHistoryState$: Observable<HistoryState>;
 
-  get historyState(): HistoryState {
-    return this.historyStateSubject.value;
+  get zpHistoryState(): HistoryState {
+    return this.zpHistoryStateSubject.value;
   }
 
-  set historyState(val: HistoryState) {
-    this.historyStateSubject.next(val);
+  set zpHistoryState(val: HistoryState) {
+    this.zpHistoryStateSubject.next(val);
   }
 
   private stateSubject: BehaviorSubject<MyUtxoState>;
@@ -83,11 +85,11 @@ export class ZeroPoolNetwork {
     this.stateSubject = new BehaviorSubject<MyUtxoState>(cashedState || defaultState);
     this.state$ = this.stateSubject.asObservable();
 
-    this.historyStateSubject = new BehaviorSubject<HistoryState>(historyState || defaultHistoryState);
-    this.historyState$ = this.historyStateSubject.asObservable();
+    this.zpHistoryStateSubject = new BehaviorSubject<HistoryState>(historyState || defaultHistoryState);
+    this.zpHistoryState$ = this.zpHistoryStateSubject.asObservable();
   }
 
-  async deposit(token: string, amount: number) {
+  async deposit(token: string, amount: number): Promise<[BlockItem<string>, string]> {
     const state = await this.myUtxoState(this.state);
     this.state = state;
 
@@ -165,12 +167,17 @@ export class ZeroPoolNetwork {
     );
   }
 
-  depositCancel(payNote: PayNote) {
+  depositCancel(payNote: PayNote): Promise<Transaction> {
     return this.ZeroPool.cancelDeposit(payNote);
   }
 
-  withdraw(payNote: PayNote) {
+  withdraw(payNote: PayNote): Promise<Transaction> {
     return this.ZeroPool.withdraw(payNote);
+  }
+
+  async publishBlockItems(blockItems: BlockItem<string>[], blockNumberExpires: number): Promise<Transaction> {
+    const rollupCurrentTxNum = await this.ZeroPool.getRollupTxNum();
+    return this.ZeroPool.publishBlock(blockItems, +rollupCurrentTxNum >> 8, blockNumberExpires)
   }
 
   async calculateUtxo(
@@ -203,64 +210,6 @@ export class ZeroPoolNetwork {
     }
 
     return { utxoIn, utxoOut }
-  }
-
-  async publishBlockItems(blockItems: BlockItem<string>[], blockNumberExpires: number) {
-    const rollupCurrentTxNum = await this.ZeroPool.getRollupTxNum();
-    return this.ZeroPool.publishBlock(blockItems, +rollupCurrentTxNum >> 8, blockNumberExpires)
-  }
-
-  async myDeposits(): Promise<DepositHistoryItem[]> {
-    const events = await this.ZeroPool.getDepositEvents();
-    if (events.length === 0) {
-      return [];
-    }
-
-    const myDeposits: DepositEvent[] = events.filter(event =>
-      event.owner === this.ZeroPool.web3Ethereum.ethAddress);
-
-    const txHums$: Promise<string>[] = myDeposits.map(
-      (deposit: DepositEvent): Promise<string> => {
-
-        const payNote: PayNote = {
-          blockNumber: deposit.blockNumber,
-          txHash: deposit.params.txHash,
-          utxo: {
-            amount: deposit.params.amount,
-            owner: deposit.owner,
-            token: deposit.params.token
-          }
-        };
-
-        return this.ZeroPool.getDepositTxNum(payNote)
-      }
-    );
-
-    const txHums: string[] = await Promise.all<string>(txHums$);
-    return myDeposits.map((deposit: DepositEvent, i: number) => {
-      if (txHums[i] === '115792089237316195423570985008687907853269984665640564039457584007913129639935') {
-        return {
-          deposit,
-          isExists: true,
-          isSpent: false,
-          spentInTx: '0'
-        }
-      } else if (txHums[i] === '0') {
-        return {
-          deposit,
-          isExists: false,
-          isSpent: false,
-          spentInTx: '0'
-        }
-      }
-
-      return {
-        deposit,
-        isExists: true,
-        isSpent: true,
-        spentInTx: txHums[i]
-      }
-    });
   }
 
   async utxoRootHash() {
@@ -342,6 +291,59 @@ export class ZeroPoolNetwork {
     ];
   }
 
+  async depositExternalHistory(): Promise<DepositHistoryItem[]> {
+    const events = await this.ZeroPool.getDepositEvents();
+    if (events.length === 0) {
+      return [];
+    }
+
+    const myDeposits: DepositEvent[] = events.filter(event =>
+      event.owner === this.ZeroPool.web3Ethereum.ethAddress);
+
+    const txHums$: Promise<string>[] = myDeposits.map(
+      (deposit: DepositEvent): Promise<string> => {
+
+        const payNote: PayNote = {
+          blockNumber: deposit.blockNumber,
+          txHash: deposit.params.txHash,
+          utxo: {
+            amount: deposit.params.amount,
+            owner: deposit.owner,
+            token: deposit.params.token
+          }
+        };
+
+        return this.ZeroPool.getDepositTxNum(payNote)
+      }
+    );
+
+    const txHums: string[] = await Promise.all<string>(txHums$);
+    return myDeposits.map((deposit: DepositEvent, i: number) => {
+      if (txHums[i] === '115792089237316195423570985008687907853269984665640564039457584007913129639935') {
+        return {
+          deposit,
+          isExists: true,
+          isSpent: false,
+          spentInTx: '0'
+        }
+      } else if (txHums[i] === '0') {
+        return {
+          deposit,
+          isExists: false,
+          isSpent: false,
+          spentInTx: '0'
+        }
+      }
+
+      return {
+        deposit,
+        isExists: true,
+        isSpent: true,
+        spentInTx: txHums[i]
+      }
+    });
+  }
+
   async utxoHistory(): Promise<HistoryState> {
     const {
       encryptedUtxoList,
@@ -349,7 +351,11 @@ export class ZeroPoolNetwork {
       blockNumbers,
       nullifiers,
       utxoDeltaList
-    } = await this.getUtxosFromContract(+this.historyState.lastBlockNumber + 1);
+    } = await this.getUtxosFromContract(+this.zpHistoryState.lastBlockNumber + 1);
+
+    if (encryptedUtxoList.length === 0) {
+      return this.zpHistoryState;
+    }
 
     for (const [i, encryptedUtxo] of encryptedUtxoList.entries()) {
 
@@ -367,7 +373,7 @@ export class ZeroPoolNetwork {
             blockNumber: blockNumbers[i]
           };
 
-          this.historyState.items.push(historyItem);
+          this.zpHistoryState.items.push(historyItem);
 
           const utxoNullifier = nullifier(utxo, this.zpKeyPair.privateKey);
           const index = nullifiers.indexOf(utxoNullifier);
@@ -379,7 +385,7 @@ export class ZeroPoolNetwork {
               blockNumber: blockNumbers[index]
             };
 
-            this.historyState.items.push(historyItem);
+            this.zpHistoryState.items.push(historyItem);
           }
 
         }
@@ -388,20 +394,13 @@ export class ZeroPoolNetwork {
 
     }
 
-    const sortedHistory = this.historyState.items.sort(sortHistory);
-    this.historyState = {
+    const sortedHistory = this.zpHistoryState.items.sort(sortHistory);
+    this.zpHistoryState = {
       items: sortedHistory,
       lastBlockNumber: sortedHistory[sortedHistory.length - 1].blockNumber
     };
 
-    return this.historyState;
-    // const deposits = await this.myDeposits();
-    //
-    // // todo: fetch withdrawals
-    // return {
-    //   utxos: myUtxo,
-    //   deposits
-    // };
+    return this.zpHistoryState;
   }
 
   async getBalance() {
