@@ -1,5 +1,7 @@
 import { gasLessCall, getCallData, getEvents, hash, toHex, Web3Ethereum } from '../ethereum';
 import { Contract, EventData } from 'web3-eth-contract';
+import { HttpProvider } from 'web3-providers-http';
+
 import { TxExternalFieldsStructure, TxStructure } from "./eth-structures";
 import {
   Block,
@@ -20,17 +22,14 @@ export class ZeroPoolContract {
   public readonly web3Ethereum: Web3Ethereum;
 
   private readonly contractAddress: string;
-  private readonly privateKey: string;
   private readonly instance: Contract;
 
   constructor(
     contractAddress: string,
-    privateKey: string,
-    connectionString: string = 'http://127.0.0.1:8545'
+    web3Provider: HttpProvider
   ) {
     this.contractAddress = contractAddress;
-    this.privateKey = privateKey;
-    this.web3Ethereum = new Web3Ethereum(connectionString);
+    this.web3Ethereum = new Web3Ethereum(web3Provider);
     this.instance = this.web3Ethereum.createInstance(ZeroPoolAbi, contractAddress);
   }
 
@@ -43,11 +42,7 @@ export class ZeroPoolContract {
 
     const data = getCallData(this.instance, 'deposit', params);
 
-    const signedTransaction =
-      // @ts-ignore
-      await this.web3Ethereum.signTransaction(this.privateKey, this.instance._address, deposit.amount, data);
-
-    return (await this.web3Ethereum.sendTransaction(signedTransaction, 1)) as Transaction;
+    return (await this.web3Ethereum.sendTransaction(this.contractAddress, deposit.amount, data)) as Transaction;
   };
 
   async cancelDeposit(payNote: PayNote): Promise<Transaction> {
@@ -63,11 +58,8 @@ export class ZeroPoolContract {
 
     const data = getCallData(this.instance, 'depositCancel', params);
 
-    const signedTransaction =
-      // @ts-ignore
-      await this.web3Ethereum.signTransaction(this.privateKey, this.instance._address, 0, data);
+    return (await this.web3Ethereum.sendTransaction(this.contractAddress, 0, data)) as Transaction;
 
-    return (await this.web3Ethereum.sendTransaction(signedTransaction, 1)) as Transaction;
   };
 
   async withdraw(payNote: PayNote): Promise<Transaction> {
@@ -83,11 +75,7 @@ export class ZeroPoolContract {
 
     const data = getCallData(this.instance, 'withdraw', params);
 
-    const signedTransaction =
-      // @ts-ignore
-      await this.web3Ethereum.signTransaction(this.privateKey, this.instance._address, 0, data);
-
-    return (await this.web3Ethereum.sendTransaction(signedTransaction, 1)) as Transaction;
+    return (await this.web3Ethereum.sendTransaction(this.contractAddress, 0, data)) as Transaction;
   };
 
   async publishBlock(
@@ -104,11 +92,7 @@ export class ZeroPoolContract {
 
     const data = getCallData(this.instance, 'publishBlock', params);
 
-    const signedTransaction =
-      // @ts-ignore
-      await this.web3Ethereum.signTransaction(this.privateKey, this.instance._address, 0, data);
-
-    return (await this.web3Ethereum.sendTransaction(signedTransaction, 1)) as Transaction;
+    return (await this.web3Ethereum.sendTransaction(this.contractAddress, 0, data)) as Transaction;
   };
 
   async getDepositEvents(): Promise<DepositEvent[]> {
@@ -132,8 +116,11 @@ export class ZeroPoolContract {
     );
   }
 
-  async publishBlockEvents(): Promise<PublishBlockEvent[]> {
-    const events = await getEvents(this.instance, 'NewBlockPack');
+  async publishBlockEvents(fromBlockNumber?: string | number): Promise<PublishBlockEvent[]> {
+    const events = await getEvents(this.instance, 'NewBlockPack', fromBlockNumber);
+    if (events.length === 0) {
+      return [];
+    }
 
     const transactions$: Promise<Transaction>[] = events.map((e: EventData) => {
       return this.web3Ethereum.getTransaction(e.transactionHash);
@@ -155,6 +142,22 @@ export class ZeroPoolContract {
         }
       }
     );
+  }
+
+  async getLastRootPointer(): Promise<number | null> {
+    const events = await getEvents(this.instance, 'NewBlockPack');
+    if (events.length === 0) {
+      return null;
+    }
+
+    const lastTransaction = await this.web3Ethereum.getTransaction(
+      events[events.length - 1].transactionHash
+    );
+
+    const publishBlockCallData = this.decodePublishedBlocks(lastTransaction.input);
+    return +publishBlockCallData.BlockItems[
+      publishBlockCallData.BlockItems.length - 1
+      ].tx.rootPointer;
   }
 
   decodeDeposit(hex: string): Deposit {

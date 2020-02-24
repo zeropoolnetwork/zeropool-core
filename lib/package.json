@@ -1,6 +1,6 @@
 {
   "name": "zeropool-lib",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "",
   "main": "dist/index.js",
   "typings": "dist/types/index.d.ts",
@@ -18,6 +18,7 @@
   "author": "ZeroPool",
   "license": "ISC",
   "dependencies": {
+    "@truffle/hdwallet-provider": "^1.0.31",
     "assert": "^2.0.0",
     "bignumber.js": "^9.0.0",
     "blake2b": "^2.1.3",
@@ -28,6 +29,7 @@
     "ethereumjs-util": "^6.2.0",
     "hdwallet-babyjub": "0.0.1",
     "lodash": "^4.17.15",
+    "rxjs": "^6.5.4",
     "snarkjs": "^0.1.20",
     "web3": "^1.2.5",
     "websnark": "github:krboktv/websnark#915a64ec65df8ac304aa23c957f7c3ec5459685c"

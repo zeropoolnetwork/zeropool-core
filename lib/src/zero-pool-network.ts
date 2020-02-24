@@ -1,59 +1,105 @@
 import { decryptUtxo, encryptUtxo, getKeyPair, getProof, KeyPair, Utxo } from "./utils";
 
-import { getEthereumAddress, hash, toHex } from './ethereum';
-import { ZeroPoolContract } from './ethereum/zeropool';
+import { hash, toHex } from './ethereum';
+import { BlockItem, DepositEvent, PayNote, Tx, TxExternalFields, ZeroPoolContract } from './ethereum/zeropool';
+
 import { nullifier, transfer_compute, utxo } from './circom/inputs';
 import { MerkleTree } from './circom/merkletree';
-import { ContractUtxos, DepositHistoryItem, UtxoPair } from "./zero-pool-network.dto";
 import {
-  BlockItem,
-  DepositEvent,
-  Message,
-  PayNote,
-  PublishBlockEvent,
-  Tx,
-  TxExternalFields
-} from "./ethereum/zeropool";
+  Action,
+  ContractUtxos,
+  DepositHistoryItem, HistoryItem, HistoryState,
+  IMerkleTree,
+  MyUtxoState,
+  UtxoPair
+} from "./zero-pool-network.dto";
 import { Transaction } from "web3-core";
+import { HttpProvider } from 'web3-providers-http';
+import * as assert from "assert";
+import { BehaviorSubject, Observable } from "rxjs";
+
+const PROOF_LENGTH = 32;
+
+const defaultState: MyUtxoState = {
+  merkleTreeState: [],
+  utxoList: [],
+  nullifiers: [],
+  lastBlockNumber: 0
+};
+
+const defaultHistoryState: HistoryState = {
+  items: [],
+  lastBlockNumber: 0
+};
 
 export class ZeroPoolNetwork {
 
   private readonly transactionJson: any;
   private readonly proverKey: any;
 
-  public readonly ethAddress: string;
   public readonly contractAddress: string;
   public readonly zpKeyPair: KeyPair;
 
   public readonly ZeroPool: ZeroPoolContract;
 
+  private historyStateSubject: BehaviorSubject<HistoryState>;
+  public historyState$: Observable<HistoryState>;
+
+  get historyState(): HistoryState {
+    return this.historyStateSubject.value;
+  }
+
+  set historyState(val: HistoryState) {
+    this.historyStateSubject.next(val);
+  }
+
+  private stateSubject: BehaviorSubject<MyUtxoState>;
+  public state$: Observable<MyUtxoState>;
+
+  get state(): MyUtxoState {
+    return this.stateSubject.value;
+  }
+
+  set state(val: MyUtxoState) {
+    this.stateSubject.next(val);
+  }
+
   constructor(
     contractAddress: string,
-    ethPrivateKey: string,
+    web3Provider: HttpProvider,
     zpMnemonic: string,
     transactionJson: any,
     proverKey: any,
-    connectionString: string = 'http://127.0.0.1:8545'
+    cashedState?: MyUtxoState,
+    historyState?: HistoryState,
   ) {
 
     this.transactionJson = transactionJson;
     this.proverKey = proverKey;
-    this.ethAddress = getEthereumAddress(ethPrivateKey);
     this.contractAddress = contractAddress;
     this.zpKeyPair = getKeyPair(zpMnemonic);
-    this.ZeroPool = new ZeroPoolContract(contractAddress, ethPrivateKey, connectionString);
+    this.ZeroPool = new ZeroPoolContract(contractAddress, web3Provider);
+
+    this.stateSubject = new BehaviorSubject<MyUtxoState>(cashedState || defaultState);
+    this.state$ = this.stateSubject.asObservable();
+
+    this.historyStateSubject = new BehaviorSubject<HistoryState>(historyState || defaultHistoryState);
+    this.historyState$ = this.historyStateSubject.asObservable();
   }
 
   async deposit(token: string, amount: number) {
+    const state = await this.myUtxoState(this.state);
+    this.state = state;
+
+    const utxoIn: Utxo[] = [];
+    const utxoOut: Utxo[] = [
+      utxo(BigInt(token), BigInt(amount), this.zpKeyPair.publicKey)
+    ];
+
     const [
       blockItem,
       txHash
-    ] = await this.prepareBlockItem(
-      token,
-      BigInt(amount),
-      [],
-      [utxo(BigInt(token), BigInt(amount), this.zpKeyPair.publicKey)]
-    );
+    ] = await this.prepareBlockItem(token, BigInt(amount), utxoIn, utxoOut, state.merkleTreeState);
 
     const transactionDetails: Transaction = await this.ZeroPool.deposit({
       token,
@@ -69,37 +115,53 @@ export class ZeroPoolNetwork {
     ];
   }
 
-  async transfer(token: string, toPubKey: string, amount: number): Promise<[BlockItem<string>, string]> {
-    const utxoPair = await this.calculateUtxo(BigInt(token), BigInt(toPubKey), BigInt(amount));
-    if (utxoPair instanceof Error) {
-      throw utxoPair;
-    }
+  async transfer(
+    token: string,
+    toPubKey: string,
+    amount: number
+  ): Promise<[BlockItem<string>, string]> {
+
+    const state = await this.myUtxoState(this.state);
+    this.state = state;
+
+    const utxoPair = await this.calculateUtxo(state.utxoList, BigInt(token), BigInt(toPubKey), BigInt(amount));
 
     const utxoZeroDelta = 0n;
     return this.prepareBlockItem(
       token,
       utxoZeroDelta,
       utxoPair.utxoIn,
-      utxoPair.utxoOut
+      utxoPair.utxoOut,
+      state.merkleTreeState
     );
   }
 
-  async prepareWithdraw(token: string, numInputs: number): Promise<[BlockItem<string>, string]> {
-    const utxos: Utxo[] = await this.myUtxos();
-    if (utxos.length < numInputs) {
-      throw new Error('not enough utxos');
-    }
-    const utxoIn = utxos.slice(0, numInputs);
+  async prepareWithdraw(utxoIn: Utxo[]): Promise<[BlockItem<string>, string]> {
+
+    assert.ok(utxoIn.length > 0, 'min 1 utxo');
+    assert.ok(utxoIn.length <= 2, 'max 2 utxo');
+    assert.equal(utxoIn[0].token, utxoIn[1].token, 'different utxo tokens');
+
+    const state = await this.myUtxoState(this.state);
+    this.state = state;
+
     const utxoDelta: bigint = utxoIn.reduce((a, b) => {
       a += b.amount;
       return a;
     }, 0n);
 
+    const utxoOut: Utxo[] = [];
+
+    const token = utxoIn[0].token === 0n ?
+      "0x0000000000000000000000000000000000000000" :
+      toHex(utxoIn[0].token);
+
     return this.prepareBlockItem(
       token,
       utxoDelta * -1n,
       utxoIn,
-      []
+      utxoOut,
+      state.merkleTreeState
     );
   }
 
@@ -111,21 +173,25 @@ export class ZeroPoolNetwork {
     return this.ZeroPool.withdraw(payNote);
   }
 
-  async calculateUtxo(token: bigint, toPubKey: bigint, sendingAmount: bigint): Promise<UtxoPair | Error> {
-    const utxos: Utxo[] = await this.myUtxos();
-    if (utxos.length === 0) {
-      return new Error('you have not utxo');
-    }
+  async calculateUtxo(
+    utxoList: Utxo[],
+    token: bigint,
+    toPubKey: bigint,
+    sendingAmount: bigint
+  ): Promise<UtxoPair> {
+
+    assert.ok(utxoList.length === 0, 'you have not utxoList');
+
+    utxoList = utxoList.sort(sortUtxo);
 
     const utxoIn = [];
     const utxoOut = [];
     let tmpAmount = 0n;
-    for (let i = 0; i < utxos.length; i++) {
-      if (i === 2) {
-        return new Error('sending amount does not fit in two inputs');
-      }
-      tmpAmount += utxos[i].amount;
-      utxoIn.push(utxos[i]);
+    for (let i = 0; i < utxoList.length; i++) {
+      assert.ok(i < 2, 'you have not utxoList');
+
+      tmpAmount += utxoList[i].amount;
+      utxoIn.push(utxoList[i]);
       if (tmpAmount === sendingAmount) {
         utxoOut.push(utxo(token, sendingAmount, toPubKey));
         break;
@@ -149,7 +215,10 @@ export class ZeroPoolNetwork {
     if (events.length === 0) {
       return [];
     }
-    const myDeposits: DepositEvent[] = events.filter(event => event.owner === this.ethAddress);
+
+    const myDeposits: DepositEvent[] = events.filter(event =>
+      event.owner === this.ZeroPool.web3Ethereum.ethAddress);
+
     const txHums$: Promise<string>[] = myDeposits.map(
       (deposit: DepositEvent): Promise<string> => {
 
@@ -196,7 +265,7 @@ export class ZeroPoolNetwork {
 
   async utxoRootHash() {
     const { utxoHashes } = await this.getUtxosFromContract();
-    const mt = new MerkleTree(32 + 1);
+    const mt = new MerkleTree(PROOF_LENGTH + 1);
     if (utxoHashes.length === 0) {
       return mt.root;
     }
@@ -208,14 +277,12 @@ export class ZeroPoolNetwork {
     token: string,
     delta: bigint,
     utxoIn: Utxo[] = [],
-    utxoOut: Utxo[] = []
+    utxoOut: Utxo[] = [],
+    merkleTreeState: any[]
   ): Promise<[BlockItem<string>, string]> {
 
-    const { utxoHashes } = await this.getUtxosFromContract();
-    const mt = new MerkleTree(32 + 1);
-    if (utxoHashes.length !== 0) {
-      mt.pushMany(utxoHashes);
-    }
+    const mt: IMerkleTree = new MerkleTree(PROOF_LENGTH + 1);
+    mt._merkleState = merkleTreeState;
 
     const {
       inputs,
@@ -225,7 +292,7 @@ export class ZeroPoolNetwork {
     const encryptedUTXOs = add_utxo.map((input: Utxo) => encryptUtxo(input.pubkey, input));
 
     const txExternalFields: TxExternalFields<bigint> = {
-      owner: delta === 0n ? "0x0000000000000000000000000000000000000000" : this.ethAddress,
+      owner: delta === 0n ? "0x0000000000000000000000000000000000000000" : this.ZeroPool.web3Ethereum.ethAddress,
       message: [
         {
           data: encryptedUTXOs[0]
@@ -241,10 +308,12 @@ export class ZeroPoolNetwork {
 
     // @ts-ignore
     const proof = await getProof(this.transactionJson, inputs, this.proverKey);
+    const lastRootPointer = await this.ZeroPool.getLastRootPointer();
     const rootPointer
-      = BigInt(utxoHashes.length / 2);
+      = BigInt(lastRootPointer ? lastRootPointer + 1 : 0);
 
-    mt.push(...inputs.utxo_out_hash);
+    mt.push(inputs.utxo_out_hash[0]);
+    mt.push(inputs.utxo_out_hash[1]);
 
     const tx: Tx<bigint> = {
       token,
@@ -273,40 +342,75 @@ export class ZeroPoolNetwork {
     ];
   }
 
-  async myHistory() {
+  async utxoHistory(): Promise<HistoryState> {
     const {
-      encryptedUtxos,
+      encryptedUtxoList,
       utxoHashes,
-      blockNumbers
-    } = await this.getUtxosFromContract();
+      blockNumbers,
+      nullifiers,
+      utxoDeltaList
+    } = await this.getUtxosFromContract(+this.historyState.lastBlockNumber + 1);
 
-    const myUtxo: Utxo[] = [];
-    encryptedUtxos.forEach((encryptedUtxo, i) => {
+    for (const [i, encryptedUtxo] of encryptedUtxoList.entries()) {
+
       try {
+
         const utxo = decryptUtxo(this.zpKeyPair.privateKey, encryptedUtxo, utxoHashes[i]);
         if (utxo.amount.toString() !== '0') {
-          utxo.blockNumber = blockNumbers[i];
-          myUtxo.push(utxo);
+
+          const action = getAction(utxoDeltaList[i]);
+
+          const historyItem: HistoryItem = {
+            action: action,
+            type: 'in', // because we search among utxo. type 'out' means search among nullifiers
+            amount: Number(utxo.amount),
+            blockNumber: blockNumbers[i]
+          };
+
+          this.historyState.items.push(historyItem);
+
+          const utxoNullifier = nullifier(utxo, this.zpKeyPair.privateKey);
+          const index = nullifiers.indexOf(utxoNullifier);
+          if (index !== -1) {
+            const historyItem: HistoryItem = {
+              action: getAction(utxoDeltaList[index]),
+              type: 'out',
+              amount: Number(utxo.amount),
+              blockNumber: blockNumbers[index]
+            };
+
+            this.historyState.items.push(historyItem);
+          }
+
         }
       } catch (e) {
       }
-    });
 
-    const deposits = await this.myDeposits();
+    }
 
-    // todo: fetch withdrawals
-    return {
-      utxos: myUtxo,
-      deposits
+    const sortedHistory = this.historyState.items.sort(sortHistory);
+    this.historyState = {
+      items: sortedHistory,
+      lastBlockNumber: sortedHistory[sortedHistory.length - 1].blockNumber
     };
+
+    return this.historyState;
+    // const deposits = await this.myDeposits();
+    //
+    // // todo: fetch withdrawals
+    // return {
+    //   utxos: myUtxo,
+    //   deposits
+    // };
   }
 
   async getBalance() {
     // todo: think about BigNumber
     const balances: { [key: string]: number } = {};
-    const utxos = await this.myUtxos();
+    const state = await this.myUtxoState(this.state);
+    this.state = state;
 
-    for (const utxo of utxos) {
+    for (const utxo of state.utxoList) {
       const asset = toHex(utxo.token);
       if (!balances[asset]) {
         balances[asset] = Number(utxo.amount);
@@ -318,24 +422,37 @@ export class ZeroPoolNetwork {
     return balances;
   }
 
-  async myUtxos(): Promise<Utxo[]> {
+  async myUtxoState(state: MyUtxoState): Promise<MyUtxoState> {
+    const mt = new MerkleTree(PROOF_LENGTH + 1);
+    if (state.merkleTreeState.length !== 0) {
+      mt._merkleState = state.merkleTreeState;
+    }
+
     const {
-      encryptedUtxos,
+      encryptedUtxoList,
       utxoHashes,
       blockNumbers,
       nullifiers
-    } = await this.getUtxosFromContract();
+    } = await this.getUtxosFromContract(+state.lastBlockNumber + 1);
 
-    if (encryptedUtxos.length === 0) {
-      return [];
+    if (encryptedUtxoList.length === 0) {
+      return state;
     }
 
-    const mt = new MerkleTree(32 + 1);
-    mt.pushMany(utxoHashes);
+    for (const hash of utxoHashes) {
+      mt.push(hash);
+    }
 
-    const myUtxo: Utxo[] = [];
+    state.merkleTreeState = mt._merkleState;
 
-    for (const [i, encryptedUtxo] of encryptedUtxos.entries()) {
+    const notUniqueNullifiers = findDuplicates<bigint>(state.nullifiers.concat(nullifiers));
+    for (const nullifier of notUniqueNullifiers) {
+      const index = state.nullifiers.indexOf(nullifier);
+      state.nullifiers = state.nullifiers.filter((x, i) => i !== index);
+      state.utxoList = state.utxoList.filter((x, i) => i !== index);
+    }
+
+    for (const [i, encryptedUtxo] of encryptedUtxoList.entries()) {
 
       const p = new Promise((resolve) => {
         setTimeout(() => resolve(), 1);
@@ -351,7 +468,8 @@ export class ZeroPoolNetwork {
 
           const utxoNullifier = nullifier(utxo, this.zpKeyPair.privateKey);
           if (!nullifiers.find(x => x === utxoNullifier)) {
-            myUtxo.push(utxo);
+            state.utxoList.push(utxo);
+            state.nullifiers.push(utxoNullifier);
           }
         }
       } catch (e) {
@@ -360,52 +478,70 @@ export class ZeroPoolNetwork {
       }
     }
 
-    return myUtxo.sort((a: Utxo, b: Utxo) => {
-      const diff = b.amount - a.amount;
-      if (diff < 0n) {
-        return -1
-      } else if (diff > 0n) {
-        return 1;
-      } else {
-        return 0
-      }
-    });
+    state.lastBlockNumber = Number(state.utxoList[state.utxoList.length - 1].blockNumber);
+
+    return state;
   }
 
-  async getUtxosFromContract(): Promise<ContractUtxos> {
-    const blockEvents = await this.ZeroPool.publishBlockEvents();
+  async getUtxosFromContract(fromBlockNumber?: string | number): Promise<ContractUtxos> {
+    const blockEvents = await this.ZeroPool.publishBlockEvents(fromBlockNumber);
     if (blockEvents.length === 0) {
-      return { encryptedUtxos: [], utxoHashes: [], blockNumbers: [], nullifiers: [] };
+      return { encryptedUtxoList: [], utxoHashes: [], blockNumbers: [], nullifiers: [], utxoDeltaList: [] };
     }
 
     const allEncryptedUtxos: bigint[][] = [];
     const allHashes: bigint[] = [];
     const inBlockNumber: number[] = [];
     const nullifiers: bigint[] = [];
+    const utxoDeltaList: bigint[] = [];
 
-    blockEvents.forEach((block: PublishBlockEvent) => {
-      block.params.BlockItems.forEach((item: BlockItem<string>) => {
+    for (const block of blockEvents) {
+
+      for (const item of block.params.BlockItems) {
+
         nullifiers.push(...item.tx.nullifier.map(BigInt));
 
-        const hashPack = item.tx.utxoHashes.map(BigInt);
-        item.tx.txExternalFields.message.forEach((msg: Message<string>, i: number) => {
-          allEncryptedUtxos.push(
-            msg.data.map(BigInt)
-          );
-          allHashes.push(hashPack[i]);
-          inBlockNumber.push(block.blockNumber);
-        })
-      });
-    });
+        const [hash1, hash2] = item.tx.utxoHashes.map(BigInt);
+
+        const encryptedUtxoPair = item.tx.txExternalFields.message;
+        allEncryptedUtxos.push(
+          encryptedUtxoPair[0].data.map(BigInt),
+          encryptedUtxoPair[1].data.map(BigInt)
+        );
+
+
+        allHashes.push(hash1, hash2);
+
+        const utxoDelta = BigInt(item.tx.delta);
+        utxoDeltaList.push(utxoDelta, utxoDelta);
+
+        inBlockNumber.push(block.blockNumber, block.blockNumber);
+
+      }
+
+    }
 
     return {
       nullifiers,
-      encryptedUtxos: allEncryptedUtxos,
+      utxoDeltaList,
+      encryptedUtxoList: allEncryptedUtxos,
       utxoHashes: allHashes,
       blockNumbers: inBlockNumber
     };
   }
 
+}
+
+const MAX_AMOUNT = 1766847064778384329583297500742918515827483896875618958121606201292619776;
+
+function getAction(delta: bigint): Action {
+  if (delta === 0n) {
+    return "transfer";
+  } else if (delta < MAX_AMOUNT) {
+    return "deposit";
+  }
+  // delta > BN254_ORDER-MAX_AMOUNT && delta < BN254_ORDER
+  return "withdraw";
 }
 
 function normalizeTx(tx: Tx<bigint>): Tx<string> {
@@ -432,3 +568,35 @@ function normalizeTx(tx: Tx<bigint>): Tx<string> {
   };
 }
 
+function sortHistory(a: HistoryItem, b: HistoryItem) {
+  const diff = b.blockNumber - a.blockNumber;
+  if (diff < 0n) {
+    return -1
+  } else if (diff > 0n) {
+    return 1;
+  } else {
+    return 0
+  }
+}
+
+function sortUtxo(a: Utxo, b: Utxo): number {
+  const diff = b.amount - a.amount;
+  if (diff < 0n) {
+    return -1
+  } else if (diff > 0n) {
+    return 1;
+  } else {
+    return 0
+  }
+}
+
+function findDuplicates<T>(arr: T[]): T[] {
+  let sortedArr = arr.slice().sort();
+  let results = [];
+  for (let i = 0; i < sortedArr.length - 1; i++) {
+    if (sortedArr[i + 1] == sortedArr[i]) {
+      results.push(sortedArr[i]);
+    }
+  }
+  return results;
+}
