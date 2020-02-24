@@ -156,8 +156,13 @@ export const tw = (x: string | number | BigNumber) =>
 export const fw = (x: string | number | BigNumber) =>
   BigNumber.isBigNumber(x) ? x.times(1e-18).toNumber() : tbn(x).times(1e-18).toNumber();
 
-export function getEvents(instance: Contract, event: string): Promise<EventData[]> {
-  return instance.getPastEvents(event, { fromBlock: 0, toBlock: 'latest' })
+export function getEvents(
+  instance: Contract,
+  event: string,
+  fromBlockNumber: string | number = 0
+): Promise<EventData[]> {
+
+  return instance.getPastEvents(event, { fromBlock: fromBlockNumber, toBlock: 'latest' })
 }
 
 export function gasLessCall(

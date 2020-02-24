@@ -116,8 +116,11 @@ export class ZeroPoolContract {
     );
   }
 
-  async publishBlockEvents(): Promise<PublishBlockEvent[]> {
-    const events = await getEvents(this.instance, 'NewBlockPack');
+  async publishBlockEvents(fromBlockNumber?: string | number): Promise<PublishBlockEvent[]> {
+    const events = await getEvents(this.instance, 'NewBlockPack', fromBlockNumber);
+    if (events.length === 0) {
+      return [];
+    }
 
     const transactions$: Promise<Transaction>[] = events.map((e: EventData) => {
       return this.web3Ethereum.getTransaction(e.transactionHash);
@@ -139,6 +142,22 @@ export class ZeroPoolContract {
         }
       }
     );
+  }
+
+  async getLastRootPointer(): Promise<number | null> {
+    const events = await getEvents(this.instance, 'NewBlockPack');
+    if (events.length === 0) {
+      return null;
+    }
+
+    const lastTransaction = await this.web3Ethereum.getTransaction(
+      events[events.length - 1].transactionHash
+    );
+
+    const publishBlockCallData = this.decodePublishedBlocks(lastTransaction.input);
+    return +publishBlockCallData.BlockItems[
+      publishBlockCallData.BlockItems.length - 1
+      ].tx.rootPointer;
   }
 
   decodeDeposit(hex: string): Deposit {

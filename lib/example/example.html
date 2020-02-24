@@ -31,7 +31,7 @@
         }
 
         async function withdraw(token, numOfInputs = 1) {
-          const myUtxo = await instance.myUtxos();
+          const myUtxo = await instance.myUtxoState();
           const withdrawAmount = myUtxo.slice(0, numOfInputs).reduce((acc, item) => {
             return acc + item.amount;
           }, 0n);
@@ -53,7 +53,11 @@
           return payNote;
         }
 
-        // const txData = await deposit('0x0000000000000000000000000000000000000000', 100000);
+        window.getBalance = getBalance;
+
+        window.deposit = deposit;
+
+        window.instance = instance;
         // const txData = await transfer(
         //   '0x0000000000000000000000000000000000000000',
         //   '0x2e6d6441261c12f37c8f8cb688754cd7e70a68b08b47246456784c107ff5a454',
@@ -90,8 +94,7 @@
       window.web3.currentProvider,
       "salute grocery glass box cloth pull wedding measure bright tilt shield over",
       transactionJson,
-      proverKey,
-      "https://rinkeby.infura.io/v3/826fec4cbd954dfd89c714eabf4611c4"
+      proverKey
     );
   }
 

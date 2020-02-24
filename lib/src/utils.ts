@@ -57,7 +57,7 @@ export function decryptUtxo(privateKey: bigint, cipher_text: bigint[], hash: big
   const receiver_public = get_pubkey(privateKey);
   const _utxo_rec = utxo(decrypted_message[0], decrypted_message[1], receiver_public, decrypted_message[2]);
   if (utxo_hash(_utxo_rec) !== hash) {
-    throw new Error('failed to decrypt utxo');
+    throw new Error('failed to decrypt utxoList');
   }
   return _utxo_rec;
 }

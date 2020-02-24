@@ -29,6 +29,7 @@
     "ethereumjs-util": "^6.2.0",
     "hdwallet-babyjub": "0.0.1",
     "lodash": "^4.17.15",
+    "rxjs": "^6.5.4",
     "snarkjs": "^0.1.20",
     "web3": "^1.2.5",
     "websnark": "github:krboktv/websnark#915a64ec65df8ac304aa23c957f7c3ec5459685c"
