@@ -364,6 +364,11 @@ export class ZeroPoolNetwork {
 
     for (const [i, encryptedUtxo] of encryptedUtxoList.entries()) {
 
+      const p = new Promise((resolve) => {
+        setTimeout(() => resolve(), 1);
+      });
+      await p;
+
       try {
 
         const utxo = decryptUtxo(this.zpKeyPair.privateKey, encryptedUtxo, utxoHashes[i]);
