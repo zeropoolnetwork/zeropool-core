@@ -22,7 +22,7 @@ import { BehaviorSubject, Observable } from "rxjs";
 
 const PROOF_LENGTH = 32;
 
-const defaultState: MyUtxoState = {
+const defaultState: MyUtxoState<bigint> = {
   merkleTreeState: [],
   utxoList: [],
   nullifiers: [],
@@ -55,14 +55,14 @@ export class ZeroPoolNetwork {
     this.zpHistoryStateSubject.next(val);
   }
 
-  private stateSubject: BehaviorSubject<MyUtxoState>;
-  public state$: Observable<MyUtxoState>;
+  private stateSubject: BehaviorSubject<MyUtxoState<bigint>>;
+  public state$: Observable<MyUtxoState<bigint>>;
 
-  get state(): MyUtxoState {
+  get state(): MyUtxoState<bigint> {
     return this.stateSubject.value;
   }
 
-  set state(val: MyUtxoState) {
+  set state(val: MyUtxoState<bigint>) {
     this.stateSubject.next(val);
   }
 
@@ -72,7 +72,7 @@ export class ZeroPoolNetwork {
     zpMnemonic: string,
     transactionJson: any,
     proverKey: any,
-    cashedState?: MyUtxoState,
+    cashedState?: MyUtxoState<string>,
     historyState?: HistoryState,
   ) {
 
@@ -82,7 +82,12 @@ export class ZeroPoolNetwork {
     this.zpKeyPair = getKeyPair(zpMnemonic);
     this.ZeroPool = new ZeroPoolContract(contractAddress, web3Provider);
 
-    this.stateSubject = new BehaviorSubject<MyUtxoState>(cashedState || defaultState);
+    if (cashedState) {
+      this.stateSubject = new BehaviorSubject<MyUtxoState<bigint>>(unNormalizeUtxoState(cashedState));
+    } else {
+      this.stateSubject = new BehaviorSubject<MyUtxoState<bigint>>(defaultState);
+    }
+
     this.state$ = this.stateSubject.asObservable();
 
     this.zpHistoryStateSubject = new BehaviorSubject<HistoryState>(historyState || defaultHistoryState);
@@ -93,8 +98,8 @@ export class ZeroPoolNetwork {
     const state = await this.myUtxoState(this.state);
     this.state = state;
 
-    const utxoIn: Utxo[] = [];
-    const utxoOut: Utxo[] = [
+    const utxoIn: Utxo<bigint>[] = [];
+    const utxoOut: Utxo<bigint>[] = [
       utxo(BigInt(token), BigInt(amount), this.zpKeyPair.publicKey)
     ];
 
@@ -138,7 +143,7 @@ export class ZeroPoolNetwork {
     );
   }
 
-  async prepareWithdraw(utxoIn: Utxo[]): Promise<[BlockItem<string>, string]> {
+  async prepareWithdraw(utxoIn: Utxo<bigint>[]): Promise<[BlockItem<string>, string]> {
 
     assert.ok(utxoIn.length > 0, 'min 1 utxo');
     assert.ok(utxoIn.length <= 2, 'max 2 utxo');
@@ -152,7 +157,7 @@ export class ZeroPoolNetwork {
       return a;
     }, 0n);
 
-    const utxoOut: Utxo[] = [];
+    const utxoOut: Utxo<bigint>[] = [];
 
     const token = utxoIn[0].token === 0n ?
       "0x0000000000000000000000000000000000000000" :
@@ -181,7 +186,7 @@ export class ZeroPoolNetwork {
   }
 
   async calculateUtxo(
-    utxoList: Utxo[],
+    utxoList: Utxo<bigint>[],
     token: bigint,
     toPubKey: bigint,
     sendingAmount: bigint
@@ -225,8 +230,8 @@ export class ZeroPoolNetwork {
   async prepareBlockItem(
     token: string,
     delta: bigint,
-    utxoIn: Utxo[] = [],
-    utxoOut: Utxo[] = [],
+    utxoIn: Utxo<bigint>[] = [],
+    utxoOut: Utxo<bigint>[] = [],
     merkleTreeState: any[]
   ): Promise<[BlockItem<string>, string]> {
 
@@ -238,7 +243,7 @@ export class ZeroPoolNetwork {
       add_utxo
     } = transfer_compute(mt.root, utxoIn, utxoOut, BigInt(token), delta, 0n, this.zpKeyPair.privateKey);
 
-    const encryptedUTXOs = add_utxo.map((input: Utxo) => encryptUtxo(input.pubkey, input));
+    const encryptedUTXOs = add_utxo.map((input: Utxo<bigint>) => encryptUtxo(input.pubkey, input));
 
     const txExternalFields: TxExternalFields<bigint> = {
       owner: delta === 0n ? "0x0000000000000000000000000000000000000000" : this.ZeroPool.web3Ethereum.ethAddress,
@@ -421,7 +426,7 @@ export class ZeroPoolNetwork {
     return balances;
   }
 
-  async myUtxoState(state: MyUtxoState): Promise<MyUtxoState> {
+  async myUtxoState(state: MyUtxoState<bigint>): Promise<MyUtxoState<bigint>> {
     const mt = new MerkleTree(PROOF_LENGTH + 1);
     if (state.merkleTreeState.length !== 0) {
       mt._merkleState = state.merkleTreeState;
@@ -567,6 +572,48 @@ function normalizeTx(tx: Tx<bigint>): Tx<string> {
   };
 }
 
+function unNormalizeUtxoState(state: MyUtxoState<string>): MyUtxoState<bigint> {
+  return {
+    utxoList: state.utxoList.map(unNormalizeUtxo),
+    nullifiers: state.nullifiers.map(BigInt),
+    lastBlockNumber: state.lastBlockNumber,
+    merkleTreeState: state.merkleTreeState.map(x => x.map(BigInt))
+  }
+}
+
+export function normalizeUtxoState(state: MyUtxoState<bigint>): MyUtxoState<string> {
+  return {
+    utxoList: state.utxoList.map(normalizeUtxo),
+    nullifiers: state.nullifiers.map(String),
+    lastBlockNumber: state.lastBlockNumber,
+    merkleTreeState: state.merkleTreeState.map(x => x.map(String))
+  }
+}
+
+function unNormalizeUtxo(utxo: Utxo<string>): Utxo<bigint> {
+  return {
+    amount: BigInt(utxo.amount),
+    token: BigInt(utxo.token),
+    pubkey: BigInt(utxo.pubkey),
+    mp_sibling: utxo.mp_sibling ? utxo.mp_sibling.map(BigInt) : [],
+    blinding: utxo.blinding ? BigInt(utxo.blinding) : undefined,
+    blockNumber: utxo.blockNumber,
+    mp_path: utxo.mp_path
+  };
+}
+
+function normalizeUtxo(utxo: Utxo<bigint>): Utxo<string> {
+  return {
+    amount: utxo.amount.toString(),
+    token: utxo.token.toString(),
+    pubkey: utxo.pubkey.toString(),
+    mp_sibling: utxo.mp_sibling ? utxo.mp_sibling.map(String) : [],
+    blinding: utxo.blinding ? utxo.blinding.toString() : undefined,
+    blockNumber: utxo.blockNumber,
+    mp_path: utxo.mp_path
+  };
+}
+
 function sortHistory(a: HistoryItem, b: HistoryItem) {
   const diff = b.blockNumber - a.blockNumber;
   if (diff < 0n) {
@@ -578,7 +625,7 @@ function sortHistory(a: HistoryItem, b: HistoryItem) {
   }
 }
 
-function sortUtxo(a: Utxo, b: Utxo): number {
+function sortUtxo(a: Utxo<bigint>, b: Utxo<bigint>): number {
   const diff = b.amount - a.amount;
   if (diff < 0n) {
     return -1

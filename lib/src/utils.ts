@@ -13,12 +13,12 @@ import buildwitness from './circom/buildwitness';
 
 const zrpPath = 'm/44\'/0\'/0\'/0/0';
 
-export type Utxo = {
-  token: bigint,
-  amount: bigint,
-  pubkey: bigint,
-  blinding?: bigint,
-  mp_sibling?: bigint[],
+export type Utxo<T> = {
+  token: T,
+  amount: T,
+  pubkey: T,
+  blinding?: T,
+  mp_sibling?: T[],
   mp_path?: number,
   blockNumber?: number
 }
@@ -28,7 +28,7 @@ export type KeyPair = {
   publicKey: bigint
 }
 
-export async function getProof(transactionJson: any, inputs: Utxo[], proverKey: any): Promise<bigint[]> {
+export async function getProof(transactionJson: any, inputs: Utxo<bigint>[], proverKey: any): Promise<bigint[]> {
   const circuit = new snarkjs.Circuit(transactionJson);
   const witness = circuit.calculateWitness(inputs);
 
@@ -45,14 +45,14 @@ export function getKeyPair(mnemonic: string): KeyPair {
   }
 }
 
-export function encryptUtxo(pubK: bigint, inputs: Utxo): bigint[] {
+export function encryptUtxo(pubK: bigint, inputs: Utxo<bigint>): bigint[] {
   // @ts-ignore
   const dataToEncrypt = in_utxo_inputs(inputs);
   const dataHash = utxo_hash(inputs);
   return encrypt_message(dataToEncrypt, pubK, dataHash);
 }
 
-export function decryptUtxo(privateKey: bigint, cipher_text: bigint[], hash: bigint): Utxo {
+export function decryptUtxo(privateKey: bigint, cipher_text: bigint[], hash: bigint): Utxo<bigint> {
   const decrypted_message = decrypt_message(cipher_text, privateKey, hash);
   const receiver_public = get_pubkey(privateKey);
   const _utxo_rec = utxo(decrypted_message[0], decrypted_message[1], receiver_public, decrypted_message[2]);

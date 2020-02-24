@@ -9,11 +9,11 @@ export interface IMerkleTree {
   pushMany: (elements: bigint[]) => void;
 }
 
-export type MyUtxoState = {
+export type MyUtxoState<T> = {
   merkleTreeState: Array<any>, // replace any with correct type
   lastBlockNumber: string | number,
-  utxoList: Utxo[],
-  nullifiers: bigint[]
+  utxoList: Utxo<T>[],
+  nullifiers: T[]
 };
 
 export type Action = 'deposit' | 'deposit_external' | 'deposit_cancel' |
@@ -50,6 +50,6 @@ export type ContractUtxos = {
 }
 
 export type UtxoPair = {
-  utxoIn: Utxo[],
-  utxoOut: Utxo[]
+  utxoIn: Utxo<bigint>[],
+  utxoOut: Utxo<bigint>[]
 }
