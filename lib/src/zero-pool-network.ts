@@ -192,7 +192,7 @@ export class ZeroPoolNetwork {
     sendingAmount: bigint
   ): Promise<UtxoPair> {
 
-    assert.ok(utxoList.length === 0, 'you have not utxoList');
+    assert.ok(utxoList.length !== 0, 'you have not utxoList');
 
     utxoList = utxoList.sort(sortUtxo);
 
