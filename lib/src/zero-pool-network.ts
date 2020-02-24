@@ -55,15 +55,15 @@ export class ZeroPoolNetwork {
     this.zpHistoryStateSubject.next(val);
   }
 
-  private stateSubject: BehaviorSubject<MyUtxoState<bigint>>;
-  public state$: Observable<MyUtxoState<bigint>>;
+  private utxoStateSubject: BehaviorSubject<MyUtxoState<bigint>>;
+  public utxoState$: Observable<MyUtxoState<bigint>>;
 
-  get state(): MyUtxoState<bigint> {
-    return this.stateSubject.value;
+  get utxoState(): MyUtxoState<bigint> {
+    return this.utxoStateSubject.value;
   }
 
-  set state(val: MyUtxoState<bigint>) {
-    this.stateSubject.next(val);
+  set utxoState(val: MyUtxoState<bigint>) {
+    this.utxoStateSubject.next(val);
   }
 
   constructor(
@@ -83,20 +83,20 @@ export class ZeroPoolNetwork {
     this.ZeroPool = new ZeroPoolContract(contractAddress, web3Provider);
 
     if (cashedState) {
-      this.stateSubject = new BehaviorSubject<MyUtxoState<bigint>>(unNormalizeUtxoState(cashedState));
+      this.utxoStateSubject = new BehaviorSubject<MyUtxoState<bigint>>(unNormalizeUtxoState(cashedState));
     } else {
-      this.stateSubject = new BehaviorSubject<MyUtxoState<bigint>>(defaultState);
+      this.utxoStateSubject = new BehaviorSubject<MyUtxoState<bigint>>(defaultState);
     }
 
-    this.state$ = this.stateSubject.asObservable();
+    this.utxoState$ = this.utxoStateSubject.asObservable();
 
     this.zpHistoryStateSubject = new BehaviorSubject<HistoryState>(historyState || defaultHistoryState);
     this.zpHistoryState$ = this.zpHistoryStateSubject.asObservable();
   }
 
   async deposit(token: string, amount: number): Promise<[BlockItem<string>, string]> {
-    const state = await this.myUtxoState(this.state);
-    this.state = state;
+    const state = await this.myUtxoState(this.utxoState);
+    this.utxoState = state;
 
     const utxoIn: Utxo<bigint>[] = [];
     const utxoOut: Utxo<bigint>[] = [
@@ -128,8 +128,8 @@ export class ZeroPoolNetwork {
     amount: number
   ): Promise<[BlockItem<string>, string]> {
 
-    const state = await this.myUtxoState(this.state);
-    this.state = state;
+    const state = await this.myUtxoState(this.utxoState);
+    this.utxoState = state;
 
     const utxoPair = await this.calculateUtxo(state.utxoList, BigInt(token), BigInt(toPubKey), BigInt(amount));
 
@@ -149,8 +149,8 @@ export class ZeroPoolNetwork {
     assert.ok(utxoIn.length <= 2, 'max 2 utxo');
     assert.equal(utxoIn[0].token, utxoIn[1].token, 'different utxo tokens');
 
-    const state = await this.myUtxoState(this.state);
-    this.state = state;
+    const state = await this.myUtxoState(this.utxoState);
+    this.utxoState = state;
 
     const utxoDelta: bigint = utxoIn.reduce((a, b) => {
       a += b.amount;
@@ -407,7 +407,7 @@ export class ZeroPoolNetwork {
     const sortedHistory = this.zpHistoryState.items.sort(sortHistory);
     this.zpHistoryState = {
       items: sortedHistory,
-      lastBlockNumber: sortedHistory[sortedHistory.length - 1].blockNumber
+      lastBlockNumber: sortedHistory[0].blockNumber
     };
 
     return this.zpHistoryState;
@@ -416,8 +416,8 @@ export class ZeroPoolNetwork {
   async getBalance() {
     // todo: think about BigNumber
     const balances: { [key: string]: number } = {};
-    const state = await this.myUtxoState(this.state);
-    this.state = state;
+    const state = await this.myUtxoState(this.utxoState);
+    this.utxoState = state;
 
     for (const utxo of state.utxoList) {
       const asset = toHex(utxo.token);
