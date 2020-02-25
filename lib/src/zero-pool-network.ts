@@ -34,6 +34,15 @@ const defaultHistoryState: HistoryState = {
   lastBlockNumber: 0
 };
 
+function copyMyUtxoState(src: MyUtxoState<bigint>): MyUtxoState<bigint> {
+  return {
+    ...src,
+    merkleTreeState: src.merkleTreeState.map( x => [...x]),
+    utxoList: [...src.utxoList],
+    nullifiers: [...src.nullifiers],
+  }
+}
+
 export class ZeroPoolNetwork {
 
   private readonly transactionJson: any;
@@ -126,7 +135,7 @@ export class ZeroPoolNetwork {
   ): Promise<BlockItem<string>> {
 
     const state = await this.myUtxoState(this.utxoState);
-    this.utxoState = state;
+    this.utxoState = copyMyUtxoState(state);
 
     const utxoPair = await this.calculateUtxo(state.utxoList, BigInt(token), BigInt(toPubKey), BigInt(amount));
 
@@ -431,8 +440,11 @@ export class ZeroPoolNetwork {
     return balances;
   }
 
+
+
   async myUtxoState(srcState: MyUtxoState<bigint>): Promise<MyUtxoState<bigint>> {
-    const state = {...srcState};
+
+    const state = copyMyUtxoState(srcState);
 
     const mt = new MerkleTree(PROOF_LENGTH + 1);
     if (state.merkleTreeState.length !== 0) {
