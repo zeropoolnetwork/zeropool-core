@@ -94,7 +94,7 @@ export class ZeroPoolNetwork {
     this.zpHistoryState$ = this.zpHistoryStateSubject.asObservable();
   }
 
-  async deposit(token: string, amount: number): Promise<[BlockItem<string>, string]> {
+  async deposit(token: string, amount: number): Promise<BlockItem<string>> {
     const state = await this.myUtxoState(this.utxoState);
     this.utxoState = state;
 
@@ -116,17 +116,14 @@ export class ZeroPoolNetwork {
 
     blockItem.depositBlockNumber = toHex(transactionDetails.blockNumber as number);
 
-    return [
-      blockItem,
-      txHash
-    ];
+    return blockItem;
   }
 
   async transfer(
     token: string,
     toPubKey: string,
     amount: number
-  ): Promise<[BlockItem<string>, string]> {
+  ): Promise<BlockItem<string>> {
 
     const state = await this.myUtxoState(this.utxoState);
     this.utxoState = state;
@@ -134,16 +131,17 @@ export class ZeroPoolNetwork {
     const utxoPair = await this.calculateUtxo(state.utxoList, BigInt(token), BigInt(toPubKey), BigInt(amount));
 
     const utxoZeroDelta = 0n;
-    return this.prepareBlockItem(
+    const [blockItem, txHash] = await this.prepareBlockItem(
       token,
       utxoZeroDelta,
       utxoPair.utxoIn,
       utxoPair.utxoOut,
       state.merkleTreeState
     );
+    return blockItem;
   }
 
-  async prepareWithdraw(utxoIn: Utxo<bigint>[]): Promise<[BlockItem<string>, string]> {
+  async prepareWithdraw(utxoIn: Utxo<bigint>[]): Promise<BlockItem<string>> {
 
     assert.ok(utxoIn.length > 0, 'min 1 utxo');
     assert.ok(utxoIn.length <= 2, 'max 2 utxo');
@@ -163,13 +161,15 @@ export class ZeroPoolNetwork {
       "0x0000000000000000000000000000000000000000" :
       toHex(utxoIn[0].token);
 
-    return this.prepareBlockItem(
+    const [blockItem, txHash] = await this.prepareBlockItem(
       token,
       utxoDelta * -1n,
       utxoIn,
       utxoOut,
       state.merkleTreeState
     );
+
+    return blockItem;
   }
 
   depositCancel(payNote: PayNote): Promise<Transaction> {
@@ -186,14 +186,15 @@ export class ZeroPoolNetwork {
   }
 
   async calculateUtxo(
-    utxoList: Utxo<bigint>[],
+    srcUtxoList: Utxo<bigint>[],
     token: bigint,
     toPubKey: bigint,
     sendingAmount: bigint
   ): Promise<UtxoPair> {
 
-    assert.ok(utxoList.length !== 0, 'you have not utxoList');
+    assert.ok(srcUtxoList.length !== 0, 'you have not utxoList');
 
+    let utxoList = [...srcUtxoList];
     utxoList = utxoList.sort(sortUtxo);
 
     const utxoIn = [];
@@ -232,7 +233,7 @@ export class ZeroPoolNetwork {
     delta: bigint,
     utxoIn: Utxo<bigint>[] = [],
     utxoOut: Utxo<bigint>[] = [],
-    merkleTreeState: any[]
+    merkleTreeState: bigint[][]
   ): Promise<[BlockItem<string>, string]> {
 
     const mt: IMerkleTree = new MerkleTree(PROOF_LENGTH + 1);
@@ -260,7 +261,6 @@ export class ZeroPoolNetwork {
     const encodedTxExternalFields = this.ZeroPool.encodeTxExternalFields(txExternalFields);
     inputs.message_hash = hash(encodedTxExternalFields);
 
-    // @ts-ignore
     const proof = await getProof(this.transactionJson, inputs, this.proverKey);
     const lastRootPointer = await this.ZeroPool.getLastRootPointer();
     const rootPointer
@@ -431,9 +431,12 @@ export class ZeroPoolNetwork {
     return balances;
   }
 
-  async myUtxoState(state: MyUtxoState<bigint>): Promise<MyUtxoState<bigint>> {
+  async myUtxoState(srcState: MyUtxoState<bigint>): Promise<MyUtxoState<bigint>> {
+    const state = {...srcState};
+
     const mt = new MerkleTree(PROOF_LENGTH + 1);
     if (state.merkleTreeState.length !== 0) {
+      // @ts-ignore
       mt._merkleState = state.merkleTreeState;
     }
 

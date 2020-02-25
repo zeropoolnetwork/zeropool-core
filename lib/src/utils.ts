@@ -28,7 +28,7 @@ export type KeyPair = {
   publicKey: bigint
 }
 
-export async function getProof(transactionJson: any, inputs: Utxo<bigint>[], proverKey: any): Promise<bigint[]> {
+export async function getProof(transactionJson: any, inputs: any, proverKey: any): Promise<bigint[]> {
   const circuit = new snarkjs.Circuit(transactionJson);
   const witness = circuit.calculateWitness(inputs);
 
