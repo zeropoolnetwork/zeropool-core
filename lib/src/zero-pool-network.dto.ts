@@ -10,7 +10,7 @@ export interface IMerkleTree {
 }
 
 export type MyUtxoState<T> = {
-  merkleTreeState: Array<any>, // replace any with correct type
+  merkleTreeState: T[][],
   lastBlockNumber: string | number,
   utxoList: Utxo<T>[],
   nullifiers: T[]
