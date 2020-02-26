@@ -2,7 +2,7 @@ const chai = require("chai");
 const path = require("path");
 const snarkjs = require("snarkjs");
 const bigInt = snarkjs.bigInt;
-const poseidon = require("circomlib/src/poseidon.js").createHash(2, 8, 53);
+const hash2 = require("circomlib/src/poseidon.js").createHash(3, 8, 53);
 const babyJub = require("circomlib/src/babyjub.js");
 
 const compiler = require("circom");
@@ -41,7 +41,7 @@ describe("Merkle proof circuit test", function() {
         let root = leaf;
         for(let i=0; i<n; i++){
           sibling[i] = randrange(0n, babyJub.p);
-          root = _path[i]==0n ? poseidon([root, sibling[i]]) : poseidon([sibling[i], root]);
+          root = _path[i]==0n ? hash2([root, sibling[i]]) : hash2([sibling[i], root]);
         }
         
         const cirDef = await compiler(path.join(__dirname, "circuits", "test_merkleproofposeidon.circom"));

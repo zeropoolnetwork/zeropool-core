@@ -1,5 +1,5 @@
 const _ = require("lodash");
-const hash2 = require("circomlib/src/poseidon.js").createHash(2, 8, 53);
+const hash2 = require("circomlib/src/poseidon.js").createHash(3, 8, 53);
 const {fr_random} = require("./utils");
 
 const assert = require("assert");
