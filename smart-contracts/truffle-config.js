@@ -24,50 +24,18 @@ module.exports = {
       port: 8545,
       network_id: '*', // eslint-disable-line camelcase
     },
-    ropsten: {
-      provider: new HDWalletProvider(process.env.MNEMONIC, "https://ropsten.infura.io/", 0, 10),
-      network_id: 3, // eslint-disable-line camelcase
-      skipDryRun: true
-    },
-    coverage: {
-      host: 'localhost',
-      network_id: '*', // eslint-disable-line camelcase
-      port: 8555,
-      gas: 0xfffffffffff,
-      gasPrice: 0x01,
-    },
-    testrpc: {
-      host: 'localhost',
-      port: 8545,
-      network_id: '*', // eslint-disable-line camelcase
-    },
-    ganache: {
-      host: 'localhost',
-      port: 8545,
-      network_id: '*', // eslint-disable-line camelcase
-    },
     rinkeby: {
       provider: new HDWalletProvider(process.env.MNEMONIC, "https://rinkeby.infura.io/", 0, 10),
       network_id: 4,
       skipDryRun: true
     },
-    sokol: {
-      provider: new HDWalletProvider(process.env.MNEMONIC, "https://sokol.poa.network/", 0, 10),
-      network_id: "*", // Match any network id
+    kovan: {
+      provider: () => new HDWalletProvider(process.env.MNEMONIC, "https://kovan.infura.io/v3/a3f4d001c1fc4a359ea70dd27fd9cb51", 0, 10),
+      network_id: 42,
+      gas: 6000000,
+      gasPrice: 1000000000,
       skipDryRun: true
     },
-    skale: {
-      provider: new HDWalletProvider(process.env.MNEMONIC, "http://157.230.154.5:8134/", 0, 10),
-      gasPrice: 0,
-      network_id: "*",
-      skipDryRun: true
-    },
-    thunder: {
-      provider: new HDWalletProvider(process.env.MNEMONIC, "https://mainnet-rpc.thundercore.com/"),
-      network_id: "*",
-      gas: 3000000,
-      gasPrice: 20000000000
-    },
-  },
+  }
 };
 

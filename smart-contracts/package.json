@@ -23,6 +23,7 @@
     "@truffle/artifactor": "^4.0.44",
     "@truffle/hdwallet-provider": "^1.0.29",
     "circomlib": "0.0.20",
-    "dotenv": "^8.2.0"
+    "dotenv": "^8.2.0",
+    "web3": "^1.2.6"
   }
 }
