@@ -162,17 +162,27 @@ export class ZeroPoolContract {
         );
     }
 
-    async publishBlockEvents(fromBlockNumber?: string | number, onData?: (data: EventData) => any): Promise<PublishBlockEvent[]> {
+    async publishBlockEvents(fromBlockNumber?: string | number, onData?: (data: PublishBlockEvent) => any): Promise<PublishBlockEvent[]> {
+
+        const eventCallback = async (data: EventData): Promise<void> => {
+            const events = await this.parseBlockEvents([data]);
+            onData && onData(events[0]);
+        };
+
         const events = await getEvents(
             this.instance,
             'NewBlockPack',
             fromBlockNumber,
-            onData ? onData : undefined);
+            onData && eventCallback);
 
         if (events.length === 0) {
             return [];
         }
 
+        return this.parseBlockEvents(events);
+    }
+
+    private async parseBlockEvents(events: EventData[]): Promise<PublishBlockEvent[]> {
         const transactions$: Promise<Transaction>[] = events.map((e: EventData) => {
             return this.web3Ethereum.getTransaction(e.transactionHash);
         });
