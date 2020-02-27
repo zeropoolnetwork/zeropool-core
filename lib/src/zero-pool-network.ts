@@ -23,7 +23,8 @@ import {
     DepositProgressNotification,
     GetBalanceProgressNotification,
     PrepareWithdrawProgressNotification,
-    TransferProgressNotification
+    TransferProgressNotification,
+    UtxoHistoryProgressNotification
 } from "./progressNotifications.dto";
 
 const PROOF_LENGTH = 32;
@@ -271,16 +272,6 @@ export class ZeroPoolNetwork {
         return { utxoIn, utxoOut }
     }
 
-    async utxoRootHash() {
-        const { utxoHashes } = await this.getUtxosFromContract();
-        const mt = new MerkleTree(PROOF_LENGTH + 1);
-        if (utxoHashes.length === 0) {
-            return mt.root;
-        }
-        mt.pushMany(utxoHashes);
-        return mt.root;
-    }
-
     async prepareBlockItem(
         token: string,
         delta: bigint,
@@ -357,6 +348,16 @@ export class ZeroPoolNetwork {
         ];
     }
 
+    async utxoRootHash() {
+        const { utxoHashes } = await this.getUtxosFromContract();
+        const mt = new MerkleTree(PROOF_LENGTH + 1);
+        if (utxoHashes.length === 0) {
+            return mt.root;
+        }
+        mt.pushMany(utxoHashes);
+        return mt.root;
+    }
+
     async depositExternalHistory(): Promise<DepositHistoryItem[]> {
         const events = await this.ZeroPool.getDepositEvents();
         if (events.length === 0) {
@@ -410,7 +411,13 @@ export class ZeroPoolNetwork {
         });
     }
 
-    async utxoHistory(): Promise<HistoryState> {
+
+    async utxoHistory(callback?: (update: UtxoHistoryProgressNotification) => any): Promise<HistoryState> {
+
+        callback && callback({ step: "start" });
+
+        callback && callback({ step: "fetch-utxo-list-from-contact" });
+
         const {
             encryptedUtxoList,
             utxoHashes,
@@ -420,10 +427,22 @@ export class ZeroPoolNetwork {
         } = await this.getUtxosFromContract(+this.zpHistoryState.lastBlockNumber + 1);
 
         if (encryptedUtxoList.length === 0) {
+            callback && callback({ step: "finish" });
             return this.zpHistoryState;
         }
 
+        callback && callback({
+            step: "find-own-utxo",
+            processed: 0,
+            outOf: encryptedUtxoList.length
+        });
+
         for (const [i, encryptedUtxo] of encryptedUtxoList.entries()) {
+
+            callback && callback({
+                step: "find-own-utxo",
+                processed: i + 1,
+            });
 
             const p = new Promise((resolve) => {
                 setTimeout(() => resolve(), 1);
@@ -470,6 +489,8 @@ export class ZeroPoolNetwork {
             items: sortedHistory,
             lastBlockNumber: sortedHistory[0].blockNumber
         };
+
+        callback && callback({ step: "finish" });
 
         return this.zpHistoryState;
     }

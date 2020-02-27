@@ -2,7 +2,9 @@ export type StartFinishSteps = 'start' | 'finish';
 
 export type MyUtxoStateSteps = 'fetch-utxo-list-from-contact' | 'find-spent-utxo' | 'find-own-utxo';
 
-export type GetBalanceStep = MyUtxoStateSteps | 'calculate-balances' | StartFinishSteps;
+export type BalanceStep = MyUtxoStateSteps | 'calculate-balances' | StartFinishSteps;
+
+export type UtxoHistoryStep = 'fetch-utxo-list-from-contact' | 'find-own-utxo' | StartFinishSteps;
 
 export type PrepareBlockItemStep = 'transfer-compute' | 'get-proof' | 'get-last-root-pointer';
 
@@ -19,7 +21,7 @@ export type DepositProgressNotification = {
 }
 
 export type GetBalanceProgressNotification = {
-    step: GetBalanceStep,
+    step: BalanceStep,
     processed?: number,
     outOf?: number
 }
@@ -32,6 +34,12 @@ export type TransferProgressNotification = {
 
 export type PrepareWithdrawProgressNotification = {
     step: PrepareWithdrawStep,
+    processed?: number,
+    outOf?: number
+}
+
+export type UtxoHistoryProgressNotification = {
+    step: UtxoHistoryStep,
     processed?: number,
     outOf?: number
 }
