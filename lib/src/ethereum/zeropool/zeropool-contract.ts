@@ -162,24 +162,36 @@ export class ZeroPoolContract {
         );
     }
 
-    async publishBlockEvents(fromBlockNumber?: string | number, onData?: (data: PublishBlockEvent) => any): Promise<PublishBlockEvent[]> {
-
-        const eventCallback = async (data: EventData): Promise<void> => {
-            const events = await this.parseBlockEvents([data]);
-            onData && onData(events[0]);
-        };
+    async publishBlockEvents(fromBlockNumber?: string | number): Promise<PublishBlockEvent[]> {
 
         const events = await getEvents(
             this.instance,
             'NewBlockPack',
-            fromBlockNumber,
-            onData && eventCallback);
+            fromBlockNumber);
 
         if (events.length === 0) {
             return [];
         }
 
         return this.parseBlockEvents(events);
+    }
+
+    async publishBlockEventsAsync(
+        onData: (data: PublishBlockEvent) => any,
+        fromBlockNumber: string | number
+    ): Promise<void> {
+
+        const eventCallback = async (data: EventData): Promise<void> => {
+            const events = await this.parseBlockEvents([data]);
+            onData(events[0]);
+        };
+
+        await getEvents(
+            this.instance,
+            'NewBlockPack',
+            fromBlockNumber,
+            eventCallback
+        );
     }
 
     private async parseBlockEvents(events: EventData[]): Promise<PublishBlockEvent[]> {
