@@ -102,7 +102,7 @@ export class ZeroPoolNetwork {
         this.ZeroPool = new ZeroPoolContract(contractAddress, web3Provider);
 
         if (cashedState) {
-            this.utxoStateSubject = new BehaviorSubject<MyUtxoState<bigint>>(unNormalizeUtxoState(cashedState));
+            this.utxoStateSubject = new BehaviorSubject<MyUtxoState<bigint>>(bigintifyUtxoState(cashedState));
         } else {
             this.utxoStateSubject = new BehaviorSubject<MyUtxoState<bigint>>(defaultState);
         }
@@ -349,7 +349,7 @@ export class ZeroPoolNetwork {
     }
 
     async utxoRootHash() {
-        const { utxoHashes } = await this.getUtxosFromContract();
+        const { utxoHashes } = await this.getUtxoListFromContract();
         const mt = new MerkleTree(PROOF_LENGTH + 1);
         if (utxoHashes.length === 0) {
             return mt.root;
@@ -424,7 +424,7 @@ export class ZeroPoolNetwork {
             blockNumbers,
             nullifiers,
             utxoDeltaList
-        } = await this.getUtxosFromContract(+this.zpHistoryState.lastBlockNumber + 1);
+        } = await this.getUtxoListFromContract(+this.zpHistoryState.lastBlockNumber + 1);
 
         if (encryptedUtxoList.length === 0) {
             callback && callback({ step: "finish" });
@@ -539,7 +539,7 @@ export class ZeroPoolNetwork {
             utxoHashes,
             blockNumbers,
             nullifiers
-        } = await this.getUtxosFromContract(+state.lastBlockNumber + 1);
+        } = await this.getUtxoListFromContract(+state.lastBlockNumber + 1);
 
         if (encryptedUtxoList.length === 0) {
             return state;
@@ -617,14 +617,14 @@ export class ZeroPoolNetwork {
         return state;
     }
 
-    async getUtxosFromContract(fromBlockNumber?: string | number): Promise<ContractUtxos> {
+    async getUtxoListFromContract(fromBlockNumber?: string | number): Promise<ContractUtxos> {
         const blockEvents = await this.ZeroPool.publishBlockEvents(fromBlockNumber);
         if (blockEvents.length === 0) {
             return { encryptedUtxoList: [], utxoHashes: [], blockNumbers: [], nullifiers: [], utxoDeltaList: [] };
         }
 
-        const allEncryptedUtxos: bigint[][] = [];
-        const allHashes: bigint[] = [];
+        const encryptedUtxoList: bigint[][] = [];
+        const hashList: bigint[] = [];
         const inBlockNumber: number[] = [];
         const nullifiers: bigint[] = [];
         const utxoDeltaList: bigint[] = [];
@@ -638,13 +638,13 @@ export class ZeroPoolNetwork {
                 const [hash1, hash2] = item.tx.utxoHashes.map(BigInt);
 
                 const encryptedUtxoPair = item.tx.txExternalFields.message;
-                allEncryptedUtxos.push(
+                encryptedUtxoList.push(
                     encryptedUtxoPair[0].data.map(BigInt),
                     encryptedUtxoPair[1].data.map(BigInt)
                 );
 
 
-                allHashes.push(hash1, hash2);
+                hashList.push(hash1, hash2);
 
                 const utxoDelta = BigInt(item.tx.delta);
                 utxoDeltaList.push(utxoDelta, utxoDelta);
@@ -658,8 +658,8 @@ export class ZeroPoolNetwork {
         return {
             nullifiers,
             utxoDeltaList,
-            encryptedUtxoList: allEncryptedUtxos,
-            utxoHashes: allHashes,
+            encryptedUtxoList: encryptedUtxoList,
+            utxoHashes: hashList,
             blockNumbers: inBlockNumber
         };
     }
@@ -702,25 +702,25 @@ function normalizeTx(tx: Tx<bigint>): Tx<string> {
     };
 }
 
-function unNormalizeUtxoState(state: MyUtxoState<string>): MyUtxoState<bigint> {
+function bigintifyUtxoState(state: MyUtxoState<string>): MyUtxoState<bigint> {
     return {
-        utxoList: state.utxoList.map(unNormalizeUtxo),
+        utxoList: state.utxoList.map(bigintifyUtxo),
         nullifiers: state.nullifiers.map(BigInt),
         lastBlockNumber: state.lastBlockNumber,
         merkleTreeState: state.merkleTreeState.map(x => x.map(BigInt))
     }
 }
 
-export function normalizeUtxoState(state: MyUtxoState<bigint>): MyUtxoState<string> {
+export function stringifyUtxoState(state: MyUtxoState<bigint>): MyUtxoState<string> {
     return {
-        utxoList: state.utxoList.map(normalizeUtxo),
+        utxoList: state.utxoList.map(stringifyUtxo),
         nullifiers: state.nullifiers.map(String),
         lastBlockNumber: state.lastBlockNumber,
         merkleTreeState: state.merkleTreeState.map(x => x.map(String))
     }
 }
 
-function unNormalizeUtxo(utxo: Utxo<string>): Utxo<bigint> {
+function bigintifyUtxo(utxo: Utxo<string>): Utxo<bigint> {
     return {
         amount: BigInt(utxo.amount),
         token: BigInt(utxo.token),
@@ -732,7 +732,7 @@ function unNormalizeUtxo(utxo: Utxo<string>): Utxo<bigint> {
     };
 }
 
-function normalizeUtxo(utxo: Utxo<bigint>): Utxo<string> {
+function stringifyUtxo(utxo: Utxo<bigint>): Utxo<string> {
     return {
         amount: utxo.amount.toString(),
         token: utxo.token.toString(),
