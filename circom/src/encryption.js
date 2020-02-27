@@ -3,8 +3,8 @@ const assert = require("assert");
 const {fs_random, subgroupDecompress, get_pubkey} = require("./utils")
 
 
-const hash2 = poseidon.createHash(2, 8, 53);
-const hash3 = poseidon.createHash(3, 8, 53);
+const hash2 = poseidon.createHash(3, 8, 53);
+
 
 function encrypt_message(message, pubkey, iv) {
   assert(message.length == 3);

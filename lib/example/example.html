@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+
+<script src="../build/zero-pool-network.js"></script>
+
+<script>
+
+  getInstance()
+    .then(
+
+      async (instance) => {
+
+
+        function getBalance() {
+          return instance.getBalance();
+        }
+
+        async function deposit(token, amount) {
+          const [blockItem, txHash] = await instance.deposit(token, amount);
+          return sendTransaction(blockItem);
+        }
+
+        async function transfer(token, toPubKey, amount) {
+          const [blockItem, txHash] = await instance.transfer(token, toPubKey, amount);
+          return sendTransaction(blockItem);
+        }
+
+        async function withdraw(token, numOfInputs = 1) {
+          const myUtxo = await instance.myUtxoState();
+          const withdrawAmount = myUtxo.slice(0, numOfInputs).reduce((acc, item) => {
+            return acc + item.amount;
+          }, 0n);
+
+          const [blockItem, txHash] = await instance.prepareWithdraw(token, numOfInputs);
+          const txData = await sendTransaction(blockItem);
+
+          const payNote = {
+            utxo: {
+              owner: instance.ethAddress,
+              amount: Number(withdrawAmount),
+              token,
+            },
+            blockNumber: txData.blockNumber,
+            txHash
+          };
+
+          // return instance.withdraw(payNote);
+          return payNote;
+        }
+
+        window.getBalance = getBalance;
+
+        window.deposit = deposit;
+
+        window.instance = instance;
+        // const txData = await transfer(
+        //   '0x0000000000000000000000000000000000000000',
+        //   '0x2e6d6441261c12f37c8f8cb688754cd7e70a68b08b47246456784c107ff5a454',
+        //   100000
+        // );
+
+        // const txData = await withdraw('0x0000000000000000000000000000000000000000', 1);
+
+        // console.log(txData)
+
+
+      }
+
+    );
+
+  async function sendTransaction(blockItem) {
+    return postData('http://134.209.172.229:3000/tx', blockItem);
+  }
+
+  async function getInstance() {
+    const fetchedData = await fetch('./transaction_pk.bin');
+    const proverKey = (await fetchedData.arrayBuffer());
+
+    const fetchedData1 = await fetch('./transaction.json');
+    const transactionJson = await fetchedData1.json();
+
+    let ethereum = window.ethereum;
+    if (typeof ethereum !== 'undefined') {
+      await ethereum.enable();
+    }
+
+    return new ZeroPoolNetwork.ZeroPoolNetwork(
+      "0xF0c255b0881acDc7f1C855A823D900F3A78fA1c2",
+      window.web3.currentProvider,
+      "salute grocery glass box cloth pull wedding measure bright tilt shield over",
+      transactionJson,
+      proverKey
+    );
+  }
+
+  function postData(url = '', data = {}) {
+    return fetch(url, {
+      method: 'POST',
+      body: JSON.stringify(data),
+        headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+      .then(response => response.json());
+  }
+
+</script>
+</body>
+</html>

@@ -1,10 +1,17 @@
-import { Command } from '@oclif/command'
-import { flags } from '@oclif/command'
-import { DomainEthereum, HdWallet, Keys } from "@buttonwallet/blockchain-ts-wallet-core";
-import * as ZeroPoolNetwork from '../../lib/zero-pool-network';
-import * as ethUtils from '../../lib/ethereum/ethereum';
-import { cosmiconfig } from "cosmiconfig";
-import { Config } from "cosmiconfig/dist/types";
+import { Command, flags } from '@oclif/command'
+import { DomainEthereum, HdWallet } from '@buttonwallet/blockchain-ts-wallet-core';
+import { getEthereumAddress, ZeroPoolNetwork } from 'zeropool-lib';
+import { cosmiconfig } from 'cosmiconfig';
+import { Config } from 'cosmiconfig/dist/types';
+
+import * as fs from 'fs';
+import * as path from 'path';
+// @ts-ignore
+import * as transactionJson from './../../circom/circuitsCompiled/transaction.json';
+import { IConfig } from "@oclif/config";
+
+const proverKeyPath = path.join(__dirname, '../../circom/circuitsCompiled/transaction_pk.bin');
+const proverKey = fs.readFileSync(proverKeyPath).buffer;
 
 // For other assets we use contract address, for ethereum use 0x0000000000000000000000000000000000000000
 const ETH_ASSET_ADDRESS = '0x0000000000000000000000000000000000000000';
@@ -21,6 +28,11 @@ type ConfigType = {
 };
 
 export default class Base extends Command {
+  constructor(argv: string[], config: IConfig, zp: ZeroPoolNetwork) {
+    super(argv, config);
+    this.zp = zp;
+  }
+
   etherscanPrefix = 'https://rinkeby.etherscan.io/tx/';
 
   static config: null | ConfigType = null;
@@ -140,20 +152,21 @@ export default class Base extends Command {
   ethAddress: string;
   // @ts-ignore
   assetAddress: string;
+
   // @ts-ignore
   zp: ZeroPoolNetwork;
 
   async loadConfig(pathToConfig?: string): Promise<Config> {
-      const explorer = cosmiconfig('alice');
-      const result = pathToConfig
-        ? await explorer.load(pathToConfig)
-        : await explorer.search();
+    const explorer = cosmiconfig('alice');
+    const result = pathToConfig
+      ? await explorer.load(pathToConfig)
+      : await explorer.search();
 
-      if (result) {
-        const { config, filepath } = result;
-        debug('parsing config', { config, filepath });
-        return config;
-      }
+    if (result) {
+      const { config, filepath } = result;
+      debug('parsing config', { config, filepath });
+      return config;
+    }
   }
 
   async run(): Promise<void> {
@@ -180,7 +193,7 @@ export default class Base extends Command {
 
       this.ethAddress = wallet.address;
     } else {
-      this.ethAddress = ethUtils.getEthereumAddress(this.ethSecret);
+      this.ethAddress = getEthereumAddress(this.ethSecret);
     }
 
     // ethAccount:
@@ -195,13 +208,15 @@ export default class Base extends Command {
       this.contractAddress,
       this.ethSecret,
       this.zpMnemonic,
+      transactionJson,
+      proverKey,
       this.rpcEndpoint
     );
 
     this.log('-------------------------------------------------');
-    this.log(`ZeroPool contract address = ${this.contractAddress}`);
-    this.log(`Your eth address = ${this.ethAddress}`);
-    this.log(`Your zp address = ${"0x" + this.zp.zpKeyPair.publicKey.toString(16)}`);
+    this.log(`ZeroPool contract address = ${ this.contractAddress }`);
+    this.log(`Your eth address = ${ this.ethAddress }`);
+    this.log(`Your zp address = ${ "0x" + this.zp.zpKeyPair.publicKey.toString(16) }`);
     this.log('-------------------------------------------------');
 
     this.assetAddress = this.asset === 'ETH'

@@ -1,6 +1,5 @@
 import cli from 'cli-ux'
 import Base from '../base';
-import * as ethUtils from '../../../lib/ethereum/ethereum';
 
 const axios = require('axios').default;
 
@@ -24,20 +23,23 @@ TODO: put example of response
     const withdrawAmount = myUtxo.slice(0, numOfInputs).reduce((acc: any, item: any) => {
       return acc + item.amount;
     }, 0n);
-    const blockItemObj = await this.zp.prepareWithdraw(this.assetAddress, numOfInputs);
+    const [blockItem, txHash] = await this.zp.prepareWithdraw(this.assetAddress, numOfInputs);
 
     cli.action.start(`Send transaction to relayer (waiting 2 confirmations) ${this.relayerEndpoint}`);
-    const res = await axios.post(`${this.relayerEndpoint}/tx`, blockItemObj);
+    const res = await axios.post(`${this.relayerEndpoint}/tx`, blockItem);
     cli.url('View transaction on Etherscan', this.etherscanPrefix + res.data.transactionHash);
 
     cli.action.start(`Withdraw (waiting 2 confirmations)`);
     const withdrawRes = await this.zp.withdraw({
-      token: this.assetAddress,
-      amount: Number(withdrawAmount),
-      owner: this.zp.ethAddress,
-      blocknumber: res.data.blockNumber - 1,
-      txhash: blockItemObj.tx_hash
+      utxo: {
+        token: this.assetAddress,
+        owner: this.zp.ethAddress,
+        amount: Number(withdrawAmount)
+      },
+      blockNumber: res.data.blockNumber - 1,
+      txHash: txHash
     });
+    // @ts-ignore
     cli.url('View Withdraw on Etherscan', this.etherscanPrefix + withdrawRes.transactionHash);
 
     cli.action.stop();

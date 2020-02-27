@@ -7,8 +7,8 @@ const { MerkleTree } = require("./merkletree.js");
 const { randrange, fr_random, fs_random, u160_random, get_pubkey } = require("./utils");
 
 
-const hash2 = poseidon.createHash(2, 8, 53);
-const hash3 = poseidon.createHash(3, 8, 53);
+const hash2 = poseidon.createHash(3, 8, 53);
+const hash3 = poseidon.createHash(4, 8, 54);
 
 const PROOF_LENGTH = 32;
 const MIN_AMOUNT = -1n << 240n;

@@ -42,7 +42,7 @@ template UTXO_hasher() {
 
     signal output out;
 
-    component hasher = Poseidon_3(3);
+    component hasher = Poseidon_4(3);
     hasher.inputs[0] <== token;
     hasher.inputs[1] <== amount;
     hasher.inputs[2] <== owner_commit;
@@ -56,7 +56,7 @@ template Owner_commit() {
 
     signal output out;
 
-    component hasher1 = Poseidon_2(2);
+    component hasher1 = Poseidon_3(2);
     hasher1.inputs[0] <== pubkey;
     hasher1.inputs[1] <== blinding;
 
@@ -69,7 +69,7 @@ template Nullifier() {
 
     signal output out;
     
-    component hasher = Poseidon_2(2);
+    component hasher = Poseidon_3(2);
     hasher.inputs[0] <== secret;
     hasher.inputs[1] <== utxo_hash;
 
