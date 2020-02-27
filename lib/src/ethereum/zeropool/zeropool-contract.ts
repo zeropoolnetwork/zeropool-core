@@ -162,8 +162,13 @@ export class ZeroPoolContract {
         );
     }
 
-    async publishBlockEvents(fromBlockNumber?: string | number): Promise<PublishBlockEvent[]> {
-        const events = await getEvents(this.instance, 'NewBlockPack', fromBlockNumber);
+    async publishBlockEvents(fromBlockNumber?: string | number, onData?: (data: EventData) => any): Promise<PublishBlockEvent[]> {
+        const events = await getEvents(
+            this.instance,
+            'NewBlockPack',
+            fromBlockNumber,
+            onData ? onData : undefined);
+
         if (events.length === 0) {
             return [];
         }
