@@ -294,7 +294,7 @@ export class ZeroPoolNetwork {
         const encryptedUTXOs = add_utxo.map((input: Utxo<bigint>) => encryptUtxo(input.pubkey, input));
 
         const txExternalFields: TxExternalFields<bigint> = {
-            owner: delta === 0n ? "0x0000000000000000000000000000000000000000" : this.ZeroPool.web3Ethereum.ethAddress,
+            owner: delta === 0n ? 0n : BigInt(this.ZeroPool.web3Ethereum.ethAddress),
             message: [
                 {
                     data: encryptedUTXOs[0]
@@ -322,7 +322,7 @@ export class ZeroPoolNetwork {
         mt.push(inputs.utxo_out_hash[1]);
 
         const tx: Tx<bigint> = {
-            token,
+            token: BigInt(token),
             rootPointer,
             txExternalFields,
             nullifier: inputs.nullifier,
@@ -337,7 +337,7 @@ export class ZeroPoolNetwork {
         const txHash = hash(encodedTx);
 
         const blockItem: BlockItem<string> = {
-            tx: normalizeTx(tx),
+            tx: stringifyTx(tx),
             depositBlockNumber: '0x0',
             newRoot: toHex(mt.root)
         };
@@ -678,15 +678,40 @@ function getAction(delta: bigint): Action {
     return "withdraw";
 }
 
-function normalizeTx(tx: Tx<bigint>): Tx<string> {
+export function bigintifyTx(tx: Tx<string>): Tx<bigint> {
     return {
-        token: tx.token,
+        delta: BigInt(tx.delta),
+        nullifier: tx.nullifier.map(BigInt),
+        proof: {
+            data: tx.proof.data.map(BigInt)
+        },
+        rootPointer: BigInt(tx.rootPointer),
+        token: BigInt(tx.token),
+        utxoHashes: tx.utxoHashes.map(BigInt),
+        txExternalFields: {
+            owner: BigInt(tx.txExternalFields.owner),
+            message: [
+                {
+                    data: tx.txExternalFields.message[0].data.map(BigInt)
+                },
+                {
+                    data: tx.txExternalFields.message[1].data.map(BigInt)
+                }
+            ]
+        }
+
+    }
+}
+
+export function stringifyTx(tx: Tx<bigint>): Tx<string> {
+    return {
+        token: toHex(tx.token),
         rootPointer: toHex(tx.rootPointer),
         nullifier: tx.nullifier.map(x => toHex(x)),
         utxoHashes: tx.utxoHashes.map(x => toHex(x)),
         delta: toHex(tx.delta),
         txExternalFields: {
-            owner: tx.txExternalFields.owner,
+            owner: toHex(tx.txExternalFields.owner),
             message: [
                 {
                     data: tx.txExternalFields.message[0].data.map(x => toHex(x)),
@@ -702,7 +727,7 @@ function normalizeTx(tx: Tx<bigint>): Tx<string> {
     };
 }
 
-function bigintifyUtxoState(state: MyUtxoState<string>): MyUtxoState<bigint> {
+export function bigintifyUtxoState(state: MyUtxoState<string>): MyUtxoState<bigint> {
     return {
         utxoList: state.utxoList.map(bigintifyUtxo),
         nullifiers: state.nullifiers.map(BigInt),
@@ -720,7 +745,7 @@ export function stringifyUtxoState(state: MyUtxoState<bigint>): MyUtxoState<stri
     }
 }
 
-function bigintifyUtxo(utxo: Utxo<string>): Utxo<bigint> {
+export function bigintifyUtxo(utxo: Utxo<string>): Utxo<bigint> {
     return {
         amount: BigInt(utxo.amount),
         token: BigInt(utxo.token),
@@ -732,10 +757,10 @@ function bigintifyUtxo(utxo: Utxo<string>): Utxo<bigint> {
     };
 }
 
-function stringifyUtxo(utxo: Utxo<bigint>): Utxo<string> {
+export function stringifyUtxo(utxo: Utxo<bigint>): Utxo<string> {
     return {
         amount: utxo.amount.toString(),
-        token: utxo.token.toString(),
+        token: stringifyToken(utxo.token),
         pubkey: utxo.pubkey.toString(),
         mp_sibling: utxo.mp_sibling ? utxo.mp_sibling.map(String) : [],
         blinding: utxo.blinding ? utxo.blinding.toString() : undefined,
@@ -766,7 +791,7 @@ function sortUtxo(a: Utxo<bigint>, b: Utxo<bigint>): number {
     }
 }
 
-function findDuplicates<T>(arr: T[]): T[] {
+export function findDuplicates<T>(arr: T[]): T[] {
     let sortedArr = arr.slice().sort();
     let results = [];
     for (let i = 0; i < sortedArr.length - 1; i++) {
@@ -775,4 +800,11 @@ function findDuplicates<T>(arr: T[]): T[] {
         }
     }
     return results;
+}
+
+export function stringifyToken(token: bigint): string {
+    if (token === 0n) {
+        return "0x0000000000000000000000000000000000000000";
+    }
+    return toHex(token);
 }

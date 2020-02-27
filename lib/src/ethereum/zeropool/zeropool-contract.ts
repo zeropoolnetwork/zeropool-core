@@ -299,7 +299,9 @@ export class ZeroPoolContract {
                 "TxExternalFields": TxExternalFieldsStructure
             },
             {
-                "owner": txExternalFields.owner.substring(2),
+                "owner": txExternalFields.owner === 0n ?
+                    "0000000000000000000000000000000000000000" :
+                    txExternalFields.owner.toString(16),
                 "Message": [
                     {
                         "data": txExternalFields.message[0].data.map(x => x.toString()),
@@ -321,7 +323,7 @@ export class ZeroPoolContract {
                 "rootptr": tx.rootPointer.toString(),
                 "nullifier": tx.nullifier.map(x => x.toString()),
                 "utxo": tx.utxoHashes.map(x => x.toString()),
-                "token": tx.token.toString(),
+                "token": tx.token.toString(16),
                 "delta": tx.delta.toString(),
                 "TxExternalFields": {
                     "owner": tx.txExternalFields.owner,
