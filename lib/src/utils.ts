@@ -37,6 +37,11 @@ export async function getProof(transactionJson: any, inputs: any, proverKey: any
   return linearize_proof(proof);
 }
 
+export async function verify(proof: bigint[], publicSignals: bigint[], verifierKey: any): Promise<boolean> {
+    const bn128 = await buildBn128();
+    return await bn128.groth16Verify(verifierKey, publicSignals, proof);
+}
+
 export function getKeyPair(mnemonic: string): KeyPair {
   const privK = HdWallet.Privkey(mnemonic, zrpPath).k;
   return {
