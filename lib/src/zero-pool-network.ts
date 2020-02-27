@@ -1,4 +1,4 @@
-import { decryptUtxo, encryptUtxo, getKeyPair, getProof, KeyPair, Utxo, verify } from "./utils";
+import { decryptUtxo, encryptUtxo, getKeyPair, getProof, KeyPair, Utxo } from "./utils";
 
 import { hash, toHex } from './ethereum';
 import { BlockItem, DepositEvent, PayNote, Tx, TxExternalFields, ZeroPoolContract } from './ethereum/zeropool';
@@ -52,8 +52,6 @@ function copyMyUtxoState(src: MyUtxoState<bigint>): MyUtxoState<bigint> {
         nullifiers: [...src.nullifiers],
     }
 }
-
-export const verifyProof = verify;
 
 export class ZeroPoolNetwork {
 
