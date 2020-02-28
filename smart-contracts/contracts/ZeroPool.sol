@@ -187,7 +187,7 @@ contract Zeropool is Ownable, OptimisticRollup {
         uint256[] memory inputs = new uint256[](5);
         inputs[0] = prev.item.new_root;
         inputs[1] = right_root;
-        inputs[2] = prev.id;
+        inputs[2] = cur.id;
         inputs[3] = cur.item.ctx.utxo[0];
         inputs[4] = cur.item.ctx.utxo[1];
         require(groth16verify(tree_update_vk, cur.item.ctx.proof, inputs));
