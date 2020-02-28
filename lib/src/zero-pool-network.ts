@@ -1,4 +1,6 @@
 import { decryptUtxo, encryptUtxo, getKeyPair, getProof, KeyPair, Utxo } from "./utils";
+// @ts-ignore
+import { bn128 } from "snarkjs";
 
 import { hash, toHex } from './ethereum';
 import { BlockItem, DepositEvent, PayNote, Tx, TxExternalFields, ZeroPoolContract } from './ethereum/zeropool';
@@ -52,6 +54,8 @@ function copyMyUtxoState(src: MyUtxoState<bigint>): MyUtxoState<bigint> {
         nullifiers: [...src.nullifiers],
     }
 }
+
+export const bn128R = bn128.r;
 
 export class ZeroPoolNetwork {
 
@@ -308,7 +312,11 @@ export class ZeroPoolNetwork {
         };
 
         const encodedTxExternalFields = this.ZeroPool.encodeTxExternalFields(txExternalFields);
-        inputs.message_hash = BigInt(hash(encodedTxExternalFields));
+        inputs.message_hash = BigInt(
+            hash(
+                encodedTxExternalFields.substring(2)
+            )
+        ) % bn128.r;
 
         callback && callback({ step: "get-proof" });
 
