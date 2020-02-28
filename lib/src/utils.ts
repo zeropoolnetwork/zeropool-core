@@ -10,6 +10,9 @@ import { in_utxo_inputs, utxo, utxo_hash } from './circom/inputs';
 import { decrypt_message, encrypt_message } from './circom/encryption';
 import { get_pubkey, linearize_proof } from './circom/utils';
 import buildwitness from './circom/buildwitness';
+import { Action, HistoryItem, MyUtxoState } from "./zero-pool-network.dto";
+import { Tx } from "./ethereum/zeropool";
+import { toHex } from "./ethereum";
 
 const zrpPath = 'm/44\'/0\'/0\'/0/0';
 
@@ -27,6 +30,150 @@ export type KeyPair = {
     privateKey: bigint,
     publicKey: bigint
 }
+
+const MAX_AMOUNT = 1766847064778384329583297500742918515827483896875618958121606201292619776;
+
+export function getAction(delta: bigint): Action {
+    if (delta === 0n) {
+        return "transfer";
+    } else if (delta < MAX_AMOUNT) {
+        return "deposit";
+    }
+    // delta > BN254_ORDER-MAX_AMOUNT && delta < BN254_ORDER
+    return "withdraw";
+}
+
+export function bigintifyTx(tx: Tx<string>): Tx<bigint> {
+    return {
+        delta: BigInt(tx.delta),
+        nullifier: tx.nullifier.map(BigInt),
+        proof: {
+            data: tx.proof.data.map(BigInt)
+        },
+        rootPointer: BigInt(tx.rootPointer),
+        token: BigInt(tx.token),
+        utxoHashes: tx.utxoHashes.map(BigInt),
+        txExternalFields: {
+            owner: BigInt(tx.txExternalFields.owner),
+            message: [
+                {
+                    data: tx.txExternalFields.message[0].data.map(BigInt)
+                },
+                {
+                    data: tx.txExternalFields.message[1].data.map(BigInt)
+                }
+            ]
+        }
+
+    }
+}
+
+export function stringifyTx(tx: Tx<bigint>): Tx<string> {
+    return {
+        token: stringifyAddress(tx.token),
+        rootPointer: toHex(tx.rootPointer),
+        nullifier: tx.nullifier.map(x => toHex(x)),
+        utxoHashes: tx.utxoHashes.map(x => toHex(x)),
+        delta: toHex(tx.delta),
+        txExternalFields: {
+            owner: stringifyAddress(tx.txExternalFields.owner),
+            message: [
+                {
+                    data: tx.txExternalFields.message[0].data.map(x => toHex(x)),
+                },
+                {
+                    data: tx.txExternalFields.message[1].data.map(x => toHex(x)),
+                }
+            ]
+        },
+        proof: {
+            data: tx.proof.data.map(x => toHex(x))
+        }
+    };
+}
+
+export function bigintifyUtxoState(state: MyUtxoState<string>): MyUtxoState<bigint> {
+    return {
+        utxoList: state.utxoList.map(bigintifyUtxo),
+        nullifiers: state.nullifiers.map(BigInt),
+        lastBlockNumber: state.lastBlockNumber,
+        merkleTreeState: state.merkleTreeState.map(x => x.map(BigInt))
+    }
+}
+
+export function stringifyUtxoState(state: MyUtxoState<bigint>): MyUtxoState<string> {
+    return {
+        utxoList: state.utxoList.map(stringifyUtxo),
+        nullifiers: state.nullifiers.map(String),
+        lastBlockNumber: state.lastBlockNumber,
+        merkleTreeState: state.merkleTreeState.map(x => x.map(String))
+    }
+}
+
+export function bigintifyUtxo(utxo: Utxo<string>): Utxo<bigint> {
+    return {
+        amount: BigInt(utxo.amount),
+        token: BigInt(utxo.token),
+        pubkey: BigInt(utxo.pubkey),
+        mp_sibling: utxo.mp_sibling ? utxo.mp_sibling.map(BigInt) : [],
+        blinding: utxo.blinding ? BigInt(utxo.blinding) : undefined,
+        blockNumber: utxo.blockNumber,
+        mp_path: utxo.mp_path
+    };
+}
+
+export function stringifyUtxo(utxo: Utxo<bigint>): Utxo<string> {
+    return {
+        amount: utxo.amount.toString(),
+        token: stringifyAddress(utxo.token),
+        pubkey: utxo.pubkey.toString(),
+        mp_sibling: utxo.mp_sibling ? utxo.mp_sibling.map(String) : [],
+        blinding: utxo.blinding ? utxo.blinding.toString() : undefined,
+        blockNumber: utxo.blockNumber,
+        mp_path: utxo.mp_path
+    };
+}
+
+export function sortHistory(a: HistoryItem, b: HistoryItem) {
+    const diff = b.blockNumber - a.blockNumber;
+    if (diff < 0n) {
+        return -1
+    } else if (diff > 0n) {
+        return 1;
+    } else {
+        return 0
+    }
+}
+
+export function sortUtxo(a: Utxo<bigint>, b: Utxo<bigint>): number {
+    const diff = b.amount - a.amount;
+    if (diff < 0n) {
+        return -1
+    } else if (diff > 0n) {
+        return 1;
+    } else {
+        return 0
+    }
+}
+
+export function findDuplicates<T>(arr: T[]): T[] {
+    let sortedArr = arr.slice().sort();
+    let results = [];
+    for (let i = 0; i < sortedArr.length - 1; i++) {
+        if (sortedArr[i + 1] == sortedArr[i]) {
+            results.push(sortedArr[i]);
+        }
+    }
+    return results;
+}
+
+export function stringifyAddress(token: bigint): string {
+    if (token === 0n) {
+        return "0x0000000000000000000000000000000000000000";
+    }
+    return toHex(token);
+}
+
 
 export async function getProof(transactionJson: any, inputs: any, proverKey: any): Promise<bigint[]> {
     const circuit = new snarkjs.Circuit(transactionJson);
@@ -70,10 +217,10 @@ export async function verifyProof(proof: bigint[], publicSignals: bigint[], veri
 }
 
 export function getKeyPair(mnemonic: string): KeyPair {
-    const privK = HdWallet.Privkey(mnemonic, zrpPath).k;
+    const privateKey = HdWallet.Privkey(mnemonic, zrpPath).k;
     return {
-        privateKey: privK,
-        publicKey: get_pubkey(privK)
+        privateKey: privateKey,
+        publicKey: get_pubkey(privateKey)
     }
 }
 
@@ -92,4 +239,16 @@ export function decryptUtxo(privateKey: bigint, cipher_text: bigint[], hash: big
         throw new Error('failed to decrypt utxoList');
     }
     return _utxo_rec;
+}
+
+export function copyMyUtxoState(src: MyUtxoState<bigint>): MyUtxoState<bigint> {
+    return {
+        ...src,
+        merkleTreeState: src.merkleTreeState.map(x => [...x]),
+        utxoList: src.utxoList.map(x => {
+            // @ts-ignore
+            return { ...x, mp_sibling: [...x.mp_sibling] }
+        }),
+        nullifiers: [...src.nullifiers],
+    }
 }
