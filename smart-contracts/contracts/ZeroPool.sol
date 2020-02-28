@@ -14,7 +14,6 @@ contract Zeropool is Ownable, OptimisticRollup {
     uint256 constant CHALLENGE_EXPIRES_BLOCKS = 5760;
     uint256 constant BN254_ORDER = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
     uint256 constant MAX_AMOUNT = 1766847064778384329583297500742918515827483896875618958121606201292619776;
-    bytes32 constant EMPTY_BLOCK_HASH = 0x9867cc5f7f196b93bae1e27e6320742445d290f2263827498b54fec539f756af;
 
     event Deposit();
     event NewBlockPack();
@@ -50,8 +49,6 @@ contract Zeropool is Ownable, OptimisticRollup {
     }
 
     constructor() public {
-        rollup_block[0] = EMPTY_BLOCK_HASH;
-        rollup_tx_num = 256;
         alive = true;
     }
 
@@ -200,6 +197,7 @@ contract Zeropool is Ownable, OptimisticRollup {
         );
         return true;
     }
+
 
     function challengeDoubleSpend(
         BlockItemNote memory cur,
