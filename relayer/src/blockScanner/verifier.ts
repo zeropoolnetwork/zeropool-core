@@ -3,7 +3,7 @@ import * as fs from "fs";
 import { bigintifyTx, bn128R, hash, Tx, unstringifyVk, verifyProof } from "zeropool-lib";
 import zp from "../zeroPool";
 
-const vkPath = path.join(__dirname, './../../circuitsCompiled/transaction_vk.json');
+const vkPath = path.join(__dirname, './../../compiled/transaction_vk.json');
 // @ts-ignore
 const vk = unstringifyVk(JSON.parse(fs.readFileSync(vkPath)));
 

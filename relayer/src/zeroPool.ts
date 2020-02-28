@@ -7,10 +7,10 @@ import { Mnemonic, NetworkConfig } from './app.config';
 
 const hdWallet = new HDWalletProvider(Mnemonic, NetworkConfig.rpc, 0, 1);
 
-const transactionJsonPath = path.join(__dirname, './../circuitsCompiled/transaction.json');
+const transactionJsonPath = path.join(__dirname, './../compiled/transaction.json');
 const transactionJson = fs.readFileSync(transactionJsonPath);
 
-const proverKeyPath = path.join(__dirname, './../circuitsCompiled/transaction_pk.bin');
+const proverKeyPath = path.join(__dirname, './../compiled/transaction_pk.bin');
 // @ts-ignore
 const proverKey = fs.readFileSync(proverKeyPath).buffer;
 
