@@ -14,12 +14,7 @@ export async function verifyTx(
 
     const tx = bigintifyTx(stringTx);
 
-    const ext = zp.ZeroPool.encodeTxExternalFields(tx.txExternalFields);
-    const messageHash = BigInt(
-        hash(
-            ext.substring(2)
-        )
-    ) % bn128R;
+    const messageHash = zp.txExternalFieldsHash(tx.txExternalFields);
 
     const inputs = [
         BigInt(lastBlockRootHash),
