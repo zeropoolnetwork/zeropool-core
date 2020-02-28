@@ -181,17 +181,19 @@ contract Zeropool is Ownable, OptimisticRollup {
 
     function challengeUTXOTreeUpdate(
         BlockItemNote memory cur,
-        BlockItemNote memory prev
+        BlockItemNote memory prev,
+        uint256 right_root
     ) public returns (bool) {
         require(blockItemNoteVerifyPair(cur, prev, rollup_block));
+        require(right_root != cur.item.new_root);
         require(cur.id == prev.id + 1);
         uint256[] memory inputs = new uint256[](5);
         inputs[0] = prev.item.new_root;
-        inputs[1] = cur.item.new_root;
+        inputs[1] = right_root;
         inputs[2] = prev.id;
         inputs[3] = cur.item.ctx.utxo[0];
         inputs[4] = cur.item.ctx.utxo[1];
-        require(!groth16verify(tree_update_vk, cur.item.ctx.proof, inputs));
+        require(groth16verify(tree_update_vk, cur.item.ctx.proof, inputs));
         stopRollup(
             cur.id &
                 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00
