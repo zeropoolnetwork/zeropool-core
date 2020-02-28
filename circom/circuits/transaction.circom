@@ -46,6 +46,7 @@ template Transaction(n) {
     component utxo_in[2];
     component utxo_in_invalid[2];
     component utxo_in_commit[2];
+    component utxo_in_nullifier[2];
 
     for(var i=0; i<2; i++) {
         utxo_in[i] = UTXO_hasher();
@@ -62,6 +63,10 @@ template Transaction(n) {
         utxo_in_invalid[i] = Num2Bits(240);
         utxo_in_invalid[i].in <== utxo_in[i].amount;
 
+        utxo_in_nullifier[i] = Nullifier();
+        utxo_in_nullifier[i].secret <== secret;
+        utxo_in_nullifier[i].utxo_hash <== utxo_in[i].out;
+        utxo_in_nullifier[i].out === nullifier[i];
     }
 
     component utxo_out[2];
@@ -80,7 +85,9 @@ template Transaction(n) {
     message_hash_invalid.in <== message_hash + 1;
     message_hash_invalid.out === 0;
 
-
+    component same_nullifiers = IsZero();
+    same_nullifiers.in <== nullifier[0] - nullifier[1];
+    same_nullifiers.out === 0;
 
     utxo_in[0].amount + utxo_in[1].amount + delta === utxo_out[0].amount + utxo_out[1].amount;
     (secret_token - token) * delta === 0;
