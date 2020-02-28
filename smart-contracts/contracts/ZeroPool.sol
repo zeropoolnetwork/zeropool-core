@@ -4,10 +4,9 @@ pragma experimental ABIEncoderV2;
 import "./lib/IERC20.sol";
 import "./lib/Ownable.sol";
 import "./lib/AbstractERC20.sol";
-import "./lib/MerkleProof.sol";
-import "./lib/Groth16Verifier.sol";
+import "./OptimisticRollup.sol";
 
-contract Zeropool is Ownable {
+contract Zeropool is Ownable, OptimisticRollup {
     using AbstractERC20 for IERC20;
 
     uint256 constant DEPOSIT_EXISTS = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
@@ -20,55 +19,6 @@ contract Zeropool is Ownable {
     event Deposit();
     event NewBlockPack();
 
-    struct Message {
-        uint256[4] data;
-    }
-
-    struct TxExternalFields {
-        address owner;
-        Message[2] message;
-    }
-
-    struct Proof {
-        uint256[8] data;
-    }
-
-    struct VK {
-        uint256[] data;
-    }
-
-    struct Tx {
-        uint256 rootptr;
-        uint256[2] nullifier;
-        uint256[2] utxo;
-        IERC20 token;
-        uint256 delta;
-        TxExternalFields ext;
-        Proof proof;
-    }
-
-    struct BlockItem {
-        Tx ctx;
-        uint256 new_root;
-        uint256 deposit_blocknumber;
-    }
-    struct BlockItemNote {
-        bytes32[8] proof;
-        uint256 id;
-        BlockItem item;
-    }
-
-    struct UTXO {
-        address owner;
-        IERC20 token;
-        uint256 amount;
-    }
-
-    struct PayNote {
-        UTXO utxo;
-        uint256 blocknumber;
-        uint256 txhash;
-    }
 
     mapping(uint256 => bytes32) public rollup_block;
     mapping(bytes32 => uint256) public deposit_state;
@@ -97,48 +47,6 @@ contract Zeropool is Ownable {
                 itemhash
             ) ==
             rollup_block[note.id >> 8];
-    }
-
-    function blockItemNoteVerifyPair(
-        BlockItemNote memory note0,
-        BlockItemNote memory note1
-    ) internal view returns (bool) {
-        (bytes32 itemhash0,) = blockItemHash(note0.item);
-        (bytes32 itemhash1,) = blockItemHash(note1.item);
-
-        return
-            MerkleProof.keccak256MerkleProof(
-                note0.proof,
-                note0.id & 0xff,
-                itemhash0
-            ) ==
-            rollup_block[note0.id >> 8] &&
-            MerkleProof.keccak256MerkleProof(
-                note1.proof,
-                note1.id & 0xff,
-                itemhash1
-            ) ==
-            rollup_block[note1.id >> 8] &&
-            itemhash0 != itemhash1;
-    }
-
-    function blockItemHash(BlockItem memory item)
-        internal
-        pure
-        returns (bytes32 itemhash, bytes32 txhash)
-    {
-        txhash = keccak256(abi.encode(item.ctx));
-        itemhash = keccak256(
-            abi.encode(txhash, item.new_root, item.deposit_blocknumber)
-        );
-    }
-
-    function groth16verify(
-        VK memory vk,
-        Proof memory proof,
-        uint256[] memory inputs
-    ) internal view returns (bool) {
-        return Groth16Verifier.verify(vk.data, proof.data, inputs);
     }
 
     constructor() public {
@@ -249,7 +157,7 @@ contract Zeropool is Ownable {
         public
         returns (bool)
     {
-        require(blockItemNoteVerifyPair(cur, base));
+        require(blockItemNoteVerifyPair(cur, base, rollup_block));
         require(cur.item.ctx.rootptr == base.id);
         uint256[] memory inputs = new uint256[](8);
         inputs[0] = base.item.new_root;
@@ -275,7 +183,7 @@ contract Zeropool is Ownable {
         BlockItemNote memory cur,
         BlockItemNote memory prev
     ) public returns (bool) {
-        require(blockItemNoteVerifyPair(cur, prev));
+        require(blockItemNoteVerifyPair(cur, prev, rollup_block));
         require(cur.id == prev.id + 1);
         uint256[] memory inputs = new uint256[](5);
         inputs[0] = prev.item.new_root;
@@ -295,7 +203,7 @@ contract Zeropool is Ownable {
         BlockItemNote memory cur,
         BlockItemNote memory prev
     ) public returns (bool) {
-        require(blockItemNoteVerifyPair(cur, prev));
+        require(blockItemNoteVerifyPair(cur, prev, rollup_block));
         require(cur.id > prev.id);
         require(
             cur.item.ctx.nullifier[0] == prev.item.ctx.nullifier[0] ||
