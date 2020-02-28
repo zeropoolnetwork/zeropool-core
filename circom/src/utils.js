@@ -114,6 +114,13 @@ function linearize_proof(proof) {
 }
 
 
+function bigint_to_hex(x, sz) {
+  const zeros = "0000000000000000000000000000000000000000000000000000000000000000";
+  sz = typeof sz === "undefined" ? 32 : sz;
+  const xdata = x.toString(16);
+  return "0x" + zeros.substring(x.length, sz*2) + xdata;
+}
+
 function subgroupDecompress(x) {
     x = bigInt(x);
     const p = babyJub.p;
@@ -145,4 +152,4 @@ function u160_random() {
   
 
 
-module.exports = { fr_random, fs_random, u160_random, randrange, witness, fload, verify, get_pubkey, linearize_vk_verifier, linearize_proof, proof, subgroupDecompress };
+module.exports = { fr_random, fs_random, u160_random, randrange, witness, fload, verify, get_pubkey, linearize_vk_verifier, linearize_proof, proof, subgroupDecompress, bigint_to_hex };
