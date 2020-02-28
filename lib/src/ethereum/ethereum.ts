@@ -9,183 +9,189 @@ import { BigNumber } from 'bignumber.js'
 
 export class Web3Ethereum {
 
-  // @ts-ignore
-  public ethAddress: string;
+    // @ts-ignore
+    public ethAddress: string;
 
-  private web3: Web3;
+    private web3: Web3;
 
-  constructor(provider: HttpProvider) {
-    this.web3 = new Web3(provider);
-    this.web3.eth.getAccounts()
-      .then((addresses: string[]) => {
-        if (addresses.length === 0) {
-          throw new Error('web3 provider not connected');
-        }
-        this.ethAddress = addresses[0];
-      });
-  }
-
-  createInstance(abi: AbiItem[], address?: string,): Contract {
-    return new this.web3.eth.Contract(abi, address);
-  }
-
-  getTransaction(txHash: string): Promise<Transaction> {
-    return this.web3.eth.getTransaction(txHash);
-  }
-
-  getBalance(address: string): Promise<string> {
-    return this.web3.eth.getBalance(address);
-  }
-
-  encodeParameter(param: any, value: any): string {
-    return this.web3.eth.abi.encodeParameter(param, value)
-  }
-
-  encodeParameters(types: any[], value: any): string {
-    return this.web3.eth.abi.encodeParameters(types, value)
-  }
-
-  decodeParameter(types: any, hex: string): { [key: string]: any } {
-    return this.web3.eth.abi.decodeParameter(types, hex)
-  }
-
-  decodeParameters(types: any[], hex: string): { [key: string]: any } {
-    return this.web3.eth.abi.decodeParameters(types, hex)
-  }
-
-  sendTransaction(
-    to: string,
-    value: number | string,
-    data: string = "",
-    confirmations = 1
-  ): Promise<string | Transaction> {
-
-    return new Promise((resolve) => {
-      this.web3.eth.sendTransaction({
-        data,
-        to,
-        from: this.ethAddress,
-        value: toHex(value)
-      })
-        .on('transactionHash', (transactionHash: string) => {
-          if (confirmations === 0) {
-            resolve(transactionHash);
-          }
-        })
-        .on('confirmation', (num: any, receipt: any) => {
-          if (num === confirmations) {
-            resolve(receipt);
-          }
-        });
-    })
-  }
-
-  sendSignedTransaction(rawTx: string, confirmations: number = 1): Promise<string | Transaction> {
-    if (rawTx.indexOf('0x') !== 0) {
-      rawTx = '0x' + rawTx;
+    constructor(provider: HttpProvider) {
+        this.web3 = new Web3(provider);
+        this.web3.eth.getAccounts()
+            .then((addresses: string[]) => {
+                if (addresses.length === 0) {
+                    throw new Error('web3 provider not connected');
+                }
+                this.ethAddress = addresses[0];
+            });
     }
 
-    return new Promise((resolve) => {
-      this.web3.eth.sendSignedTransaction(rawTx)
-        .on('transactionHash', (transactionHash: string) => {
-          if (confirmations === 0) {
-            resolve(transactionHash);
-          }
+    createInstance(abi: AbiItem[], address?: string,): Contract {
+        return new this.web3.eth.Contract(abi, address);
+    }
+
+    getTransaction(txHash: string): Promise<Transaction> {
+        return this.web3.eth.getTransaction(txHash);
+    }
+
+    getBalance(address: string): Promise<string> {
+        return this.web3.eth.getBalance(address);
+    }
+
+    encodeParameter(param: any, value: any): string {
+        return this.web3.eth.abi.encodeParameter(param, value)
+    }
+
+    encodeParameters(types: any[], value: any): string {
+        return this.web3.eth.abi.encodeParameters(types, value)
+    }
+
+    decodeParameter(types: any, hex: string): { [key: string]: any } {
+        return this.web3.eth.abi.decodeParameter(types, hex)
+    }
+
+    decodeParameters(types: any[], hex: string): { [key: string]: any } {
+        return this.web3.eth.abi.decodeParameters(types, hex)
+    }
+
+    sendTransaction(
+        to: string,
+        value: number | string,
+        data: string = "",
+        confirmations = 1
+    ): Promise<string | Transaction> {
+
+        return new Promise((resolve) => {
+            this.web3.eth.sendTransaction({
+                data,
+                to,
+                from: this.ethAddress,
+                value: toHex(value)
+            })
+                .on('transactionHash', (transactionHash: string) => {
+                    if (confirmations === 0) {
+                        resolve(transactionHash);
+                    }
+                })
+                .on('confirmation', (num: any, receipt: any) => {
+                    if (num === confirmations) {
+                        resolve(receipt);
+                    }
+                });
         })
-        .on('confirmation', (num: any, receipt: any) => {
-          if (num === confirmations) {
-            resolve(receipt);
-          }
-        });
-    })
-  }
+    }
 
-  async signTransactionCustom(
-    privateKey: string,
-    to: string,
-    value: number | string,
-    data: string = ""
-  ) {
-    const from = getEthereumAddress(privateKey);
+    sendSignedTransaction(rawTx: string, confirmations: number = 1): Promise<string | Transaction> {
+        if (rawTx.indexOf('0x') !== 0) {
+            rawTx = '0x' + rawTx;
+        }
 
-    const nonce = await this.web3.eth.getTransactionCount(from)
-      .then((x: number): string => toHex(x));
+        return new Promise((resolve) => {
+            this.web3.eth.sendSignedTransaction(rawTx)
+                .on('transactionHash', (transactionHash: string) => {
+                    if (confirmations === 0) {
+                        resolve(transactionHash);
+                    }
+                })
+                .on('confirmation', (num: any, receipt: any) => {
+                    if (num === confirmations) {
+                        resolve(receipt);
+                    }
+                });
+        })
+    }
 
-    const gasPrice = await this.web3.eth.getGasPrice()
-      .then((x: string): string => toHex(x));
+    async signTransactionCustom(
+        privateKey: string,
+        to: string,
+        value: number | string,
+        data: string = ""
+    ) {
+        const from = getEthereumAddress(privateKey);
 
-    const gas = data
+        const nonce = await this.web3.eth.getTransactionCount(from)
+            .then((x: number): string => toHex(x));
 
-      ? await this.web3.eth.estimateGas({ to, data, gas: 5000000, from, value })
-        .then((x: number): string => toHex(tbn(x).times(1.2).integerValue()))
+        const gasPrice = await this.web3.eth.getGasPrice()
+            .then((x: string): string => toHex(x));
 
-      : toHex(21000);
+        const gas = data
 
-    value = toHex(value);
+            ? await this.web3.eth.estimateGas({ to, data, gas: 5000000, from, value })
+                .then((x: number): string => toHex(tbn(x).times(1.2).integerValue()))
 
-    const txParam: TxData = { nonce, to, value, data, gasPrice, gasLimit: gas };
+            : toHex(21000);
 
-    return sign(txParam, privateKey);
-  }
+        value = toHex(value);
+
+        const txParam: TxData = { nonce, to, value, data, gasPrice, gasLimit: gas };
+
+        return sign(txParam, privateKey);
+    }
 }
 
 function sign(txParam: TxData, privateKey: string): string {
-  if (privateKey.indexOf('0x') === 0) {
-    privateKey = privateKey.substring(2);
-  }
+    if (privateKey.indexOf('0x') === 0) {
+        privateKey = privateKey.substring(2);
+    }
 
-  const tx = new Tx(txParam, { chain: 'rinkeby' });
-  const privateKeyBuffer = Buffer.from(privateKey, 'hex');
-  tx.sign(privateKeyBuffer);
-  const serializedTx = tx.serialize();
-  return serializedTx.toString('hex');
+    const tx = new Tx(txParam, { chain: 'rinkeby' });
+    const privateKeyBuffer = Buffer.from(privateKey, 'hex');
+    tx.sign(privateKeyBuffer);
+    const serializedTx = tx.serialize();
+    return serializedTx.toString('hex');
 }
 
 export function toHex(val: number | string | BigNumber | BigInt): string {
-  if (typeof val === "string") {
-    return "0x" + tbn(val).toString(16);
-  }
-  return "0x" + val.toString(16);
+    if (typeof val === "string") {
+        return "0x" + tbn(val).toString(16);
+    }
+    return "0x" + val.toString(16);
 }
 
 export const hash = keccak256;
 
 export const tbn = (x: number | string): BigNumber => new BigNumber(x);
 export const tw = (x: string | number | BigNumber) =>
-  BigNumber.isBigNumber(x) ? x.times(1e18).integerValue() : tbn(x).times(1e18).integerValue();
+    BigNumber.isBigNumber(x) ? x.times(1e18).integerValue() : tbn(x).times(1e18).integerValue();
 export const fw = (x: string | number | BigNumber) =>
-  BigNumber.isBigNumber(x) ? x.times(1e-18).toNumber() : tbn(x).times(1e-18).toNumber();
+    BigNumber.isBigNumber(x) ? x.times(1e-18).toNumber() : tbn(x).times(1e-18).toNumber();
 
 export function getEvents(
-  instance: Contract,
-  event: string,
-  fromBlockNumber: string | number = 0
+    instance: Contract,
+    event: string,
+    fromBlockNumber: string | number = 0,
+    onData?: (data: EventData) => any
 ): Promise<EventData[]> {
-
-  return instance.getPastEvents(event, { fromBlock: fromBlockNumber, toBlock: 'latest' })
+    if (onData) {
+        return instance.events[event]({ fromBlock: fromBlockNumber })
+            .on('data', function (event: EventData) {
+                onData(event);
+            })
+    }
+    return instance.getPastEvents(event, { fromBlock: fromBlockNumber, toBlock: 'latest' })
 }
 
 export function gasLessCall(
-  instance: Contract,
-  methodName: string,
-  parameters: any[],
-  addressFrom: string = '0x0000000000000000000000000000000000000000',
-  blockNumber: string = 'latest'
+    instance: Contract,
+    methodName: string,
+    parameters: any[],
+    addressFrom: string = '0x0000000000000000000000000000000000000000',
+    blockNumber: string = 'latest'
 ): Promise<any> {
-  return instance.methods[methodName](...parameters).call({ from: addressFrom }, blockNumber);
+    return instance.methods[methodName](...parameters).call({ from: addressFrom }, blockNumber);
 }
 
 export function getCallData(instance: Contract, methodName: string, parameters: any): string {
-  if (!instance.methods[methodName])
-    throw new Error(`Method ${ methodName } does not exist`);
-  return instance.methods[methodName](...parameters).encodeABI();
+    if (!instance.methods[methodName])
+        throw new Error(`Method ${ methodName } does not exist`);
+    return instance.methods[methodName](...parameters).encodeABI();
 }
 
 export function getEthereumAddress(privateKey: string) {
-  if (privateKey.indexOf('0x') === 0) {
-    privateKey = privateKey.substring(2);
-  }
-  const addressBuffer = privateToAddress(Buffer.from(privateKey, 'hex'));
-  const hexAddress = addressBuffer.toString('hex');
-  return addHexPrefix(toChecksumAddress(hexAddress));
+    if (privateKey.indexOf('0x') === 0) {
+        privateKey = privateKey.substring(2);
+    }
+    const addressBuffer = privateToAddress(Buffer.from(privateKey, 'hex'));
+    const hexAddress = addressBuffer.toString('hex');
+    return addHexPrefix(toChecksumAddress(hexAddress));
 }

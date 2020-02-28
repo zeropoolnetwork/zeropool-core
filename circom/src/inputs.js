@@ -68,7 +68,7 @@ function utxo_random(fixed) {
 
 
 function nullifier(utxo, secret) {
-    return hash2([utxo_hash(utxo), secret]);
+    return hash2([secret, utxo_hash(utxo)]);
 }
 
 

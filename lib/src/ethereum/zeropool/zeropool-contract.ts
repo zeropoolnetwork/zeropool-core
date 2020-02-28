@@ -163,11 +163,38 @@ export class ZeroPoolContract {
     }
 
     async publishBlockEvents(fromBlockNumber?: string | number): Promise<PublishBlockEvent[]> {
-        const events = await getEvents(this.instance, 'NewBlockPack', fromBlockNumber);
+
+        const events = await getEvents(
+            this.instance,
+            'NewBlockPack',
+            fromBlockNumber);
+
         if (events.length === 0) {
             return [];
         }
 
+        return this.parseBlockEvents(events);
+    }
+
+    async publishBlockEventsAsync(
+        onData: (data: PublishBlockEvent) => any,
+        fromBlockNumber: string | number
+    ): Promise<void> {
+
+        const eventCallback = async (data: EventData): Promise<void> => {
+            const events = await this.parseBlockEvents([data]);
+            onData(events[0]);
+        };
+
+        await getEvents(
+            this.instance,
+            'NewBlockPack',
+            fromBlockNumber,
+            eventCallback
+        );
+    }
+
+    private async parseBlockEvents(events: EventData[]): Promise<PublishBlockEvent[]> {
         const transactions$: Promise<Transaction>[] = events.map((e: EventData) => {
             return this.web3Ethereum.getTransaction(e.transactionHash);
         });
@@ -284,7 +311,9 @@ export class ZeroPoolContract {
                 "TxExternalFields": TxExternalFieldsStructure
             },
             {
-                "owner": txExternalFields.owner.substring(2),
+                "owner": txExternalFields.owner === 0n ?
+                    "0000000000000000000000000000000000000000" :
+                    txExternalFields.owner.toString(16),
                 "Message": [
                     {
                         "data": txExternalFields.message[0].data.map(x => x.toString()),
@@ -306,10 +335,14 @@ export class ZeroPoolContract {
                 "rootptr": tx.rootPointer.toString(),
                 "nullifier": tx.nullifier.map(x => x.toString()),
                 "utxo": tx.utxoHashes.map(x => x.toString()),
-                "token": tx.token.toString(),
+                "token": tx.token === 0n ?
+                    "0000000000000000000000000000000000000000" :
+                    tx.token.toString(16),
                 "delta": tx.delta.toString(),
                 "TxExternalFields": {
-                    "owner": tx.txExternalFields.owner,
+                    "owner": tx.txExternalFields.owner === 0n ?
+                        "0000000000000000000000000000000000000000" :
+                        tx.txExternalFields.owner.toString(16),
                     "Message": [
                         {
                             "data": tx.txExternalFields.message[0].data.map(x => x.toString()),

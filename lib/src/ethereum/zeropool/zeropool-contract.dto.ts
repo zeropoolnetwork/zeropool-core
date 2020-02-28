@@ -34,7 +34,7 @@ export type Message<T> = {
 }
 
 export type TxExternalFields<T> = {
-    owner: string,
+    owner: T,
     message: Message<T>[] // 2
 }
 
@@ -42,7 +42,7 @@ export type Tx<T> = {
     rootPointer: T,
     nullifier: T[],  // 2
     utxoHashes: T[], // 2
-    token: string,
+    token: T,
     delta: T,
     txExternalFields: TxExternalFields<T>,
     proof: Proof<T>
