@@ -5,7 +5,10 @@
     "removeComments": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "target": "es2017",
+    "target": "esnext",
+    "lib": [
+      "esnext.bigint"
+    ],
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",

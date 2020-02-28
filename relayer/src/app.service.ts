@@ -1,29 +1,47 @@
 import { Injectable } from '@nestjs/common';
-import { ZeroPoolContract } from 'zeropool-lib';
-import { DomainEthereum, HdWallet } from '@buttonwallet/blockchain-ts-wallet-core';
-import { Mnemonic, NetworkConfig } from './app.config';
 import { BlockItemDto } from './transaction.dto';
+import zp from './zeroPool';
+import { MemoryStorage } from './storage/memoryStorage';
+import { handleBlock, initialScan } from './blockScanner/blockScanner';
+import { Block } from 'zeropool-lib';
+
+const storage = new MemoryStorage();
 
 @Injectable()
 export class AppService {
 
-  private zpContract: ZeroPoolContract;
-
   constructor() {
-    const wallet = new HdWallet(Mnemonic, '');
-    const eth = wallet.generateKeyPair(DomainEthereum.Instance(), 0);
-
-    this.zpContract = new ZeroPoolContract(NetworkConfig.contract, eth.privateKey, NetworkConfig.rpc);
-
+    initialScan(storage);
   }
 
-  async publishBlock(block: BlockItemDto[], blockNumberExpires: number): Promise<any> {
-    const rollupCurTxNum = await this.zpContract.getRollupTxNum();
-    return this.zpContract.publishBlock(block, +rollupCurTxNum >> 8, blockNumberExpires);
+  async publishBlock(blockItems: BlockItemDto[], blockNumberExpires: number): Promise<any> {
+
+    const rollupCurTxNum = await zp.ZeroPool.getRollupTxNum();
+
+    const block: Block<string> = {
+      BlockItems: blockItems,
+      rollupCurrentBlockNumber: +rollupCurTxNum >> 8,
+      blockNumberExpires: blockNumberExpires,
+    };
+
+    const ok = await handleBlock(block, storage);
+    if (!ok) {
+      throw new Error('cannot verify block');
+    }
+
+    return zp.ZeroPool.publishBlock(
+      block.BlockItems,
+      block.rollupCurrentBlockNumber,
+      block.blockNumberExpires,
+    );
   }
 
   publishBlockItem(blockItem: BlockItemDto): Promise<any> {
-    const blockNumberExpires = 50000000; // todo: fetch it from Blockchain
+    const blockNumberExpires = 500000000; // todo: fetch it from Blockchain
     return this.publishBlock([blockItem], blockNumberExpires);
+  }
+
+  private verifyBlock() {
+
   }
 }
