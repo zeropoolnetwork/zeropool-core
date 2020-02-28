@@ -308,16 +308,14 @@ export class ZeroPoolNetwork {
         };
 
         const encodedTxExternalFields = this.ZeroPool.encodeTxExternalFields(txExternalFields);
-        inputs.message_hash = hash(encodedTxExternalFields);
-
-        mt.push(inputs.utxo_out_hash[0]);
-        mt.push(inputs.utxo_out_hash[1]);
-
-        inputs.root = mt.root;
+        inputs.message_hash = BigInt(hash(encodedTxExternalFields));
 
         callback && callback({ step: "get-proof" });
 
         const proof = await getProof(this.transactionJson, inputs, this.proverKey);
+
+        mt.push(inputs.utxo_out_hash[0]);
+        mt.push(inputs.utxo_out_hash[1]);
 
         callback && callback({ step: "get-last-root-pointer" });
 
