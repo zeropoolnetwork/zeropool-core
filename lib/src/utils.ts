@@ -37,6 +37,10 @@ export async function getProof(transactionJson: any, inputs: any, proverKey: any
     return linearize_proof(proof);
 }
 
+export function unstringifyVk(vk: any): any {
+    return unstringifyBigInts(vk);
+}
+
 export function unLinearizeProof(proof: bigint[]) {
     return {
         pi_a: [

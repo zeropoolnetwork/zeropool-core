@@ -282,7 +282,9 @@ export class ZeroPoolNetwork {
     ): Promise<[BlockItem<string>, string]> {
 
         const mt: IMerkleTree = new MerkleTree(PROOF_LENGTH + 1);
-        mt._merkleState = merkleTreeState;
+        if (merkleTreeState.length !== 0) {
+            mt._merkleState = merkleTreeState;
+        }
 
         callback && callback({ step: "transfer-compute" });
 
@@ -308,6 +310,11 @@ export class ZeroPoolNetwork {
         const encodedTxExternalFields = this.ZeroPool.encodeTxExternalFields(txExternalFields);
         inputs.message_hash = hash(encodedTxExternalFields);
 
+        mt.push(inputs.utxo_out_hash[0]);
+        mt.push(inputs.utxo_out_hash[1]);
+
+        inputs.root = mt.root;
+
         callback && callback({ step: "get-proof" });
 
         const proof = await getProof(this.transactionJson, inputs, this.proverKey);
@@ -316,10 +323,8 @@ export class ZeroPoolNetwork {
 
         const lastRootPointer = await this.ZeroPool.getLastRootPointer();
         const rootPointer
-            = BigInt(lastRootPointer ? lastRootPointer + 1 : 0);
+            = BigInt(lastRootPointer !== null ? lastRootPointer + 1 : 0);
 
-        mt.push(inputs.utxo_out_hash[0]);
-        mt.push(inputs.utxo_out_hash[1]);
 
         const tx: Tx<bigint> = {
             token: BigInt(token),
