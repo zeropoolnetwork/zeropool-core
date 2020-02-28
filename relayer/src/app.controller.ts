@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { ApiCreatedResponse, ApiExcludeEndpoint, ApiTags } from '@nestjs/swagger';
 import { AppService } from './app.service';
+import zp from './zeroPool';
 import { BlockItemDto } from './transaction.dto';
 
 // import { AppServiceRx } from "./app.service-rx";
@@ -38,6 +39,14 @@ export class AppController {
   })
   async postTransactions(@Body() tx: BlockItemDto): Promise<any> {
     return await this.appService.publishBlockItem(tx);
+  }
+
+  @Get('relayer')
+  @ApiCreatedResponse({
+    description: 'Get relayer ethereum address for gas donations',
+  })
+  getRelayerAddress(): string {
+    return zp.ZeroPool.web3Ethereum.ethAddress;
   }
 
   // @Post('tx-rx')

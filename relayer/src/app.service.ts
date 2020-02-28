@@ -41,7 +41,4 @@ export class AppService {
     return this.publishBlock([blockItem], blockNumberExpires);
   }
 
-  private verifyBlock() {
-
-  }
 }
