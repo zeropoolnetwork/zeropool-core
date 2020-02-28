@@ -1,6 +1,6 @@
 import * as path from "path";
 import * as fs from "fs";
-import { bigintifyTx, bn128R, hash, Tx, unstringifyVk, verifyProof } from "zeropool-lib";
+import { bigintifyTx, Tx, unstringifyVk, verifyProof } from "zeropool-lib";
 import zp from "../zeroPool";
 
 const vkPath = path.join(__dirname, './../../compiled/transaction_vk.json');
