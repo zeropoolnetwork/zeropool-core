@@ -37,9 +37,32 @@ export async function getProof(transactionJson: any, inputs: any, proverKey: any
     return linearize_proof(proof);
 }
 
+export function unLinearizeProof(proof: bigint[]) {
+    return {
+        pi_a: [
+            proof[0],
+            proof[1],
+        ],
+        pi_b: [
+            [
+                proof[3],
+                proof[2]
+            ],
+            [
+                proof[5],
+                proof[4]
+            ],
+        ],
+        pi_c: [
+            proof[6],
+            proof[7],
+        ]
+    };
+}
+
 export async function verifyProof(proof: bigint[], publicSignals: bigint[], verifierKey: any): Promise<boolean> {
     const bn128 = await buildBn128();
-    return await bn128.groth16Verify(verifierKey, publicSignals, proof);
+    return await bn128.groth16Verify(verifierKey, publicSignals, unLinearizeProof(proof));
 }
 
 export function getKeyPair(mnemonic: string): KeyPair {

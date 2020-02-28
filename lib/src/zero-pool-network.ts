@@ -705,13 +705,13 @@ export function bigintifyTx(tx: Tx<string>): Tx<bigint> {
 
 export function stringifyTx(tx: Tx<bigint>): Tx<string> {
     return {
-        token: toHex(tx.token),
+        token: stringifyAddress(tx.token),
         rootPointer: toHex(tx.rootPointer),
         nullifier: tx.nullifier.map(x => toHex(x)),
         utxoHashes: tx.utxoHashes.map(x => toHex(x)),
         delta: toHex(tx.delta),
         txExternalFields: {
-            owner: toHex(tx.txExternalFields.owner),
+            owner: stringifyAddress(tx.txExternalFields.owner),
             message: [
                 {
                     data: tx.txExternalFields.message[0].data.map(x => toHex(x)),
@@ -760,7 +760,7 @@ export function bigintifyUtxo(utxo: Utxo<string>): Utxo<bigint> {
 export function stringifyUtxo(utxo: Utxo<bigint>): Utxo<string> {
     return {
         amount: utxo.amount.toString(),
-        token: stringifyToken(utxo.token),
+        token: stringifyAddress(utxo.token),
         pubkey: utxo.pubkey.toString(),
         mp_sibling: utxo.mp_sibling ? utxo.mp_sibling.map(String) : [],
         blinding: utxo.blinding ? utxo.blinding.toString() : undefined,
@@ -802,7 +802,7 @@ export function findDuplicates<T>(arr: T[]): T[] {
     return results;
 }
 
-export function stringifyToken(token: bigint): string {
+export function stringifyAddress(token: bigint): string {
     if (token === 0n) {
         return "0x0000000000000000000000000000000000000000";
     }
