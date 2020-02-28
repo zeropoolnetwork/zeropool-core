@@ -1,20 +1,32 @@
 import { Injectable } from '@nestjs/common';
 import { BlockItemDto } from './transaction.dto';
-import zp from './zeroPool';
+import { gasZp, zp } from './zeroPool';
 import { MemoryStorage } from './storage/memoryStorage';
-import { handleBlock, initialScan } from './blockScanner/blockScanner';
-import { Block } from 'zeropool-lib';
+import { handleBlock, initialScan, synced } from './blockScanner/blockScanner';
+import { Block, ZeroPoolNetwork } from 'zeropool-lib';
+import { IStorage } from './storage/IStorage';
 
 const storage = new MemoryStorage();
+const gasStorage = new MemoryStorage();
 
 @Injectable()
 export class AppService {
 
   constructor() {
-    initialScan(storage);
+    initialScan(storage, zp);
+    initialScan(gasStorage, gasZp);
   }
 
-  async publishBlock(blockItems: BlockItemDto[], blockNumberExpires: number): Promise<any> {
+  private async publishBlock(
+    blockItems: BlockItemDto[],
+    blockNumberExpires: number,
+    zp: ZeroPoolNetwork,
+    storage: IStorage,
+  ): Promise<any> {
+
+    if(synced.filter(x => !x)) {
+      throw new Error('relayer not synced');
+    }
 
     const rollupCurTxNum = await zp.ZeroPool.getRollupTxNum();
 
@@ -29,16 +41,35 @@ export class AppService {
       throw new Error('cannot verify block');
     }
 
-    return zp.ZeroPool.publishBlock(
+    const tx = await zp.ZeroPool.publishBlock(
       block.BlockItems,
       block.rollupCurrentBlockNumber,
       block.blockNumberExpires,
     );
+
+    storage.addBlocks([block]);
+
+    return tx;
   }
 
   publishBlockItem(blockItem: BlockItemDto): Promise<any> {
     const blockNumberExpires = 500000000; // todo: fetch it from Blockchain
-    return this.publishBlock([blockItem], blockNumberExpires);
+    return this.publishBlock(
+      [blockItem],
+      blockNumberExpires,
+      zp,
+      storage,
+    );
+  }
+
+  publishGasBlockItem(blockItem: BlockItemDto): Promise<any> {
+    const blockNumberExpires = 500000000; // todo: fetch it from Blockchain
+    return this.publishBlock(
+      [blockItem],
+      blockNumberExpires,
+      gasZp,
+      gasStorage,
+    );
   }
 
 }

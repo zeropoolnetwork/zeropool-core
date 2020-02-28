@@ -14,7 +14,16 @@ const proverKeyPath = path.join(__dirname, './../compiled/transaction_pk.bin');
 // @ts-ignore
 const proverKey = fs.readFileSync(proverKeyPath).buffer;
 
-export default new ZeroPoolNetwork(
+export const zp = new ZeroPoolNetwork(
+  NetworkConfig.contract,
+  // @ts-ignore
+  hdWallet,
+  Mnemonic,
+  transactionJson,
+  proverKey,
+);
+
+export const gasZp = new ZeroPoolNetwork(
   NetworkConfig.contract,
   // @ts-ignore
   hdWallet,

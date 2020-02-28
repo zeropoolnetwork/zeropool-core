@@ -1,7 +1,7 @@
 import * as path from "path";
 import * as fs from "fs";
 import { bigintifyTx, Tx, unstringifyVk, verifyProof } from "zeropool-lib";
-import zp from "../zeroPool";
+import { zp } from "../zeroPool";
 
 const vkPath = path.join(__dirname, './../../compiled/transaction_vk.json');
 // @ts-ignore
@@ -14,6 +14,7 @@ export async function verifyTx(
 
     const tx = bigintifyTx(stringTx);
 
+    // todo: pass in parameters zp in case of other logic
     const messageHash = zp.txExternalFieldsHash(tx.txExternalFields);
 
     const inputs = [

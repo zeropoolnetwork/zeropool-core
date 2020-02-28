@@ -1,13 +1,15 @@
-import { Block, BlockItem, Event } from "zeropool-lib";
+import { Block, BlockItem, Event } from 'zeropool-lib';
 
 export interface IStorage {
-    lastBlockNumber: number;
+  lastBlockNumber: number;
 
-    getBlockEvents(): Event<Block<string>>[];
+  getBlockEvents(): Event<Block<string>>[];
 
-    getBlockItems(): BlockItem<string>[];
+  getBlockItems(): BlockItem<string>[];
 
-    getNullifiers(): string[];
+  getNullifiers(): string[];
 
-    addBlockEvents(newBlockEvents: Event<Block<string>>[]): void;
+  addBlockEvents(newBlockEvents: Event<Block<string>>[]): void;
+
+  addBlocks(blocks: Block<string>[]): void
 }
