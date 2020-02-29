@@ -24,9 +24,9 @@ export class AppService {
     storage: IStorage,
   ): Promise<any> {
 
-    if(synced.filter(x => !x)) {
-      throw new Error('relayer not synced');
-    }
+    // if(synced.filter(x => !x)) {
+    //   throw new Error('relayer not synced');
+    // }
 
     const rollupCurTxNum = await zp.ZeroPool.getRollupTxNum();
 
