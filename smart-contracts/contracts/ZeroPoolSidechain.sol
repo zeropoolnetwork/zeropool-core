@@ -2,25 +2,27 @@ pragma solidity >=0.6.0;
 pragma experimental ABIEncoderV2;
 
 
-import "./lib/Ownable.sol";
 import "./OptimisticRollup.sol";
 
 
-contract Zeropool is Ownable, OptimisticRollup {
-
-    bytes32 constant EMPTY_BLOCK_HASH = 0x9867cc5f7f196b93bae1e27e6320742445d290f2263827498b54fec539f756af;
+contract Zeropool is OptimisticRollup {
 
     event NewBlockPack();
+    uint256 constant VERSION = 1;
 
-    mapping(uint256 => bytes32) public rollup_block;
+    function rollup_block(uint x) external view returns(bytes32) {
+        return get_rollup_block(x);
+    }
+
+    function rollup_tx_num() external view returns(uint256) {
+        return get_rollup_tx_num();
+    }
 
 
-    uint256 public rollup_tx_num;
-
-
-    constructor() public {
-        rollup_block[0] = EMPTY_BLOCK_HASH;
-        rollup_tx_num = 256;
+    function init(address relayer) external onlyUninitialized(VERSION) {
+        set_alive(true);
+        set_relayer(relayer);
+        set_version(VERSION);
     }
 
 
@@ -29,8 +31,9 @@ contract Zeropool is Ownable, OptimisticRollup {
         BlockItem[] memory items,
         uint256 rollup_cur_block_num,
         uint256 blocknumber_expires
-    ) public onlyOwner returns (bool) {
-        require(rollup_cur_block_num == rollup_tx_num >> 8);
+    ) public onlyRelayer returns (bool) {
+        uint256 cur_rollup_tx_num = get_rollup_tx_num();
+        require(rollup_cur_block_num == cur_rollup_tx_num >> 8);
         require(block.number < blocknumber_expires);
         uint256 nitems = items.length;
         require(nitems > 0 && nitems <= 256);
@@ -40,10 +43,8 @@ contract Zeropool is Ownable, OptimisticRollup {
             bytes32 itemhash = keccak256(abi.encode(item));
             hashes[i] = itemhash;
         }
-        rollup_block[rollup_tx_num >> 8] = MerkleProof.keccak256MerkleTree(
-            hashes
-        );
-        rollup_tx_num += 256;
+        set_rollup_block(cur_rollup_tx_num >> 8, MerkleProof.keccak256MerkleTree(hashes));
+        set_rollup_tx_num(cur_rollup_tx_num+256);
         emit NewBlockPack();
         return true;
     }
