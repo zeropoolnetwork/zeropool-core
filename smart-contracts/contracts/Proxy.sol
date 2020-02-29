@@ -26,11 +26,11 @@ contract Proxy is UnstructuredStorage {
     }
 
     function set_implementation(address value) internal {
-        set_address(PTR_ADMIN, value);
+        set_address(PTR_IMPLEMENTATION, value);
     }
 
     function get_implementation() internal view returns(address value) {
-        value = get_address(PTR_ADMIN);
+        value = get_address(PTR_IMPLEMENTATION);
     }
 
     function admin() external view returns(address) {
@@ -86,7 +86,7 @@ contract Proxy is UnstructuredStorage {
         return get_admin() == address(0);
     }
 
-    constructor() internal {
+    constructor() public {
         set_admin(msg.sender);
     }
 

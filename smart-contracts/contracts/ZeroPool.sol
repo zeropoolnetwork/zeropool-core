@@ -69,7 +69,7 @@ contract Zeropool is OptimisticRollup {
         return true;
     }
 
-    function depositCancel(PayNote memory d) public payable returns (bool) {
+    function depositCancel(PayNote memory d) public returns (bool) {
         bytes32 deposit_hash = keccak256(abi.encode(d));
         require(get_deposit_state(deposit_hash) >= get_rollup_tx_num());
         require(d.blocknumber < block.number - DEPOSIT_EXPIRES_BLOCKS);
