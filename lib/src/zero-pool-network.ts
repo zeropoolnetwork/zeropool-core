@@ -321,10 +321,12 @@ export class ZeroPoolNetwork {
 
         callback && callback({ step: "get-last-root-pointer" });
 
-        const lastRootPointer = await this.ZeroPool.getLastRootPointer();
         const rootPointer
-            = BigInt(lastRootPointer !== null ? lastRootPointer + 1 : 0);
-
+            = BigInt(
+            merkleTreeState[0].length / 2 !== 0 ?
+                (merkleTreeState[0].length / 2) - 1 :
+                0
+        );
 
         const tx: Tx<bigint> = {
             token: BigInt(token),
