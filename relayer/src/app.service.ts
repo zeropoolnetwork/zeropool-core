@@ -13,8 +13,8 @@ const gasStorage = new MemoryStorage();
 export class AppService {
 
   constructor() {
-    initialScan(storage, zp);
-    initialScan(gasStorage, gasZp);
+    // initialScan(storage, zp);
+    // initialScan(gasStorage, gasZp);
   }
 
   private async publishBlock(
@@ -36,10 +36,10 @@ export class AppService {
       blockNumberExpires: blockNumberExpires,
     };
 
-    const ok = await handleBlock(block, storage);
-    if (!ok) {
-      throw new Error('cannot verify block');
-    }
+    // const ok = await handleBlock(block, storage);
+    // if (!ok) {
+    //   throw new Error('cannot verify block');
+    // }
 
     const tx = await zp.ZeroPool.publishBlock(
       block.BlockItems,
