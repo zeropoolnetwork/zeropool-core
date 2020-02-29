@@ -5,6 +5,8 @@ app:
 network:
   etherscan_prefix: ''
   rpc: 'http://127.0.0.1:8545'
-  contract: '0x04f4D781Ba5F29603595a8f23c7E9aA00FBF3F86',
+  contract: '0x04f4D781Ba5F29603595a8f23c7E9aA00FBF3F86'
+  gas_contract: '0x1e2Ac08FDBe055e3A2c431c304D36A889455F5ae'
+
 
 mnemonic: 'salute grocery glass box cloth pull wedding measure bright tilt shield over'

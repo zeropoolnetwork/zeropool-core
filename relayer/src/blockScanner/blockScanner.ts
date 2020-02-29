@@ -1,9 +1,13 @@
-import zp from '../zeroPool';
-import { Block, PublishBlockEvent, Tx } from 'zeropool-lib';
+import { Block, Tx, ZeroPoolNetwork } from 'zeropool-lib';
 import { verifyTx } from './verifier';
 import { IStorage } from '../storage/IStorage';
 
-export async function initialScan(storage: IStorage): Promise<void> {
+export let synced = [];
+
+export async function initialScan(
+  storage: IStorage,
+  zp: ZeroPoolNetwork,
+): Promise<void> {
 
   const lastBlockNumber = storage.lastBlockNumber;
 
@@ -14,11 +18,13 @@ export async function initialScan(storage: IStorage): Promise<void> {
     storage.addBlockEvents([event]);
   }
 
+  synced.push(true);
+
 }
 
 export async function handleBlock(
   block: Block<string>,
-  storage: IStorage
+  storage: IStorage,
 ): Promise<boolean> {
 
   const storageBlockItems = storage.getBlockItems();
