@@ -86,6 +86,11 @@ contract Proxy is UnstructuredStorage {
         return get_admin() == address(0);
     }
 
+    function setMaintenance(bool value) external onlyAdmin returns(bool) {
+        set_maintenance(value);
+        return true;
+    }
+
     constructor() public {
         set_admin(msg.sender);
     }
