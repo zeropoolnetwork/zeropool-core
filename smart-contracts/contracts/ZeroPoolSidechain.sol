@@ -30,10 +30,12 @@ contract Zeropool is OptimisticRollup {
     function publishBlock(
         BlockItem[] memory items,
         uint256 rollup_cur_block_num,
-        uint256 blocknumber_expires
+        uint256 blocknumber_expires,
+        uint256 protocol_version
     ) public onlyRelayer returns (bool) {
         uint256 cur_rollup_tx_num = get_rollup_tx_num();
         require(rollup_cur_block_num == cur_rollup_tx_num >> 8);
+        require(protocol_version == get_version(), "wrong protocol version");
         require(block.number < blocknumber_expires);
         uint256 nitems = items.length;
         require(nitems > 0 && nitems <= 256);
