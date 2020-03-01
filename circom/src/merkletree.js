@@ -85,9 +85,12 @@ class MerkleTree {
     
     this._pushcells(0, index, elements);
     
-
+    let from = index;
+    let to = index + s;
     for(let i = 1; i < this.height; i++) {
-      for(let j = index>>>i; j<=(index+s)>>>i; j++) {
+      from >>>=1;
+      to >>>=1;
+      for(let j = from; j<=to; j++) {
         this._setcell(i, j, hash2([this._cell(i-1, j*2), this._cell(i-1, j*2+1)]));
       }
     }
