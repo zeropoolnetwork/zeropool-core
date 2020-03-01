@@ -2,7 +2,7 @@ import { Body, Controller, Get, Post } from '@nestjs/common';
 import { ApiCreatedResponse, ApiExcludeEndpoint, ApiTags } from '@nestjs/swagger';
 import { AppService } from './app.service';
 import { zp } from './zeroPool';
-import { BlockItemDto } from './transaction.dto';
+import { GasDonationDto, TransactionDto } from './transaction.dto';
 
 // import { AppServiceRx } from "./app.service-rx";
 
@@ -32,6 +32,9 @@ export class AppController {
   // }
 
   // TODO: add network parameter. Rinkeby, Mainnet
+  
+  
+  /*
   @Post('tx')
   @ApiCreatedResponse({
     description: 'Accepts signed transaction to include it into a block. ' +
@@ -49,6 +52,26 @@ export class AppController {
   async postGasTransactions(@Body() tx: BlockItemDto): Promise<any> {
     return await this.appService.publishGasBlockItem(tx);
   }
+  */
+
+
+  @Post('gasdonation')
+  @ApiCreatedResponse({
+    description: 'Accepts ethereum donation transaction to include it into a block and deposit transaction to subchain '
+  })
+  async postGasDonation(@Body() gd: GasDonationDto): Promise<any> {
+    return Promise.resolve("TODO: implement postGasTransaction");
+  }
+
+  @Post('tx')
+  @ApiCreatedResponse({
+    description: 'Accepts ethereum donation transaction to include it into a block and deposit transaction to subchain ' +
+      'Returns hash of Ethereum subchain transaction that post a block on the smart contract',
+  })
+  async postTransaction(@Body() wtx: TransactionDto): Promise<any> {
+    return Promise.resolve("TODO: implement postGasTransaction");
+  }
+
 
   @Get('relayer')
   @ApiCreatedResponse({

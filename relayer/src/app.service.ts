@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { BlockItemDto } from './transaction.dto';
+import { BlockItem } from './transaction.dto';
 import { gasZp, zp } from './zeroPool';
 import { MemoryStorage } from './storage/memoryStorage';
 import { handleBlock, initialScan, synced } from './blockScanner/blockScanner';
@@ -18,7 +18,7 @@ export class AppService {
   }
 
   private async publishBlock(
-    blockItems: BlockItemDto[],
+    blockItems: BlockItem[],
     blockNumberExpires: number,
     zp: ZeroPoolNetwork,
     storage: IStorage,
@@ -52,7 +52,7 @@ export class AppService {
     return tx;
   }
 
-  publishBlockItem(blockItem: BlockItemDto): Promise<any> {
+  publishBlockItem(blockItem: BlockItem): Promise<any> {
     const blockNumberExpires = 500000000; // todo: fetch it from Blockchain
     return this.publishBlock(
       [blockItem],
@@ -62,7 +62,7 @@ export class AppService {
     );
   }
 
-  publishGasBlockItem(blockItem: BlockItemDto): Promise<any> {
+  publishGasBlockItem(blockItem: BlockItem): Promise<any> {
     const blockNumberExpires = 500000000; // todo: fetch it from Blockchain
     return this.publishBlock(
       [blockItem],

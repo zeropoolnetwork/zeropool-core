@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger'
+import c = require('config');
 
 export class Proof {
 
@@ -46,7 +47,7 @@ export class Tx {
   proof: Proof;
 }
 
-export class BlockItemDto {
+export class BlockItem {
   @ApiProperty()
   tx: Tx;
 
@@ -56,6 +57,25 @@ export class BlockItemDto {
   @ApiProperty()
   depositBlockNumber: string;
 }
+
+
+export class GasDonationDto {
+  @ApiProperty()
+  gastx: Tx;
+
+  @ApiProperty()
+  donationhash: string;
+}
+
+
+export class TransactionDto {
+  @ApiProperty()
+  tx: Tx;
+
+  @ApiProperty()
+  gastx: Tx;
+}
+
 //
 // // https://github.com/sidorares/json-bigint
 // export class BlockItemDto {
