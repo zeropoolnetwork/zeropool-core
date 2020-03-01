@@ -500,6 +500,10 @@ export class ZeroPoolNetwork {
             utxoDeltaList
         } = await this.getUtxoListFromContract(+this.zpHistoryState.lastBlockNumber + 1);
 
+        this.zpHistoryState.lastBlockNumber = encryptedUtxoList.length !== 0
+            ? blockNumbers[blockNumbers.length - 1]
+            : this.zpHistoryState.lastBlockNumber;
+
         if (encryptedUtxoList.length === 0) {
             callback && callback({ step: "finish" });
             return this.zpHistoryState;
@@ -618,6 +622,10 @@ export class ZeroPoolNetwork {
             nullifiers
         } = await this.getUtxoListFromContract(+state.lastBlockNumber + 1);
 
+        state.lastBlockNumber = encryptedUtxoList.length !== 0
+            ? blockNumbers[blockNumbers.length - 1]
+            : state.lastBlockNumber;
+
         if (encryptedUtxoList.length === 0) {
             return state;
         }
@@ -711,10 +719,6 @@ export class ZeroPoolNetwork {
             utxoPathPointer += (512 - blockEncryptedUtxoList.length);
 
         }
-
-        state.lastBlockNumber = state.utxoList.length !== 0
-            ? Number(state.utxoList[state.utxoList.length - 1].blockNumber)
-            : 0;
 
         return state;
     }

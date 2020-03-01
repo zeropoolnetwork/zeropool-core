@@ -198,11 +198,11 @@ export class ZeroPoolContract {
     }
 
     getChallengeExpiresBlocks(): Promise<number> {
-        return gasLessCall(this.instance, 'CHALLENGE_EXPIRES_BLOCKS', []);
+        return gasLessCall(this.instance, 'challenge_expires_blocks', []);
     }
 
     getDepositExpiresBlocks(): Promise<number> {
-        return gasLessCall(this.instance, 'DEPOSIT_EXPIRES_BLOCKS', []);
+        return gasLessCall(this.instance, 'deposit_expires_blocks', []);
     }
 
     private async parseBlockEvents(events: EventData[]): Promise<PublishBlockEvent[]> {

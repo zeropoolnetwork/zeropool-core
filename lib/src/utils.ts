@@ -13,7 +13,7 @@ import buildwitness from './circom/buildwitness';
 import { Action, HistoryItem, IMerkleTree, KeyPair, MerkleTreeState, MyUtxoState, Utxo } from "./zero-pool-network.dto";
 import { Tx } from "./ethereum/zeropool";
 import { toHex } from "./ethereum";
-import { MerkleTree } from './circom/merkletree';
+import { MerkleTree as MT } from './circom/merkletree';
 
 const zrpPath = 'm/44\'/0\'/0\'/0/0';
 
@@ -23,6 +23,10 @@ export const BN254_ORDER = 21888242871839275222246405745257275088548364400416034
 export const WITHDRAW_ACTION = "withdraw";
 export const DEPOSIT_ACTION = "deposit";
 export const TRANSFER_ACTION = "transfer";
+
+export function MerkleTree(height: number): IMerkleTree {
+    return new MT(height);
+}
 
 export function getAction(delta: bigint): Action {
     if (delta === 0n) {
@@ -84,7 +88,7 @@ export function stringifyTx(tx: Tx<bigint>): Tx<string> {
 }
 
 export function bigintifyUtxoState(state: MyUtxoState<string>): MyUtxoState<bigint> {
-    const mt: IMerkleTree = MerkleTree.fromObject(state.merkleTreeState);
+    const mt: IMerkleTree = MT.fromObject(state.merkleTreeState);
 
     return {
         utxoList: state.utxoList.map(bigintifyUtxo),
@@ -99,7 +103,7 @@ export function bigintifyUtxoState(state: MyUtxoState<string>): MyUtxoState<bigi
 }
 
 export function stringifyUtxoState(state: MyUtxoState<bigint>): MyUtxoState<string> {
-    const mt: IMerkleTree = MerkleTree.fromObject(state.merkleTreeState);
+    const mt: IMerkleTree = MT.fromObject(state.merkleTreeState);
 
     return {
         utxoList: state.utxoList.map(stringifyUtxo),
