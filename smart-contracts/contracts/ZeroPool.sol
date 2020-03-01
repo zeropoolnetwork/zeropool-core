@@ -47,6 +47,10 @@ contract Zeropool is OptimisticRollup {
         return get_tree_update_vk();
     }
 
+    function relayer() external view returns(address) {
+        return get_relayer();
+    }
+
     
     function init(address relayer) external onlyUninitialized(VERSION) {
         set_alive(true);
