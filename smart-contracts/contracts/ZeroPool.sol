@@ -61,6 +61,14 @@ contract Zeropool is OptimisticRollup {
         return VERSION;
     }
 
+    function challenge_expires_blocks() external view returns(uint256) {
+        return CHALLENGE_EXPIRES_BLOCKS;
+    }
+
+    function deposit_expires_blocks() external view returns(uint256) {
+        return DEPOSIT_EXPIRES_BLOCKS;
+    }
+
     
     function init(address relayer) external onlyUninitialized(VERSION) {
         set_alive(true);
