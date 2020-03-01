@@ -7,7 +7,11 @@
     "test": "test"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "ZeroPool.full.sol": "solidityFlattener.pl --contractsdir=contracts --mainsol=ZeroPool.sol --outputsol=ZeroPool.full.sol --verbose",
+    "ZeroPoolSidechain.full.sol": "solidityFlattener.pl --contractsdir=contracts --mainsol=ZeroPoolSidechain.sol --outputsol=ZeroPoolSidechain.full.sol --verbose",
+    "dist:ZeroPool": "npm run ZeroPool.full.sol && solcjs --bin --abi --optimize ZeroPool.full.sol && mv ZeroPool_full_sol_Zeropool.abi ZeroPool.full.abi && mv ZeroPool_full_sol_Zeropool.bin ZeroPool.full.bin && rm -rf ZeroPool_full_sol*",
+    "dist:ZeroPoolSidechain": "npm run ZeroPoolSidechain.full.sol && solcjs --bin --abi --optimize ZeroPoolSidechain.full.sol && mv ZeroPoolSidechain_full_sol_Zeropool.abi ZeroPoolSidechain.full.abi && mv ZeroPoolSidechain_full_sol_Zeropool.bin ZeroPoolSidechain.full.bin && rm -rf ZeroPoolSidechain_full_sol*",
+    "dist": "npm run dist:ZeroPool && npm run dist:ZeroPoolSidechain"
   },
   "repository": {
     "type": "git",
@@ -25,5 +29,9 @@
     "circomlib": "0.0.20",
     "dotenv": "^8.2.0",
     "web3": "^1.2.6"
+  },
+  "devDependencies": {
+    "solc": "^0.6.3",
+    "truffle-flattener": "^1.4.2"
   }
 }
