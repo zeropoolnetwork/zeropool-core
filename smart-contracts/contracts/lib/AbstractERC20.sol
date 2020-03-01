@@ -2,7 +2,6 @@ pragma solidity >=0.6.0;
 
 import "./IERC20.sol";
 
-
 library AbstractERC20 {
 
     function abstractReceive(IERC20 token, uint256 amount) internal returns(uint256) {
