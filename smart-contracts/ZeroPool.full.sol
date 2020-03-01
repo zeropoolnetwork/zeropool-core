@@ -13,25 +13,6 @@ interface IERC20 {
     event Approval(address indexed owner, address indexed spender, uint256 value);
 }
 
-contract Ownable {
-    address private _owner;
-
-    constructor () internal {
-        _owner = msg.sender;
-    }
-
-    function owner() public view returns (address) {
-        return _owner;
-    }
-
-    modifier onlyOwner() {
-        require(msg.sender == _owner, "Ownable: caller is not the owner");
-        _;
-    }
-
-
-}
-
 
 library AbstractERC20 {
 
@@ -235,8 +216,98 @@ library Groth16Verifier {
 }
 
 
+contract UnstructuredStorage {
+    function set_uint256(bytes32 pos, uint256 value) internal {
+        // solium-disable-next-line
+        assembly {
+            sstore(pos, value)
+        }
+    }
 
-contract OptimisticRollup {
+    function get_uint256(bytes32 pos) internal view returns(uint256 value) {
+        // solium-disable-next-line
+        assembly {
+            value:=sload(pos)
+        }
+    }
+
+    function set_address(bytes32 pos, address value) internal {
+        // solium-disable-next-line
+        assembly {
+            sstore(pos, value)
+        }
+    }
+
+    function get_address(bytes32 pos) internal view returns(address value) {
+        // solium-disable-next-line
+        assembly {
+            value:=sload(pos)
+        }
+    }
+
+
+    function set_bool(bytes32 pos, bool value) internal {
+        // solium-disable-next-line
+        assembly {
+            sstore(pos, value)
+        }
+    }
+
+    function get_bool(bytes32 pos) internal view returns(bool value) {
+        // solium-disable-next-line
+        assembly {
+            value:=sload(pos)
+        }
+    }
+
+    function set_bytes32(bytes32 pos, bytes32 value) internal {
+        // solium-disable-next-line
+        assembly {
+            sstore(pos, value)
+        }
+    }
+
+    function get_bytes32(bytes32 pos) internal view returns(bytes32 value) {
+        // solium-disable-next-line
+        assembly {
+            value:=sload(pos)
+        }
+    }
+
+
+    function set_uint256(bytes32 pos, uint256 offset, uint256 value) internal {
+        // solium-disable-next-line
+        assembly {
+            sstore(add(pos, offset), value)
+        }
+    }
+
+    function get_uint256(bytes32 pos, uint256 offset) internal view returns(uint256 value) {
+        // solium-disable-next-line
+        assembly {
+            value:=sload(add(pos, offset))
+        }
+    }
+
+    function set_uint256_list(bytes32 pos, uint256[] memory list) internal {
+        uint256 sz = list.length;
+        set_uint256(pos, sz);
+        for(uint256 i = 0; i<sz; i++) {
+            set_uint256(pos, i+1, list[i]);
+        }
+    }
+
+    function get_uint256_list(bytes32 pos) internal view returns (uint256[] memory list) {
+        uint256 sz = get_uint256(pos);
+        list = new uint256[](sz);
+        for(uint256 i = 0; i < sz; i++) {
+            list[i] = get_uint256(pos, i+1);
+        }
+    }
+}
+
+
+contract OptimisticRollup is UnstructuredStorage {
     struct Message {
         uint256[4] data;
     }
@@ -287,8 +358,122 @@ contract OptimisticRollup {
         uint256 txhash;
     }
 
+    bytes32 constant PTR_ROLLUP_BLOCK = 0xd790c52c075936677813beed5aa36e1fce5549c1b511bc0277a6ae4213ee93d8; // zeropool.instance.rollup_block
+    bytes32 constant PTR_DEPOSIT_STATE = 0xc9bc9b91da46ecf8158f48c23ddba2c34e9b3dffbc3fcfd2362158d58383f80b; //zeropool.instance.deposit_state
+    bytes32 constant PTR_WITHDRAW_STATE = 0x7ad39ce31882298a63a0da3c9e2d38db2b34986c4be4550da17577edc0078639; //zeropool.instance.withdraw_state
 
-    function blockItemNoteVerify(BlockItemNote memory note, mapping(uint256 => bytes32) storage rollup_block)
+    bytes32 constant PTR_ROLLUP_TX_NUM = 0xeeb5c14c43ac322ae6567adef70b1c44e69fe064f5d4a67d8c5f0323c138f65e; //zeropool.instance.rollup_tx_num
+    bytes32 constant PTR_ALIVE = 0x58feb0c2bb14ff08ed56817b2d673cf3457ba1799ad05b4e8739e57359eaecc8; //zeropool.instance.alive
+    bytes32 constant PTR_TX_VK = 0x08cff3e7425cd7b0e33f669dbfb21a086687d7980e87676bf3641c97139fcfd3; //zeropool.instance.tx_vk
+    bytes32 constant PTR_TREE_UPDATE_VK = 0xf0f9fc4bf95155a0eed7d21afd3dfd94fade350663e7e1beccf42b5109244d86; //zeropool.instance.tree_update_vk
+    bytes32 constant PTR_VERSION = 0x0bf0574ec126ccd99fc2670d59004335a5c88189b4dc4c4736ba2c1eced3519c; //zeropool.instance.version
+    bytes32 constant PTR_RELAYER = 0xa6c0702dad889760bc0a910159487cf57ece87c3aff39b866b8eaec3ef42f09b; //zeropool.instance.relayer
+
+    function get_rollup_block(uint256 x) internal view returns(bytes32 value) {
+        bytes32 pos = keccak256(abi.encodePacked(PTR_ROLLUP_BLOCK, x));
+        value = get_bytes32(pos);
+    }
+
+    function set_rollup_block(uint256 x, bytes32 value) internal {
+        bytes32 pos = keccak256(abi.encodePacked(PTR_ROLLUP_BLOCK, x));
+        set_bytes32(pos, value);
+    }
+
+    function get_deposit_state(bytes32 x) internal view returns(uint256 value) {
+        bytes32 pos = keccak256(abi.encodePacked(PTR_DEPOSIT_STATE, x));
+        value = get_uint256(pos);
+    }
+
+    function set_deposit_state(bytes32 x, uint256 value) internal {
+        bytes32 pos = keccak256(abi.encodePacked(PTR_DEPOSIT_STATE, x));
+        set_uint256(pos, value);
+    }
+
+
+
+    function get_withdraw_state(bytes32 x) internal view returns(uint256 value) {
+        bytes32 pos = keccak256(abi.encodePacked(PTR_WITHDRAW_STATE, x));
+        value = get_uint256(pos);
+    }
+
+    function set_withdraw_state(bytes32 x, uint256 value) internal {
+        bytes32 pos = keccak256(abi.encodePacked(PTR_WITHDRAW_STATE, x));
+        set_uint256(pos, value);
+    }
+
+
+
+    function get_rollup_tx_num() internal view returns(uint256 value) {
+        value = get_uint256(PTR_ROLLUP_TX_NUM);
+    }
+
+    function set_rollup_tx_num(uint256 value) internal {
+        set_uint256(PTR_ROLLUP_TX_NUM, value);
+    }
+
+    function get_alive() internal view returns(bool value) {
+        value = get_bool(PTR_ALIVE);
+    }
+
+    function set_alive(bool x) internal {
+        set_bool(PTR_ALIVE, x);
+    }
+
+    function get_tx_vk() internal view returns(VK memory vk) {
+        vk.data = get_uint256_list(PTR_TX_VK);
+    }
+
+    function set_tx_vk(VK memory vk) internal {
+        set_uint256_list(PTR_TX_VK, vk.data);
+    }
+
+    function get_tree_update_vk() internal view returns(VK memory vk) {
+        vk.data = get_uint256_list(PTR_TREE_UPDATE_VK);
+    }
+
+    function set_tree_update_vk(VK memory vk) internal {
+        set_uint256_list(PTR_TREE_UPDATE_VK, vk.data);
+    }
+
+    function get_version() internal view returns(uint256 value) {
+        value = get_uint256(PTR_VERSION);
+    }
+
+    function set_version(uint256 value) internal {
+        set_uint256(PTR_VERSION, value);
+    }
+
+    function get_relayer() internal view returns(address value) {
+        value = get_address(PTR_RELAYER);
+    }
+
+    function set_relayer(address value) internal {
+        set_address(PTR_RELAYER, value);
+    }
+
+
+    modifier onlyInitialized(uint256 version) {
+        require(get_version() == version, "contract should be initialized");
+        _;
+    }
+
+    modifier onlyUninitialized(uint256 version) {
+        require(get_version() < version, "contract should be uninitialized");
+        _;
+    }
+
+    modifier onlyRelayer() {
+        require(msg.sender == get_relayer(), "This is relayer-only action");
+        _;
+    }
+
+    modifier onlyAlive() {
+        require(get_alive(), "Contract stopped");
+        _;
+    }
+
+
+    function blockItemNoteVerify(BlockItemNote memory note)
         internal
         view
         returns (bool)
@@ -299,17 +484,16 @@ contract OptimisticRollup {
                 note.proof,
                 note.id & 0xff,
                 itemhash
-            ) ==
-            rollup_block[note.id >> 8];
+            ) == get_rollup_block(note.id >> 8);
     }
 
     function blockItemNoteVerifyPair(
         BlockItemNote memory note0,
-        BlockItemNote memory note1,
-        mapping(uint256 => bytes32) storage rollup_block
+        BlockItemNote memory note1
     ) internal view returns (bool) {
         (bytes32 itemhash0,) = blockItemHash(note0.item);
         (bytes32 itemhash1,) = blockItemHash(note1.item);
+
 
         return
             MerkleProof.keccak256MerkleProof(
@@ -317,13 +501,13 @@ contract OptimisticRollup {
                 note0.id & 0xff,
                 itemhash0
             ) ==
-            rollup_block[note0.id >> 8] &&
+            get_rollup_block(note0.id >> 8) &&
             MerkleProof.keccak256MerkleProof(
                 note1.proof,
                 note1.id & 0xff,
                 itemhash1
             ) ==
-            rollup_block[note1.id >> 8] &&
+            get_rollup_block(note1.id >> 8) &&
             itemhash0 != itemhash1;
     }
 
@@ -348,7 +532,7 @@ contract OptimisticRollup {
 
 }
 
-contract Zeropool is Ownable, OptimisticRollup {
+contract Zeropool is OptimisticRollup {
     using AbstractERC20 for IERC20;
 
     uint256 constant DEPOSIT_EXISTS = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
@@ -357,42 +541,58 @@ contract Zeropool is Ownable, OptimisticRollup {
     uint256 constant BN254_ORDER = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
     uint256 constant MAX_AMOUNT = 1766847064778384329583297500742918515827483896875618958121606201292619776;
 
+    uint256 constant VERSION = 1;
+
     event Deposit();
     event NewBlockPack();
 
-
-    mapping(uint256 => bytes32) public rollup_block;
-    mapping(bytes32 => uint256) public deposit_state;
-    mapping(bytes32 => uint256) public withdraw_state;
-
-    uint256 public rollup_tx_num;
-    bool public alive = true;
-    VK tx_vk;
-    VK tree_update_vk;
-
-    modifier onlyAlive() {
-        require(alive);
-        _;
+    function rollup_block(uint x) external view returns(bytes32) {
+        return get_rollup_block(x);
     }
 
-    function blockItemNoteVerify(BlockItemNote memory note)
-        internal
-        view
-        returns (bool)
-    {
-        (bytes32 itemhash, ) = blockItemHash(note.item);
-        return
-            MerkleProof.keccak256MerkleProof(
-                note.proof,
-                note.id & 0xff,
-                itemhash
-            ) ==
-            rollup_block[note.id >> 8];
+    function deposit_state(bytes32 x) external view returns(uint256) {
+        return get_deposit_state(x);
     }
 
-    constructor() public {
-        alive = true;
+    function withdraw_state(bytes32 x) external view returns(uint256) {
+        return get_withdraw_state(x);
     }
+
+    function rollup_tx_num() external view returns(uint256) {
+        return get_rollup_tx_num();
+    }
+
+    function alive() external view returns(bool) {
+        return get_alive();
+    }
+
+    function tx_vk() external view returns(VK memory) {
+        return get_tx_vk();
+    }
+
+    function tree_update_vk() external view returns(VK memory) {
+        return get_tree_update_vk();
+    }
+
+    function relayer() external view returns(address) {
+        return get_relayer();
+    }
+
+    function initialized() external view returns(bool) {
+        return get_version() < VERSION;
+    }
+
+    function version() external view returns(uint256) {
+        return VERSION;
+    }
+
+    
+    function init(address relayer) external onlyUninitialized(VERSION) {
+        set_alive(true);
+        set_relayer(relayer);
+        set_version(VERSION);
+    }
+
 
     function deposit(IERC20 token, uint256 amount, bytes32 txhash)
         public
@@ -403,37 +603,40 @@ contract Zeropool is Ownable, OptimisticRollup {
         bytes32 deposit_hash = keccak256(
             abi.encode(msg.sender, token, _amount, block.number, txhash)
         );
-        deposit_state[deposit_hash] = DEPOSIT_EXISTS;
+        set_deposit_state(deposit_hash, DEPOSIT_EXISTS);
         emit Deposit();
         return true;
     }
 
-    function depositCancel(PayNote memory d) public payable returns (bool) {
+    function depositCancel(PayNote memory d) public returns (bool) {
         bytes32 deposit_hash = keccak256(abi.encode(d));
-        require(deposit_state[deposit_hash] >= rollup_tx_num);
+        require(get_deposit_state(deposit_hash) >= get_rollup_tx_num());
         require(d.blocknumber < block.number - DEPOSIT_EXPIRES_BLOCKS);
-        delete deposit_state[deposit_hash];
+        set_deposit_state(deposit_hash, 0);
         d.utxo.token.abstractTransfer(d.utxo.owner, d.utxo.amount);
         return true;
     }
 
     function withdraw(PayNote memory w) public returns (bool) {
         bytes32 withdraw_hash = keccak256(abi.encode(w));
-        uint256 state = withdraw_state[withdraw_hash];
-        require(state < rollup_tx_num && state != 0);
+        uint256 state = get_withdraw_state(withdraw_hash);
+        require(state < get_rollup_tx_num() && state != 0);
         require(w.blocknumber < block.number - CHALLENGE_EXPIRES_BLOCKS);
-        delete withdraw_state[withdraw_hash];
+        set_withdraw_state(withdraw_hash, 0);
         w.utxo.token.abstractTransfer(w.utxo.owner, w.utxo.amount);
         return true;
     }
 
     function publishBlock(
+        uint256 protocol_version,
         BlockItem[] memory items,
         uint256 rollup_cur_block_num,
         uint256 blocknumber_expires
-    ) public onlyOwner returns (bool) {
-        require(alive, "contract stopped");
-        require(rollup_cur_block_num == rollup_tx_num >> 8, "wrong block number");
+    ) public onlyRelayer onlyAlive returns (bool) {
+        uint256 cur_rollup_tx_num = get_rollup_tx_num();
+
+        require(rollup_cur_block_num == cur_rollup_tx_num >> 8, "wrong block number");
+        require(protocol_version == get_version(), "wrong protocol version");
         require(block.number < blocknumber_expires, "blocknumber is already expires");
         uint256 nitems = items.length;
         require(nitems > 0 && nitems <= 256, "wrong number of items");
@@ -456,8 +659,8 @@ contract Zeropool is Ownable, OptimisticRollup {
                         txhash
                     )
                 );
-                require(deposit_state[deposit_hash] == DEPOSIT_EXISTS, "unexisted deposit");
-                deposit_state[deposit_hash] = rollup_tx_num + i;
+                require(get_deposit_state(deposit_hash) == DEPOSIT_EXISTS, "unexisted deposit");
+                set_deposit_state(deposit_hash, cur_rollup_tx_num + i);
             } else if (
                 item.ctx.delta > BN254_ORDER - MAX_AMOUNT &&
                 item.ctx.delta < BN254_ORDER
@@ -473,30 +676,28 @@ contract Zeropool is Ownable, OptimisticRollup {
                         txhash
                     )
                 );
-                require(withdraw_state[withdraw_hash] == 0, "withdrawal already published");
-                withdraw_state[withdraw_hash] = rollup_tx_num + i;
+                require(get_withdraw_state(withdraw_hash) == 0, "withdrawal already published");
+                set_withdraw_state(withdraw_hash, cur_rollup_tx_num + i);
             } else revert("wrong behavior");
 
             hashes[i] = itemhash;
         }
-        rollup_block[rollup_tx_num >> 8] = MerkleProof.keccak256MerkleTree(
-            hashes
-        );
-        rollup_tx_num += 256;
+        set_rollup_block(cur_rollup_tx_num >> 8, MerkleProof.keccak256MerkleTree(hashes));
+        set_rollup_tx_num(cur_rollup_tx_num+256);
         emit NewBlockPack();
         return true;
     }
 
     function stopRollup(uint256 lastvalid) internal returns (bool) {
-        alive = false;
-        if (rollup_tx_num > lastvalid) rollup_tx_num = lastvalid;
+        set_alive(false);
+        if (get_rollup_tx_num() > lastvalid) set_rollup_tx_num(lastvalid);
     }
 
     function challengeTx(BlockItemNote memory cur, BlockItemNote memory base)
         public
         returns (bool)
     {
-        require(blockItemNoteVerifyPair(cur, base, rollup_block));
+        require(blockItemNoteVerifyPair(cur, base));
         require(cur.item.ctx.rootptr == base.id);
         uint256[] memory inputs = new uint256[](8);
         inputs[0] = base.item.new_root;
@@ -508,7 +709,7 @@ contract Zeropool is Ownable, OptimisticRollup {
         inputs[6] = cur.item.ctx.delta;
         inputs[7] = uint256(keccak256(abi.encode(cur.item.ctx.ext))) % BN254_ORDER;
         require(
-            !groth16verify(tx_vk, cur.item.ctx.proof, inputs) ||
+            !groth16verify(get_tx_vk(), cur.item.ctx.proof, inputs) ||
                 cur.item.ctx.rootptr >= cur.id
         );
         stopRollup(
@@ -523,7 +724,7 @@ contract Zeropool is Ownable, OptimisticRollup {
         BlockItemNote memory prev,
         uint256 right_root
     ) public returns (bool) {
-        require(blockItemNoteVerifyPair(cur, prev, rollup_block));
+        require(blockItemNoteVerifyPair(cur, prev));
         require(right_root != cur.item.new_root);
         require(cur.id == prev.id + 1);
         uint256[] memory inputs = new uint256[](5);
@@ -532,7 +733,7 @@ contract Zeropool is Ownable, OptimisticRollup {
         inputs[2] = cur.id;
         inputs[3] = cur.item.ctx.utxo[0];
         inputs[4] = cur.item.ctx.utxo[1];
-        require(groth16verify(tree_update_vk, cur.item.ctx.proof, inputs));
+        require(groth16verify(get_tree_update_vk(), cur.item.ctx.proof, inputs));
         stopRollup(
             cur.id &
                 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00
@@ -545,7 +746,7 @@ contract Zeropool is Ownable, OptimisticRollup {
         BlockItemNote memory cur,
         BlockItemNote memory prev
     ) public returns (bool) {
-        require(blockItemNoteVerifyPair(cur, prev, rollup_block));
+        require(blockItemNoteVerifyPair(cur, prev));
         require(cur.id > prev.id);
         require(
             cur.item.ctx.nullifier[0] == prev.item.ctx.nullifier[0] ||
