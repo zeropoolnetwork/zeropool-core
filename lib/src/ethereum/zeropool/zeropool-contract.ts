@@ -82,10 +82,12 @@ export class ZeroPoolContract {
     async publishBlock(
         blockItems: BlockItem<string>[],
         rollupCurrentBlockNumber: number,
-        blockNumberExpires: number
+        blockNumberExpires: number,
+        version: number
     ): Promise<Transaction> {
 
         const params = [
+            toHex(version),
             blockItems.map(packBlockItem),
             toHex(rollupCurrentBlockNumber),
             toHex(blockNumberExpires)
@@ -176,22 +178,8 @@ export class ZeroPoolContract {
         return this.parseBlockEvents(events);
     }
 
-    async publishBlockEventsAsync(
-        onData: (data: PublishBlockEvent) => any,
-        fromBlockNumber: string | number
-    ): Promise<void> {
-
-        const eventCallback = async (data: EventData): Promise<void> => {
-            const events = await this.parseBlockEvents([data]);
-            onData(events[0]);
-        };
-
-        await getEvents(
-            this.instance,
-            'NewBlockPack',
-            fromBlockNumber,
-            eventCallback
-        );
+    getContractVersion(): Promise<number> {
+        return gasLessCall(this.instance, 'version', []);
     }
 
     private async parseBlockEvents(events: EventData[]): Promise<PublishBlockEvent[]> {
