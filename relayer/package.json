@@ -30,7 +30,7 @@
     "rxjs": "^6.5.4",
     "swagger-ui-express": "^4.1.3",
     "truffle-hdwallet-provider": "^1.0.17",
-    "zeropool-lib": "^0.4.12-node"
+    "zeropool-lib": "^0.4.31-node"
   },
   "devDependencies": {
     "@nestjs/cli": "^6.13.2",
