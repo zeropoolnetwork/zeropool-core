@@ -544,7 +544,9 @@ contract Zeropool is OptimisticRollup {
     uint256 constant VERSION = 1;
 
     event Deposit();
+    event DepositCancel();
     event NewBlockPack();
+    event Withdraw();
 
     function rollup_block(uint x) external view returns(bytes32) {
         return get_rollup_block(x);
@@ -614,6 +616,7 @@ contract Zeropool is OptimisticRollup {
         require(d.blocknumber < block.number - DEPOSIT_EXPIRES_BLOCKS);
         set_deposit_state(deposit_hash, 0);
         d.utxo.token.abstractTransfer(d.utxo.owner, d.utxo.amount);
+        emit DepositCancel();
         return true;
     }
 
@@ -624,6 +627,7 @@ contract Zeropool is OptimisticRollup {
         require(w.blocknumber < block.number - CHALLENGE_EXPIRES_BLOCKS);
         set_withdraw_state(withdraw_hash, 0);
         w.utxo.token.abstractTransfer(w.utxo.owner, w.utxo.amount);
+        emit Withdraw();
         return true;
     }
 
