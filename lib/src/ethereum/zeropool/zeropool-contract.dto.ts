@@ -6,6 +6,7 @@ export type Event<T> = {
 
 export type DepositEvent = Event<Deposit>;
 export type PublishBlockEvent = Event<Block<string>>;
+export type WithdrawEvent = Event<PayNote>;
 
 export type Deposit = {
     token: string,

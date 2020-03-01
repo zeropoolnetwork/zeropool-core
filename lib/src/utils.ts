@@ -17,16 +17,21 @@ import { MerkleTree } from './circom/merkletree';
 
 const zrpPath = 'm/44\'/0\'/0\'/0/0';
 
-const MAX_AMOUNT = 1766847064778384329583297500742918515827483896875618958121606201292619776;
+export const MAX_AMOUNT = 1766847064778384329583297500742918515827483896875618958121606201292619776;
+export const BN254_ORDER = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
+
+export const WITHDRAW_ACTION = "withdraw";
+export const DEPOSIT_ACTION = "deposit";
+export const TRANSFER_ACTION = "transfer";
 
 export function getAction(delta: bigint): Action {
     if (delta === 0n) {
-        return "transfer";
+        return TRANSFER_ACTION;
     } else if (delta < MAX_AMOUNT) {
-        return "deposit";
+        return DEPOSIT_ACTION;
     }
     // delta > BN254_ORDER-MAX_AMOUNT && delta < BN254_ORDER
-    return "withdraw";
+    return WITHDRAW_ACTION;
 }
 
 export function bigintifyTx(tx: Tx<string>): Tx<bigint> {

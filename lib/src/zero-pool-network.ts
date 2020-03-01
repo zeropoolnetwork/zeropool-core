@@ -12,11 +12,12 @@ import {
     sortUtxo,
     stringifyAddress,
     stringifyTx,
+    WITHDRAW_ACTION,
 } from "./utils";
 // @ts-ignore
 import { bn128 } from "snarkjs";
 
-import { hash, toHex } from './ethereum';
+import { hash, toHex, WithdrawEvent } from './ethereum';
 import { BlockItem, DepositEvent, PayNote, Tx, TxExternalFields, ZeroPoolContract } from './ethereum/zeropool';
 
 import { nullifier, transfer_compute, utxo } from './circom/inputs';
@@ -258,6 +259,50 @@ export class ZeroPoolNetwork {
         )
     }
 
+    // todo: maybe make sense to cache it
+    async getActiveWithdrawals(): Promise<PayNote[]> {
+        const [
+            publishBlockEvents,
+            withdrawEvents
+        ] = await Promise.all([
+            this.ZeroPool.publishBlockEvents(),
+            this.ZeroPool.withdrawEvents()
+        ]);
+
+        const activeWithdrawals: PayNote[] = [];
+        for (const event of publishBlockEvents) {
+            for (const item of event.params.BlockItems) {
+                const action = getAction(BigInt(item.tx.delta));
+                if (
+                    action === WITHDRAW_ACTION &&
+                    item.tx.txExternalFields.owner === this.ZeroPool.web3Ethereum.ethAddress
+                ) {
+                    const encodedTx = this.ZeroPool.encodeTx(item.tx);
+                    const txHash = hash(encodedTx);
+
+                    const coincidences = withdrawEvents.filter((event: WithdrawEvent) => {
+                        return event.params.txHash === txHash;
+                    });
+
+                    if (coincidences.length === 0) {
+                        activeWithdrawals.push({
+                            utxo: {
+                                owner: item.tx.txExternalFields.owner,
+                                amount: Number(bn128.r - BigInt(item.tx.delta)),
+                                token: item.tx.token
+                            },
+                            blockNumber: event.blockNumber,
+                            txHash: txHash,
+                        });
+                    }
+                }
+            }
+        }
+
+        return activeWithdrawals;
+
+    }
+
     async calculateUtxo(
         srcUtxoList: Utxo<bigint>[],
         token: bigint,
@@ -360,7 +405,9 @@ export class ZeroPoolNetwork {
             }
         };
 
-        const encodedTx = this.ZeroPool.encodeTx(tx);
+        const encodedTx = this.ZeroPool.encodeTx(
+            stringifyTx(tx)
+        );
         const txHash = hash(encodedTx);
 
         const blockItem: BlockItem<string> = {
@@ -521,7 +568,7 @@ export class ZeroPoolNetwork {
         const sortedHistory = this.zpHistoryState.items.sort(sortHistory);
         this.zpHistoryState = {
             items: sortedHistory,
-            lastBlockNumber: sortedHistory[0].blockNumber
+            lastBlockNumber: sortedHistory[0] ? sortedHistory[0].blockNumber : 0
         };
 
         callback && callback({ step: "finish" });
@@ -665,7 +712,9 @@ export class ZeroPoolNetwork {
 
         }
 
-        state.lastBlockNumber = Number(state.utxoList[state.utxoList.length - 1].blockNumber);
+        state.lastBlockNumber = state.utxoList.length !== 0
+            ? Number(state.utxoList[state.utxoList.length - 1].blockNumber)
+            : 0;
 
         return state;
     }

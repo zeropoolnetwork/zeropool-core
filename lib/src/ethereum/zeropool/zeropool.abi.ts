@@ -5,7 +5,12 @@ export const ZeroPoolAbi: AbiItem[] = [{
     "inputs": [],
     "name": "Deposit",
     "type": "event"
-}, { "anonymous": false, "inputs": [], "name": "NewBlockPack", "type": "event" }, {
+}, { "anonymous": false, "inputs": [], "name": "DepositCancel", "type": "event" }, {
+    "anonymous": false,
+    "inputs": [],
+    "name": "NewBlockPack",
+    "type": "event"
+}, { "anonymous": false, "inputs": [], "name": "Withdraw", "type": "event" }, {
     "inputs": [],
     "name": "alive",
     "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],

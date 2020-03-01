@@ -37,6 +37,10 @@ export class Web3Ethereum {
         return this.web3.eth.getBalance(address);
     }
 
+    getBlockNumber(): Promise<number> {
+        return this.web3.eth.getBlockNumber();
+    }
+
     encodeParameter(param: any, value: any): string {
         return this.web3.eth.abi.encodeParameter(param, value)
     }
