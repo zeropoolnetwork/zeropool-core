@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { BlockItemDto } from './transaction.dto';
 import { gasZp, zp } from './zeroPool';
 import { MemoryStorage } from './storage/memoryStorage';
-import { handleBlock, initialScan, synced } from './blockScanner/blockScanner';
 import { Block, ZeroPoolNetwork } from 'zeropool-lib';
 import { IStorage } from './storage/IStorage';
 
@@ -29,6 +28,7 @@ export class AppService {
     // }
 
     const rollupCurTxNum = await zp.ZeroPool.getRollupTxNum();
+    const version = await zp.ZeroPool.getContractVersion();
 
     const block: Block<string> = {
       BlockItems: blockItems,
@@ -45,6 +45,7 @@ export class AppService {
       block.BlockItems,
       block.rollupCurrentBlockNumber,
       block.blockNumberExpires,
+      version
     );
 
     storage.addBlocks([block]);
