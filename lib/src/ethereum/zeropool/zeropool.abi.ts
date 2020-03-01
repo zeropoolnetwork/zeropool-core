@@ -359,6 +359,12 @@ export const ZeroPoolAbi: AbiItem[] = [{
     "stateMutability": "nonpayable",
     "type": "function"
 }, {
+    "inputs": [],
+    "name": "challenge_expires_blocks",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+}, {
     "inputs": [{ "internalType": "contract IERC20", "name": "token", "type": "address" }, {
         "internalType": "uint256",
         "name": "amount",
@@ -389,6 +395,12 @@ export const ZeroPoolAbi: AbiItem[] = [{
     "name": "depositCancel",
     "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
     "stateMutability": "nonpayable",
+    "type": "function"
+}, {
+    "inputs": [],
+    "name": "deposit_expires_blocks",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
     "type": "function"
 }, {
     "inputs": [{ "internalType": "bytes32", "name": "x", "type": "bytes32" }],
