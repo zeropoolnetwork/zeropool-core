@@ -2,11 +2,10 @@ pragma solidity >=0.6.0;
 pragma experimental ABIEncoderV2;
 
 import "./lib/IERC20.sol";
-import "./lib/Ownable.sol";
 import "./lib/AbstractERC20.sol";
 import "./OptimisticRollup.sol";
 
-contract Zeropool is Ownable, OptimisticRollup {
+contract Zeropool is OptimisticRollup {
     using AbstractERC20 for IERC20;
 
     uint256 constant DEPOSIT_EXISTS = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
@@ -15,42 +14,58 @@ contract Zeropool is Ownable, OptimisticRollup {
     uint256 constant BN254_ORDER = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
     uint256 constant MAX_AMOUNT = 1766847064778384329583297500742918515827483896875618958121606201292619776;
 
+    uint256 constant VERSION = 1;
+
     event Deposit();
     event NewBlockPack();
 
-
-    mapping(uint256 => bytes32) public rollup_block;
-    mapping(bytes32 => uint256) public deposit_state;
-    mapping(bytes32 => uint256) public withdraw_state;
-
-    uint256 public rollup_tx_num;
-    bool public alive = true;
-    VK tx_vk;
-    VK tree_update_vk;
-
-    modifier onlyAlive() {
-        require(alive);
-        _;
+    function rollup_block(uint x) external view returns(bytes32) {
+        return get_rollup_block(x);
     }
 
-    function blockItemNoteVerify(BlockItemNote memory note)
-        internal
-        view
-        returns (bool)
-    {
-        (bytes32 itemhash, ) = blockItemHash(note.item);
-        return
-            MerkleProof.keccak256MerkleProof(
-                note.proof,
-                note.id & 0xff,
-                itemhash
-            ) ==
-            rollup_block[note.id >> 8];
+    function deposit_state(bytes32 x) external view returns(uint256) {
+        return get_deposit_state(x);
     }
 
-    constructor() public {
-        alive = true;
+    function withdraw_state(bytes32 x) external view returns(uint256) {
+        return get_withdraw_state(x);
     }
+
+    function rollup_tx_num() external view returns(uint256) {
+        return get_rollup_tx_num();
+    }
+
+    function alive() external view returns(bool) {
+        return get_alive();
+    }
+
+    function tx_vk() external view returns(VK memory) {
+        return get_tx_vk();
+    }
+
+    function tree_update_vk() external view returns(VK memory) {
+        return get_tree_update_vk();
+    }
+
+    function relayer() external view returns(address) {
+        return get_relayer();
+    }
+
+    function initialized() external view returns(bool) {
+        return get_version() < VERSION;
+    }
+
+    function version() external view returns(uint256) {
+        return VERSION;
+    }
+
+    
+    function init(address relayer) external onlyUninitialized(VERSION) {
+        set_alive(true);
+        set_relayer(relayer);
+        set_version(VERSION);
+    }
+
 
     function deposit(IERC20 token, uint256 amount, bytes32 txhash)
         public
@@ -61,37 +76,40 @@ contract Zeropool is Ownable, OptimisticRollup {
         bytes32 deposit_hash = keccak256(
             abi.encode(msg.sender, token, _amount, block.number, txhash)
         );
-        deposit_state[deposit_hash] = DEPOSIT_EXISTS;
+        set_deposit_state(deposit_hash, DEPOSIT_EXISTS);
         emit Deposit();
         return true;
     }
 
-    function depositCancel(PayNote memory d) public payable returns (bool) {
+    function depositCancel(PayNote memory d) public returns (bool) {
         bytes32 deposit_hash = keccak256(abi.encode(d));
-        require(deposit_state[deposit_hash] >= rollup_tx_num);
+        require(get_deposit_state(deposit_hash) >= get_rollup_tx_num());
         require(d.blocknumber < block.number - DEPOSIT_EXPIRES_BLOCKS);
-        delete deposit_state[deposit_hash];
+        set_deposit_state(deposit_hash, 0);
         d.utxo.token.abstractTransfer(d.utxo.owner, d.utxo.amount);
         return true;
     }
 
     function withdraw(PayNote memory w) public returns (bool) {
         bytes32 withdraw_hash = keccak256(abi.encode(w));
-        uint256 state = withdraw_state[withdraw_hash];
-        require(state < rollup_tx_num && state != 0);
+        uint256 state = get_withdraw_state(withdraw_hash);
+        require(state < get_rollup_tx_num() && state != 0);
         require(w.blocknumber < block.number - CHALLENGE_EXPIRES_BLOCKS);
-        delete withdraw_state[withdraw_hash];
+        set_withdraw_state(withdraw_hash, 0);
         w.utxo.token.abstractTransfer(w.utxo.owner, w.utxo.amount);
         return true;
     }
 
     function publishBlock(
+        uint256 protocol_version,
         BlockItem[] memory items,
         uint256 rollup_cur_block_num,
         uint256 blocknumber_expires
-    ) public onlyOwner returns (bool) {
-        require(alive, "contract stopped");
-        require(rollup_cur_block_num == rollup_tx_num >> 8, "wrong block number");
+    ) public onlyRelayer onlyAlive returns (bool) {
+        uint256 cur_rollup_tx_num = get_rollup_tx_num();
+
+        require(rollup_cur_block_num == cur_rollup_tx_num >> 8, "wrong block number");
+        require(protocol_version == get_version(), "wrong protocol version");
         require(block.number < blocknumber_expires, "blocknumber is already expires");
         uint256 nitems = items.length;
         require(nitems > 0 && nitems <= 256, "wrong number of items");
@@ -114,8 +132,8 @@ contract Zeropool is Ownable, OptimisticRollup {
                         txhash
                     )
                 );
-                require(deposit_state[deposit_hash] == DEPOSIT_EXISTS, "unexisted deposit");
-                deposit_state[deposit_hash] = rollup_tx_num + i;
+                require(get_deposit_state(deposit_hash) == DEPOSIT_EXISTS, "unexisted deposit");
+                set_deposit_state(deposit_hash, cur_rollup_tx_num + i);
             } else if (
                 item.ctx.delta > BN254_ORDER - MAX_AMOUNT &&
                 item.ctx.delta < BN254_ORDER
@@ -131,30 +149,28 @@ contract Zeropool is Ownable, OptimisticRollup {
                         txhash
                     )
                 );
-                require(withdraw_state[withdraw_hash] == 0, "withdrawal already published");
-                withdraw_state[withdraw_hash] = rollup_tx_num + i;
+                require(get_withdraw_state(withdraw_hash) == 0, "withdrawal already published");
+                set_withdraw_state(withdraw_hash, cur_rollup_tx_num + i);
             } else revert("wrong behavior");
 
             hashes[i] = itemhash;
         }
-        rollup_block[rollup_tx_num >> 8] = MerkleProof.keccak256MerkleTree(
-            hashes
-        );
-        rollup_tx_num += 256;
+        set_rollup_block(cur_rollup_tx_num >> 8, MerkleProof.keccak256MerkleTree(hashes));
+        set_rollup_tx_num(cur_rollup_tx_num+256);
         emit NewBlockPack();
         return true;
     }
 
     function stopRollup(uint256 lastvalid) internal returns (bool) {
-        alive = false;
-        if (rollup_tx_num > lastvalid) rollup_tx_num = lastvalid;
+        set_alive(false);
+        if (get_rollup_tx_num() > lastvalid) set_rollup_tx_num(lastvalid);
     }
 
     function challengeTx(BlockItemNote memory cur, BlockItemNote memory base)
         public
         returns (bool)
     {
-        require(blockItemNoteVerifyPair(cur, base, rollup_block));
+        require(blockItemNoteVerifyPair(cur, base));
         require(cur.item.ctx.rootptr == base.id);
         uint256[] memory inputs = new uint256[](8);
         inputs[0] = base.item.new_root;
@@ -166,7 +182,7 @@ contract Zeropool is Ownable, OptimisticRollup {
         inputs[6] = cur.item.ctx.delta;
         inputs[7] = uint256(keccak256(abi.encode(cur.item.ctx.ext))) % BN254_ORDER;
         require(
-            !groth16verify(tx_vk, cur.item.ctx.proof, inputs) ||
+            !groth16verify(get_tx_vk(), cur.item.ctx.proof, inputs) ||
                 cur.item.ctx.rootptr >= cur.id
         );
         stopRollup(
@@ -181,7 +197,7 @@ contract Zeropool is Ownable, OptimisticRollup {
         BlockItemNote memory prev,
         uint256 right_root
     ) public returns (bool) {
-        require(blockItemNoteVerifyPair(cur, prev, rollup_block));
+        require(blockItemNoteVerifyPair(cur, prev));
         require(right_root != cur.item.new_root);
         require(cur.id == prev.id + 1);
         uint256[] memory inputs = new uint256[](5);
@@ -190,7 +206,7 @@ contract Zeropool is Ownable, OptimisticRollup {
         inputs[2] = cur.id;
         inputs[3] = cur.item.ctx.utxo[0];
         inputs[4] = cur.item.ctx.utxo[1];
-        require(groth16verify(tree_update_vk, cur.item.ctx.proof, inputs));
+        require(groth16verify(get_tree_update_vk(), cur.item.ctx.proof, inputs));
         stopRollup(
             cur.id &
                 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00
@@ -203,7 +219,7 @@ contract Zeropool is Ownable, OptimisticRollup {
         BlockItemNote memory cur,
         BlockItemNote memory prev
     ) public returns (bool) {
-        require(blockItemNoteVerifyPair(cur, prev, rollup_block));
+        require(blockItemNoteVerifyPair(cur, prev));
         require(cur.id > prev.id);
         require(
             cur.item.ctx.nullifier[0] == prev.item.ctx.nullifier[0] ||
