@@ -59,6 +59,7 @@ class MerkleTree {
       pos = pos >>> 1;
       this._setcell(i, pos, hash2([this._cell(i - 1, pos * 2), this._cell(i - 1, pos * 2 + 1)]));
     }
+    this.length+=1;
   }
 
   proof(index) {
@@ -90,6 +91,7 @@ class MerkleTree {
         this._setcell(i, j, hash2([this._cell(i-1, j*2), this._cell(i-1, j*2+1)]));
       }
     }
+    this.length+=s;
   }
 
   pushZeros(n) {
