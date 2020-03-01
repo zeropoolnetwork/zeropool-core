@@ -51,6 +51,14 @@ contract Zeropool is OptimisticRollup {
         return get_relayer();
     }
 
+    function initialized() external view returns(bool) {
+        return get_version() < VERSION;
+    }
+
+    function version() external view returns(uint256) {
+        return VERSION;
+    }
+
     
     function init(address relayer) external onlyUninitialized(VERSION) {
         set_alive(true);
