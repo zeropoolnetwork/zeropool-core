@@ -249,7 +249,13 @@ export class ZeroPoolNetwork {
 
     async publishBlockItems(blockItems: BlockItem<string>[], blockNumberExpires: number): Promise<Transaction> {
         const rollupCurrentTxNum = await this.ZeroPool.getRollupTxNum();
-        return this.ZeroPool.publishBlock(blockItems, +rollupCurrentTxNum >> 8, blockNumberExpires)
+        const version = await this.ZeroPool.getContractVersion();
+        return this.ZeroPool.publishBlock(
+            blockItems,
+            +rollupCurrentTxNum >> 8,
+            blockNumberExpires,
+            version
+        )
     }
 
     async calculateUtxo(
