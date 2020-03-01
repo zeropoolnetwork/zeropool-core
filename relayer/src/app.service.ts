@@ -6,8 +6,8 @@ import { handleBlock, initialScan, synced } from './blockScanner/blockScanner';
 import { Block, ZeroPoolNetwork } from 'zeropool-lib';
 import { IStorage } from './storage/IStorage';
 
-const storage = new MemoryStorage();
-const gasStorage = new MemoryStorage();
+export const storage = new MemoryStorage();
+export const gasStorage = new MemoryStorage();
 
 @Injectable()
 export class AppService {

@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { ApiCreatedResponse, ApiExcludeEndpoint, ApiTags } from '@nestjs/swagger';
-import { AppService } from './app.service';
+import { AppService, storage, gasStorage } from './app.service';
 import { zp } from './zeroPool';
 import { GasDonationDto, TransactionDto } from './transaction.dto';
 

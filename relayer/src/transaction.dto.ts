@@ -70,6 +70,9 @@ export class GasDonationDto {
 
 export class TransactionDto {
   @ApiProperty()
+  depositBlockNumber: string;
+
+  @ApiProperty()
   tx: Tx;
 
   @ApiProperty()
