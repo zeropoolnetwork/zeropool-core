@@ -1,15 +1,11 @@
-import { Block, BlockItem, Event } from 'zeropool-lib';
+import { Block, BlockItem, IMerkleTree } from 'zeropool-lib';
 
 export interface IStorage {
-  lastBlockNumber: number;
-
-  getBlockEvents(): Event<Block<string>>[];
+  utxoTree: IMerkleTree;
 
   getBlockItems(): BlockItem<string>[];
 
   getNullifiers(): string[];
-
-  addBlockEvents(newBlockEvents: Event<Block<string>>[]): void;
 
   addBlocks(blocks: Block<string>[]): void
 }

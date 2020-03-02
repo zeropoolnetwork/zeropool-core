@@ -46,16 +46,38 @@ export class Tx {
   proof: Proof;
 }
 
-export class BlockItemDto {
+// export class BlockItem {
+//   @ApiProperty()
+//   tx: Tx;
+//
+//   @ApiProperty()
+//   newRoot: string;
+//
+//   @ApiProperty()
+//   depositBlockNumber: string;
+// }
+
+
+export class GasDonationDto {
+  @ApiProperty()
+  gasTx: Tx;
+
+  @ApiProperty()
+  donationHash: string;
+}
+
+
+export class TransactionDto {
+  @ApiProperty()
+  depositBlockNumber: string;
+
   @ApiProperty()
   tx: Tx;
 
   @ApiProperty()
-  newRoot: string;
-
-  @ApiProperty()
-  depositBlockNumber: string;
+  gasTx: Tx;
 }
+
 //
 // // https://github.com/sidorares/json-bigint
 // export class BlockItemDto {
