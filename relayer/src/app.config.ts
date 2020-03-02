@@ -12,6 +12,7 @@ export const AppConfig = {
 
 export const NetworkConfig = {
   rpc: process.env.RPC || networkConfig.rpc,
+  gasRpc: process.env.GAS_RPC || networkConfig.gasRpc,
   contract: process.env.CONTRACT_ADDRESS || networkConfig.contract,
   etherscan_prefix: process.env.ETHERSCAN_PREFIX || networkConfig.etherscan_prefix,
   gasContract: process.env.GAS_CONTRACT || networkConfig.gas_contract,
@@ -23,6 +24,7 @@ console.log('CONFIG: #1');
 console.log({
   mnemonic: Mnemonic,
   rpc: NetworkConfig.rpc,
+  gasRpc: NetworkConfig.gasRpc,
   contract: NetworkConfig.contract,
   gasContract: NetworkConfig.gasContract,
   etherscan_prefix: NetworkConfig.etherscan_prefix,

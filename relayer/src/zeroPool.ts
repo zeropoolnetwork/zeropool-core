@@ -6,6 +6,7 @@ import * as path from 'path';
 import { Mnemonic, NetworkConfig } from './app.config';
 
 const hdWallet = new HDWalletProvider(Mnemonic, NetworkConfig.rpc, 0, 1);
+const gasHdWallet = new HDWalletProvider(Mnemonic, NetworkConfig.gasRpc, 0, 1);
 
 const transactionJsonPath = path.join(__dirname, './../compiled/transaction.json');
 const transactionJson = fs.readFileSync(transactionJsonPath);
@@ -24,9 +25,9 @@ export const zp = new ZeroPoolNetwork(
 );
 
 export const gasZp = new ZeroPoolNetwork(
-  NetworkConfig.contract,
+  NetworkConfig.gasContract,
   // @ts-ignore
-  hdWallet,
+  gasHdWallet,
   Mnemonic,
   transactionJson,
   proverKey,

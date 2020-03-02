@@ -9,13 +9,11 @@ export async function initialScan(
   zp: ZeroPoolNetwork,
 ): Promise<void> {
 
-  const lastBlockNumber = storage.lastBlockNumber;
-
-  const blockEvents = await zp.ZeroPool.publishBlockEvents(lastBlockNumber + 1);
+  const blockEvents = await zp.ZeroPool.publishBlockEvents();
 
   for (const event of blockEvents) {
-    await handleBlock(event.params, storage);
-    storage.addBlockEvents([event]);
+    // await handleBlock(event.params, storage);
+    storage.addBlocks([event.params]);
   }
 
   synced.push(true);

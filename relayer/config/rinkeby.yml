@@ -5,6 +5,7 @@ app:
 network:
   etherscan_prefix: 'https://rinkeby.etherscan.io/'
   rpc: 'https://rinkeby.infura.io/v3/826fec4cbd954dfd89c714eabf4611c4'
+  gasRpc: 'https://rinkeby.infura.io/v3/826fec4cbd954dfd89c714eabf4611c4'
   contract: '0x1e2Ac08FDBe055e3A2c431c304D36A889455F5ae'
   gas_contract: '0x1e2Ac08FDBe055e3A2c431c304D36A889455F5ae'
 

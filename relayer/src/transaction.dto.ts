@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger'
-import c = require('config');
 
 export class Proof {
 
@@ -47,24 +46,24 @@ export class Tx {
   proof: Proof;
 }
 
-export class BlockItem {
-  @ApiProperty()
-  tx: Tx;
-
-  @ApiProperty()
-  newRoot: string;
-
-  @ApiProperty()
-  depositBlockNumber: string;
-}
+// export class BlockItem {
+//   @ApiProperty()
+//   tx: Tx;
+//
+//   @ApiProperty()
+//   newRoot: string;
+//
+//   @ApiProperty()
+//   depositBlockNumber: string;
+// }
 
 
 export class GasDonationDto {
   @ApiProperty()
-  gastx: Tx;
+  gasTx: Tx;
 
   @ApiProperty()
-  donationhash: string;
+  donationHash: string;
 }
 
 
@@ -76,7 +75,7 @@ export class TransactionDto {
   tx: Tx;
 
   @ApiProperty()
-  gastx: Tx;
+  gasTx: Tx;
 }
 
 //
