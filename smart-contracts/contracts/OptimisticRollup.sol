@@ -120,7 +120,7 @@ contract OptimisticRollup is UnstructuredStorage {
         set_bool(PTR_ALIVE, x);
     }
 
-    function get_tx_vk() internal view returns(VK memory vk) {
+    function get_tx_vk() internal view virtual returns(VK memory vk) {
         vk.data = get_uint256_list(PTR_TX_VK);
     }
 
@@ -128,7 +128,7 @@ contract OptimisticRollup is UnstructuredStorage {
         set_uint256_list(PTR_TX_VK, vk.data);
     }
 
-    function get_tree_update_vk() internal view returns(VK memory vk) {
+    function get_tree_update_vk() internal view virtual returns(VK memory vk) {
         vk.data = get_uint256_list(PTR_TREE_UPDATE_VK);
     }
 
