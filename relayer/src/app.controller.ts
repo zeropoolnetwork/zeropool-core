@@ -33,7 +33,7 @@ export class AppController {
 
   // TODO: add network parameter. Rinkeby, Mainnet
 
-  @Post('gasdonation')
+  @Post('tx/donation')
   @ApiCreatedResponse({
     description: 'Accepts ethereum donation transaction to include it into a block and deposit transaction to subchain '
   })
