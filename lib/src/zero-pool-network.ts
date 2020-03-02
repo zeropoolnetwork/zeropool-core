@@ -1,8 +1,12 @@
 import {
+    bigintifyTx,
+    bigintifyUtxoHistoryState,
     bigintifyUtxoState,
     copyMerkleTreeState,
     copyMyUtxoState,
+    copyUtxoHistory,
     decryptUtxo,
+    DEPOSIT_ACTION,
     encryptUtxo,
     findDuplicates,
     getAction,
@@ -12,6 +16,7 @@ import {
     sortUtxo,
     stringifyAddress,
     stringifyTx,
+    TRANSFER_ACTION,
     WITHDRAW_ACTION,
 } from "./utils";
 // @ts-ignore
@@ -59,9 +64,11 @@ const defaultState: MyUtxoState<bigint> = {
     lastBlockNumber: 0
 };
 
-const defaultHistoryState: HistoryState = {
+const defaultHistoryState: HistoryState<bigint> = {
     items: [],
-    lastBlockNumber: 0
+    lastBlockNumber: 0,
+    nullifiers: [],
+    utxoList: []
 };
 
 export class ZeroPoolNetwork {
@@ -74,15 +81,57 @@ export class ZeroPoolNetwork {
 
     public readonly ZeroPool: ZeroPoolContract;
 
-    private zpHistoryStateSubject: BehaviorSubject<HistoryState>;
-    public zpHistoryState$: Observable<HistoryState>;
+    public zpHistoryState$: Observable<HistoryState<bigint>>;
+    private zpHistoryStateSubject: BehaviorSubject<HistoryState<bigint>>;
 
-    get zpHistoryState(): HistoryState {
-        return this.zpHistoryStateSubject.value;
+    constructor(
+        contractAddress: string,
+        web3Provider: HttpProvider,
+        zpMnemonic: string,
+        transactionJson: any,
+        proverKey: any,
+        cashedState?: MyUtxoState<string>,
+        historyState?: HistoryState<string>,
+    ) {
+
+        this.transactionJson = transactionJson;
+        this.proverKey = proverKey;
+        this.contractAddress = contractAddress;
+        this.zpKeyPair = getKeyPair(zpMnemonic);
+        this.ZeroPool = new ZeroPoolContract(contractAddress, web3Provider);
+
+        if (cashedState) {
+
+            this.utxoStateSubject =
+                new BehaviorSubject<MyUtxoState<bigint>>(bigintifyUtxoState(cashedState));
+
+        } else {
+
+            this.utxoStateSubject =
+                new BehaviorSubject<MyUtxoState<bigint>>(defaultState);
+
+        }
+
+        this.utxoState$ = this.utxoStateSubject.asObservable();
+
+        if (historyState) {
+
+            this.zpHistoryStateSubject =
+                new BehaviorSubject<HistoryState<bigint>>(bigintifyUtxoHistoryState(historyState));
+
+        } else {
+
+            this.zpHistoryStateSubject =
+                new BehaviorSubject<HistoryState<bigint>>(defaultHistoryState);
+
+        }
+
+        this.zpHistoryState$ = this.zpHistoryStateSubject.asObservable();
+
     }
 
-    set zpHistoryState(val: HistoryState) {
-        this.zpHistoryStateSubject.next(val);
+    get zpHistoryState(): HistoryState<bigint> {
+        return this.zpHistoryStateSubject.value;
     }
 
     private utxoStateSubject: BehaviorSubject<MyUtxoState<bigint>>;
@@ -96,33 +145,8 @@ export class ZeroPoolNetwork {
         this.utxoStateSubject.next(val);
     }
 
-    constructor(
-        contractAddress: string,
-        web3Provider: HttpProvider,
-        zpMnemonic: string,
-        transactionJson: any,
-        proverKey: any,
-        cashedState?: MyUtxoState<string>,
-        historyState?: HistoryState,
-    ) {
-
-        this.transactionJson = transactionJson;
-        this.proverKey = proverKey;
-        this.contractAddress = contractAddress;
-        this.zpKeyPair = getKeyPair(zpMnemonic);
-        this.ZeroPool = new ZeroPoolContract(contractAddress, web3Provider);
-
-        if (cashedState) {
-            this.utxoStateSubject = new BehaviorSubject<MyUtxoState<bigint>>(bigintifyUtxoState(cashedState));
-        } else {
-            this.utxoStateSubject = new BehaviorSubject<MyUtxoState<bigint>>(defaultState);
-        }
-
-        this.utxoState$ = this.utxoStateSubject.asObservable();
-
-        this.zpHistoryStateSubject = new BehaviorSubject<HistoryState>(historyState || defaultHistoryState);
-        this.zpHistoryState$ = this.zpHistoryStateSubject.asObservable();
-
+    set zpHistoryState(val: HistoryState<bigint>) {
+        this.zpHistoryStateSubject.next(val);
     }
 
     async deposit(
@@ -485,99 +509,189 @@ export class ZeroPoolNetwork {
         });
     }
 
-
-    async utxoHistory(callback?: (update: UtxoHistoryProgressNotification) => any): Promise<HistoryState> {
+    async utxoHistory(callback?: (update: UtxoHistoryProgressNotification) => any): Promise<HistoryState<bigint>> {
 
         callback && callback({ step: "start" });
 
+        const state = copyUtxoHistory(this.zpHistoryState);
+
         callback && callback({ step: "fetch-utxo-list-from-contact" });
 
-        const {
-            encryptedUtxoList,
-            utxoHashes,
-            blockNumbers,
-            nullifiers,
-            utxoDeltaList
-        } = await this.getUtxoListFromContract(+this.zpHistoryState.lastBlockNumber + 1);
-
-        this.zpHistoryState.lastBlockNumber = encryptedUtxoList.length !== 0
-            ? blockNumbers[blockNumbers.length - 1]
-            : this.zpHistoryState.lastBlockNumber;
-
-        if (encryptedUtxoList.length === 0) {
+        const blockEvents = await this.ZeroPool.publishBlockEvents(+state.lastBlockNumber + 1);
+        if (blockEvents.length === 0) {
             callback && callback({ step: "finish" });
-            return this.zpHistoryState;
+            return state;
         }
 
-        callback && callback({
-            step: "find-own-utxo",
-            processed: 0,
-            outOf: encryptedUtxoList.length
-        });
+        state.lastBlockNumber = blockEvents[blockEvents.length - 1].blockNumber;
 
-        let utxoCounter = 0;
-        for (const [i, blockEncryptedUtxoList] of encryptedUtxoList.entries()) {
+        // callback && callback({
+        //     step: "find-own-utxo",
+        //     processed: 0,
+        //     outOf: encryptedUtxoList.length
+        // });
 
-            for (const [j, encryptedUtxo] of blockEncryptedUtxoList.entries()) {
+        for (const block of blockEvents) {
 
-                callback && callback({
-                    step: "find-own-utxo",
-                    processed: i + 1,
-                });
+            for (const item of block.params.BlockItems) {
 
-                const p = new Promise((resolve) => {
-                    setTimeout(() => resolve(), 1);
-                });
-                await p;
+                const tx = bigintifyTx(item.tx);
+
+                const action = getAction(tx.delta);
+
+                const firstUtxoIndex = state.nullifiers.indexOf(tx.nullifier[0]);
+                const secondUtxoIndex = state.nullifiers.indexOf(tx.nullifier[1]);
+
+                if (
+                    action === WITHDRAW_ACTION &&
+                    (
+                        firstUtxoIndex !== -1 ||
+                        secondUtxoIndex !== -1
+                    )
+                ) {
+
+                    const firstInputAmount = state.utxoList[firstUtxoIndex]
+                        ? state.utxoList[firstUtxoIndex].amount
+                        : 0n;
+
+                    const secondInputAmount = state.utxoList[secondUtxoIndex]
+                        ? state.utxoList[secondUtxoIndex].amount
+                        : 0n;
+
+                    const historyItem: HistoryItem = {
+                        action: action,
+                        type: 'out',
+                        amount: Number(
+                            firstInputAmount +
+                            secondInputAmount
+                        ),
+                        blockNumber: +block.blockNumber
+                    };
+
+                    state.items.push(historyItem);
+
+                }
+
+                let amount = 0n;
+
 
                 try {
 
-                    const utxo = decryptUtxo(this.zpKeyPair.privateKey, encryptedUtxo, utxoHashes[i][j]);
+                    const utxo = decryptUtxo(
+                        this.zpKeyPair.privateKey,
+                        tx.txExternalFields.message[0].data,
+                        tx.utxoHashes[0]
+                    );
+
                     if (utxo.amount.toString() !== '0') {
-
-                        const action = getAction(utxoDeltaList[utxoCounter]);
-
-                        const historyItem: HistoryItem = {
-                            action: action,
-                            type: 'in', // because we search among utxo. type 'out' means search among nullifiers
-                            amount: Number(utxo.amount),
-                            blockNumber: blockNumbers[i]
-                        };
-
-                        this.zpHistoryState.items.push(historyItem);
+                        utxo.blockNumber = block.blockNumber;
+                        state.utxoList.push(utxo);
 
                         const utxoNullifier = nullifier(utxo, this.zpKeyPair.privateKey);
-                        const index = nullifiers.indexOf(utxoNullifier);
-                        if (index !== -1) {
-                            const historyItem: HistoryItem = {
-                                action: getAction(utxoDeltaList[index]),
-                                type: 'out',
-                                amount: Number(utxo.amount),
-                                blockNumber: blockNumbers[index]
-                            };
+                        state.nullifiers.push(utxoNullifier);
 
-                            this.zpHistoryState.items.push(historyItem);
-                        }
-
+                        amount += utxo.amount;
                     }
+
+
                 } catch (e) {
+
                 }
 
-                utxoCounter++;
+                try {
+
+                    const utxo = decryptUtxo(
+                        this.zpKeyPair.privateKey,
+                        tx.txExternalFields.message[1].data,
+                        tx.utxoHashes[1]
+                    );
+
+                    if (utxo.amount.toString() !== '0') {
+                        utxo.blockNumber = block.blockNumber;
+                        state.utxoList.push(utxo);
+
+                        const utxoNullifier = nullifier(utxo, this.zpKeyPair.privateKey);
+                        state.nullifiers.push(utxoNullifier);
+
+                        amount += utxo.amount;
+                    }
+
+
+                } catch (e) {
+
+                }
+
+
+                if (
+                    amount > 0n &&
+                    (
+                        action === DEPOSIT_ACTION ||
+                        (
+                            firstUtxoIndex === -1 &&
+                            secondUtxoIndex === -1
+                        )
+                    )
+                ) {
+
+                    const historyItem: HistoryItem = {
+                        action: action,
+                        type: 'in',
+                        amount: Number(amount),
+                        blockNumber: +block.blockNumber
+                    };
+
+                    state.items.push(historyItem);
+
+                }
+
+                if (
+                    action === TRANSFER_ACTION &&
+                    amount > 0n &&
+                    (
+                        firstUtxoIndex !== -1 ||
+                        secondUtxoIndex !== -1
+                    )
+                ) {
+
+                    const firstInputAmount = state.utxoList[firstUtxoIndex]
+                        ? state.utxoList[firstUtxoIndex].amount
+                        : 0n;
+
+                    const secondInputAmount = state.utxoList[secondUtxoIndex]
+                        ? state.utxoList[secondUtxoIndex].amount
+                        : 0n;
+
+                    const historyItem: HistoryItem = {
+                        action: action,
+                        type: 'out',
+                        amount: Number(
+                            firstInputAmount +
+                            secondInputAmount -
+                            amount
+                        ),
+                        blockNumber: +block.blockNumber
+                    };
+
+                    state.items.push(historyItem);
+
+                }
 
             }
 
         }
 
-        const sortedHistory = this.zpHistoryState.items.sort(sortHistory);
+
+        const sortedHistory = state.items.sort(sortHistory);
         this.zpHistoryState = {
             items: sortedHistory,
-            lastBlockNumber: sortedHistory[0] ? sortedHistory[0].blockNumber : 0
+            lastBlockNumber: state.lastBlockNumber,
+            nullifiers: state.nullifiers,
+            utxoList: state.utxoList
         };
 
         callback && callback({ step: "finish" });
 
-        return this.zpHistoryState;
+        return state;
     }
 
     async getBalance(callback?: (update: GetBalanceProgressNotification) => any) {

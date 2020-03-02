@@ -10,7 +10,16 @@ import { in_utxo_inputs, utxo, utxo_hash } from './circom/inputs';
 import { decrypt_message, encrypt_message } from './circom/encryption';
 import { get_pubkey, linearize_proof } from './circom/utils';
 import buildwitness from './circom/buildwitness';
-import { Action, HistoryItem, IMerkleTree, KeyPair, MerkleTreeState, MyUtxoState, Utxo } from "./zero-pool-network.dto";
+import {
+    Action,
+    HistoryItem,
+    HistoryState,
+    IMerkleTree,
+    KeyPair,
+    MerkleTreeState,
+    MyUtxoState,
+    Utxo
+} from "./zero-pool-network.dto";
 import { Tx } from "./ethereum/zeropool";
 import { toHex } from "./ethereum";
 import { MerkleTree as MT } from './circom/merkletree';
@@ -111,6 +120,28 @@ export function stringifyUtxoState(state: MyUtxoState<bigint>): MyUtxoState<stri
         lastBlockNumber: state.lastBlockNumber,
         merkleTreeState: mt.toObject()
     };
+}
+
+export function stringifyUtxoHistoryState(state: HistoryState<bigint>): HistoryState<string> {
+
+    return {
+        utxoList: state.utxoList.map(stringifyUtxo),
+        nullifiers: state.nullifiers.map(String),
+        lastBlockNumber: state.lastBlockNumber,
+        items: state.items
+    };
+
+}
+
+export function bigintifyUtxoHistoryState(state: HistoryState<string>): HistoryState<bigint> {
+
+    return {
+        utxoList: state.utxoList.map(bigintifyUtxo),
+        nullifiers: state.nullifiers.map(BigInt),
+        lastBlockNumber: state.lastBlockNumber,
+        items: state.items
+    };
+
 }
 
 export function bigintifyUtxo(utxo: Utxo<string>): Utxo<bigint> {
@@ -242,6 +273,21 @@ export function decryptUtxo(privateKey: bigint, cipher_text: bigint[], hash: big
         throw new Error('failed to decrypt utxoList');
     }
     return _utxo_rec;
+}
+
+export function copyUtxoHistory(src: HistoryState<bigint>): HistoryState<bigint> {
+    return {
+        items: src.items.map(x => {
+            // @ts-ignore
+            return { ...x }
+        }),
+        lastBlockNumber: src.lastBlockNumber,
+        nullifiers: [...src.nullifiers],
+        utxoList: src.utxoList.map(x => {
+            // @ts-ignore
+            return { ...x }
+        }),
+    }
 }
 
 export function copyMyUtxoState(src: MyUtxoState<bigint>): MyUtxoState<bigint> {

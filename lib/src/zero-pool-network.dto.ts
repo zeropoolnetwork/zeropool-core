@@ -53,9 +53,11 @@ export type Action = 'deposit' | 'deposit_external' | 'deposit_cancel' |
 
 export type ActionType = 'in' | 'out';
 
-export type HistoryState = {
+export type HistoryState<T> = {
     lastBlockNumber: string | number,
-    items: HistoryItem[]
+    items: HistoryItem[],
+    nullifiers: T[],
+    utxoList: Utxo<T>[]
 }
 
 export type HistoryItem = {
