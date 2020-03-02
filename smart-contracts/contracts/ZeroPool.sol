@@ -9,8 +9,8 @@ contract Zeropool is OptimisticRollup {
     using AbstractERC20 for IERC20;
 
     uint256 constant DEPOSIT_EXISTS = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
-    uint256 constant DEPOSIT_EXPIRES_BLOCKS = 500;
-    uint256 constant CHALLENGE_EXPIRES_BLOCKS = 5760;
+    uint256 constant DEPOSIT_EXPIRES_BLOCKS = 2;
+    uint256 constant CHALLENGE_EXPIRES_BLOCKS = 10;
     uint256 constant BN254_ORDER = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
     uint256 constant MAX_AMOUNT = 1766847064778384329583297500742918515827483896875618958121606201292619776;
 
