@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { ApiCreatedResponse, ApiExcludeEndpoint, ApiTags } from '@nestjs/swagger';
-import { AppService, storage, gasStorage } from './app.service';
+import { AppService } from './app.service';
 import { zp } from './zeroPool';
 import { GasDonationDto, TransactionDto } from './transaction.dto';
 
@@ -32,35 +32,13 @@ export class AppController {
   // }
 
   // TODO: add network parameter. Rinkeby, Mainnet
-  
-  
-  /*
-  @Post('tx')
-  @ApiCreatedResponse({
-    description: 'Accepts signed transaction to include it into a block. ' +
-      'Returns hash of Ethereum transaction that post a block on the smart contract',
-  })
-  async postTransactions(@Body() tx: BlockItemDto): Promise<any> {
-    return await this.appService.publishBlockItem(tx);
-  }
-
-  @Post('tx/gas')
-  @ApiCreatedResponse({
-    description: 'Accepts signed transaction for gas to include it into a block. ' +
-      'Returns hash of Ethereum transaction that post a block on the smart contract',
-  })
-  async postGasTransactions(@Body() tx: BlockItemDto): Promise<any> {
-    return await this.appService.publishGasBlockItem(tx);
-  }
-  */
-
 
   @Post('gasdonation')
   @ApiCreatedResponse({
     description: 'Accepts ethereum donation transaction to include it into a block and deposit transaction to subchain '
   })
   async postGasDonation(@Body() gd: GasDonationDto): Promise<any> {
-    return Promise.resolve("TODO: implement postGasTransaction");
+    return this.appService.publishGasDonation(gd.gasTx, gd.donationHash);
   }
 
   @Post('tx')
@@ -69,7 +47,7 @@ export class AppController {
       'Returns hash of Ethereum subchain transaction that post a block on the smart contract',
   })
   async postTransaction(@Body() wtx: TransactionDto): Promise<any> {
-    return Promise.resolve("TODO: implement postGasTransaction");
+    return this.appService.publishTransaction(wtx.tx, wtx.depositBlockNumber, wtx.gasTx);
   }
 
 
