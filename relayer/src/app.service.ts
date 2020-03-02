@@ -90,13 +90,6 @@ export class AppService {
       throw new Error('cannot verify block');
     }
 
-    console.log(
-      block.BlockItems,
-      block.rollupCurrentBlockNumber,
-      block.blockNumberExpires,
-      version,
-    );
-
     const res = await localZp.ZeroPool.publishBlock(
       block.BlockItems,
       block.rollupCurrentBlockNumber,

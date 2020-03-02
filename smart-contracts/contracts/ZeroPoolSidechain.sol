@@ -5,7 +5,7 @@ pragma experimental ABIEncoderV2;
 import "./OptimisticRollup.sol";
 
 
-contract Zeropool is OptimisticRollup {
+contract ZeropoolSidechain is OptimisticRollup {
 
     event NewBlockPack();
     uint256 constant VERSION = 1;
