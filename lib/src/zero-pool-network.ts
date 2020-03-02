@@ -165,7 +165,7 @@ export class ZeroPoolNetwork {
             state.utxoList,
             BigInt(token),
             BigInt(this.zpKeyPair.publicKey),
-            BigInt(amount),
+            0n,
             utxoDelta
         );
 
@@ -251,7 +251,7 @@ export class ZeroPoolNetwork {
 
     async prepareWithdraw(
         token: string,
-        amount: string,
+        amount: number,
         callback?: (update: PrepareWithdrawProgressNotification) => any
     ): Promise<[Tx<string>, string]> {
 
@@ -266,7 +266,7 @@ export class ZeroPoolNetwork {
             state.utxoList,
             BigInt(token),
             BigInt(this.zpKeyPair.publicKey),
-            BigInt(amount),
+            0n,
             utxoDelta
         );
 
@@ -357,12 +357,12 @@ export class ZeroPoolNetwork {
         delta: bigint
     ): Promise<UtxoPair> {
 
-        assert.ok(srcUtxoList.length !== 0, 'you have not utxoList');
+        assert.ok(srcUtxoList.length !== 0 || delta > 0n, 'you have not utxoList');
 
         let utxoList = [...srcUtxoList];
         utxoList = utxoList.sort(sortUtxo);
 
-        const utxoIn = utxoList.slice(2);
+        const utxoIn = utxoList.slice(0, 2);
 
         const utxoInAmount = utxoIn.reduce((acc, val) => {
             acc += val.amount;
@@ -414,8 +414,11 @@ export class ZeroPoolNetwork {
 
         const encryptedUTXOs = add_utxo.map((input: Utxo<bigint>) => encryptUtxo(input.pubkey, input));
 
+        // todo: this is bad fix with || 0n, but is needed for SideChain contract
+        const owner = delta === 0n ? 0n : BigInt(this.ZeroPool.web3Ethereum.ethAddress || 0n);
+
         const txExternalFields: TxExternalFields<bigint> = {
-            owner: delta === 0n ? 0n : BigInt(this.ZeroPool.web3Ethereum.ethAddress),
+            owner: owner,
             message: [
                 {
                     data: encryptedUTXOs[0]
@@ -571,21 +574,10 @@ export class ZeroPoolNetwork {
                     )
                 ) {
 
-                    const firstInputAmount = state.utxoList[firstUtxoIndex]
-                        ? state.utxoList[firstUtxoIndex].amount
-                        : 0n;
-
-                    const secondInputAmount = state.utxoList[secondUtxoIndex]
-                        ? state.utxoList[secondUtxoIndex].amount
-                        : 0n;
-
                     const historyItem: HistoryItem = {
                         action: action,
                         type: 'out',
-                        amount: Number(
-                            firstInputAmount +
-                            secondInputAmount
-                        ),
+                        amount: Number(bn128.r - tx.delta),
                         blockNumber: +block.blockNumber
                     };
 
@@ -654,14 +646,37 @@ export class ZeroPoolNetwork {
                     )
                 ) {
 
-                    const historyItem: HistoryItem = {
-                        action: action,
-                        type: 'in',
-                        amount: Number(amount),
-                        blockNumber: +block.blockNumber
-                    };
+                    if (action === DEPOSIT_ACTION) {
 
-                    state.items.push(historyItem);
+                        const historyItem: HistoryItem = {
+                            action: action,
+                            type: 'in',
+                            amount: Number(tx.delta),
+                            blockNumber: +block.blockNumber
+                        };
+
+                        state.items.push(historyItem);
+
+                    }
+
+                    if (
+                        action !== DEPOSIT_ACTION &&
+                        (
+                            firstUtxoIndex === -1 &&
+                            secondUtxoIndex === -1
+                        )
+                    ) {
+
+                        const historyItem: HistoryItem = {
+                            action: action,
+                            type: 'in',
+                            amount: Number(amount),
+                            blockNumber: +block.blockNumber
+                        };
+
+                        state.items.push(historyItem);
+
+                    }
 
                 }
 

@@ -19,9 +19,10 @@ export class Web3Ethereum {
         this.web3.eth.getAccounts()
             .then((addresses: string[]) => {
                 if (addresses.length === 0) {
-                    throw new Error('web3 provider not connected');
+                    console.warn('web3 provider has not addresses');
+                } else {
+                    this.ethAddress = addresses[0];
                 }
-                this.ethAddress = addresses[0];
             });
     }
 
