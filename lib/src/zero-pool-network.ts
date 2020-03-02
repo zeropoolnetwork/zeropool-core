@@ -14,7 +14,6 @@ import {
     getProof,
     sortHistory,
     sortUtxo,
-    stringifyAddress,
     stringifyTx,
     TRANSFER_ACTION,
     WITHDRAW_ACTION,
@@ -170,8 +169,6 @@ export class ZeroPoolNetwork {
             utxoDelta
         );
 
-        const utxoDelta = BigInt(amount);
-
         const [
             tx,
             txHash
@@ -180,8 +177,6 @@ export class ZeroPoolNetwork {
             utxoDelta,
             utxoPair.utxoIn,
             utxoPair.utxoOut,
-            utxoIn,
-            utxoOut,
             state.merkleTreeState,
             callback
         );
