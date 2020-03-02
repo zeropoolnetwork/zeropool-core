@@ -10,37 +10,41 @@ import { in_utxo_inputs, utxo, utxo_hash } from './circom/inputs';
 import { decrypt_message, encrypt_message } from './circom/encryption';
 import { get_pubkey, linearize_proof } from './circom/utils';
 import buildwitness from './circom/buildwitness';
-import { Action, HistoryItem, MyUtxoState } from "./zero-pool-network.dto";
+import {
+    Action,
+    HistoryItem,
+    HistoryState,
+    IMerkleTree,
+    KeyPair,
+    MerkleTreeState,
+    MyUtxoState,
+    Utxo
+} from "./zero-pool-network.dto";
 import { Tx } from "./ethereum/zeropool";
 import { toHex } from "./ethereum";
+import { MerkleTree as MT } from './circom/merkletree';
 
 const zrpPath = 'm/44\'/0\'/0\'/0/0';
 
-export type Utxo<T> = {
-    token: T,
-    amount: T,
-    pubkey: T,
-    blinding?: T,
-    mp_sibling?: T[],
-    mp_path?: number,
-    blockNumber?: number
-}
+export const MAX_AMOUNT = 1766847064778384329583297500742918515827483896875618958121606201292619776;
+export const BN254_ORDER = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
 
-export type KeyPair = {
-    privateKey: bigint,
-    publicKey: bigint
-}
+export const WITHDRAW_ACTION = "withdraw";
+export const DEPOSIT_ACTION = "deposit";
+export const TRANSFER_ACTION = "transfer";
 
-const MAX_AMOUNT = 1766847064778384329583297500742918515827483896875618958121606201292619776;
+export function MerkleTree(height: number): IMerkleTree {
+    return new MT(height);
+}
 
 export function getAction(delta: bigint): Action {
     if (delta === 0n) {
-        return "transfer";
+        return TRANSFER_ACTION;
     } else if (delta < MAX_AMOUNT) {
-        return "deposit";
+        return DEPOSIT_ACTION;
     }
     // delta > BN254_ORDER-MAX_AMOUNT && delta < BN254_ORDER
-    return "withdraw";
+    return WITHDRAW_ACTION;
 }
 
 export function bigintifyTx(tx: Tx<string>): Tx<bigint> {
@@ -93,21 +97,51 @@ export function stringifyTx(tx: Tx<bigint>): Tx<string> {
 }
 
 export function bigintifyUtxoState(state: MyUtxoState<string>): MyUtxoState<bigint> {
+    const mt: IMerkleTree = MT.fromObject(state.merkleTreeState);
+
     return {
         utxoList: state.utxoList.map(bigintifyUtxo),
         nullifiers: state.nullifiers.map(BigInt),
         lastBlockNumber: state.lastBlockNumber,
-        merkleTreeState: state.merkleTreeState.map(x => x.map(BigInt))
+        merkleTreeState: {
+            height: mt.height,
+            length: mt.length,
+            _merkleState: mt._merkleState
+        }
     }
 }
 
 export function stringifyUtxoState(state: MyUtxoState<bigint>): MyUtxoState<string> {
+    const mt: IMerkleTree = MT.fromObject(state.merkleTreeState);
+
     return {
         utxoList: state.utxoList.map(stringifyUtxo),
         nullifiers: state.nullifiers.map(String),
         lastBlockNumber: state.lastBlockNumber,
-        merkleTreeState: state.merkleTreeState.map(x => x.map(String))
-    }
+        merkleTreeState: mt.toObject()
+    };
+}
+
+export function stringifyUtxoHistoryState(state: HistoryState<bigint>): HistoryState<string> {
+
+    return {
+        utxoList: state.utxoList.map(stringifyUtxo),
+        nullifiers: state.nullifiers.map(String),
+        lastBlockNumber: state.lastBlockNumber,
+        items: state.items
+    };
+
+}
+
+export function bigintifyUtxoHistoryState(state: HistoryState<string>): HistoryState<bigint> {
+
+    return {
+        utxoList: state.utxoList.map(bigintifyUtxo),
+        nullifiers: state.nullifiers.map(BigInt),
+        lastBlockNumber: state.lastBlockNumber,
+        items: state.items
+    };
+
 }
 
 export function bigintifyUtxo(utxo: Utxo<string>): Utxo<bigint> {
@@ -241,14 +275,37 @@ export function decryptUtxo(privateKey: bigint, cipher_text: bigint[], hash: big
     return _utxo_rec;
 }
 
+export function copyUtxoHistory(src: HistoryState<bigint>): HistoryState<bigint> {
+    return {
+        items: src.items.map(x => {
+            // @ts-ignore
+            return { ...x }
+        }),
+        lastBlockNumber: src.lastBlockNumber,
+        nullifiers: [...src.nullifiers],
+        utxoList: src.utxoList.map(x => {
+            // @ts-ignore
+            return { ...x }
+        }),
+    }
+}
+
 export function copyMyUtxoState(src: MyUtxoState<bigint>): MyUtxoState<bigint> {
     return {
         ...src,
-        merkleTreeState: src.merkleTreeState.map(x => [...x]),
+        merkleTreeState: copyMerkleTreeState(src.merkleTreeState),
         utxoList: src.utxoList.map(x => {
             // @ts-ignore
-            return { ...x, mp_sibling: [...x.mp_sibling] }
+            return { ...x }
         }),
         nullifiers: [...src.nullifiers],
+    }
+}
+
+export function copyMerkleTreeState(src: MerkleTreeState<bigint>): MerkleTreeState<bigint> {
+    return {
+        _merkleState: src._merkleState.map(x => [...x]),
+        height: src.height,
+        length: src.length
     }
 }

@@ -1,22 +1,28 @@
 import {
+    bigintifyTx,
+    bigintifyUtxoHistoryState,
     bigintifyUtxoState,
+    copyMerkleTreeState,
     copyMyUtxoState,
+    copyUtxoHistory,
     decryptUtxo,
+    DEPOSIT_ACTION,
     encryptUtxo,
     findDuplicates,
     getAction,
     getKeyPair,
     getProof,
-    KeyPair,
     sortHistory,
     sortUtxo,
+    stringifyAddress,
     stringifyTx,
-    Utxo
+    TRANSFER_ACTION,
+    WITHDRAW_ACTION,
 } from "./utils";
 // @ts-ignore
 import { bn128 } from "snarkjs";
 
-import { hash, toHex } from './ethereum';
+import { hash, toHex, WithdrawEvent } from './ethereum';
 import { BlockItem, DepositEvent, PayNote, Tx, TxExternalFields, ZeroPoolContract } from './ethereum/zeropool';
 
 import { nullifier, transfer_compute, utxo } from './circom/inputs';
@@ -27,7 +33,10 @@ import {
     HistoryItem,
     HistoryState,
     IMerkleTree,
+    KeyPair,
+    MerkleTreeState,
     MyUtxoState,
+    Utxo,
     UtxoPair
 } from "./zero-pool-network.dto";
 import { Transaction } from "web3-core";
@@ -45,15 +54,21 @@ import {
 const PROOF_LENGTH = 32;
 
 const defaultState: MyUtxoState<bigint> = {
-    merkleTreeState: [],
+    merkleTreeState: {
+        height: PROOF_LENGTH + 1,
+        length: 0,
+        _merkleState: Array(PROOF_LENGTH + 1).fill(0).map(() => [])
+    },
     utxoList: [],
     nullifiers: [],
     lastBlockNumber: 0
 };
 
-const defaultHistoryState: HistoryState = {
+const defaultHistoryState: HistoryState<bigint> = {
     items: [],
-    lastBlockNumber: 0
+    lastBlockNumber: 0,
+    nullifiers: [],
+    utxoList: []
 };
 
 export class ZeroPoolNetwork {
@@ -66,15 +81,57 @@ export class ZeroPoolNetwork {
 
     public readonly ZeroPool: ZeroPoolContract;
 
-    private zpHistoryStateSubject: BehaviorSubject<HistoryState>;
-    public zpHistoryState$: Observable<HistoryState>;
+    public zpHistoryState$: Observable<HistoryState<bigint>>;
+    private zpHistoryStateSubject: BehaviorSubject<HistoryState<bigint>>;
 
-    get zpHistoryState(): HistoryState {
-        return this.zpHistoryStateSubject.value;
+    constructor(
+        contractAddress: string,
+        web3Provider: HttpProvider,
+        zpMnemonic: string,
+        transactionJson: any,
+        proverKey: any,
+        cashedState?: MyUtxoState<string>,
+        historyState?: HistoryState<string>,
+    ) {
+
+        this.transactionJson = transactionJson;
+        this.proverKey = proverKey;
+        this.contractAddress = contractAddress;
+        this.zpKeyPair = getKeyPair(zpMnemonic);
+        this.ZeroPool = new ZeroPoolContract(contractAddress, web3Provider);
+
+        if (cashedState) {
+
+            this.utxoStateSubject =
+                new BehaviorSubject<MyUtxoState<bigint>>(bigintifyUtxoState(cashedState));
+
+        } else {
+
+            this.utxoStateSubject =
+                new BehaviorSubject<MyUtxoState<bigint>>(defaultState);
+
+        }
+
+        this.utxoState$ = this.utxoStateSubject.asObservable();
+
+        if (historyState) {
+
+            this.zpHistoryStateSubject =
+                new BehaviorSubject<HistoryState<bigint>>(bigintifyUtxoHistoryState(historyState));
+
+        } else {
+
+            this.zpHistoryStateSubject =
+                new BehaviorSubject<HistoryState<bigint>>(defaultHistoryState);
+
+        }
+
+        this.zpHistoryState$ = this.zpHistoryStateSubject.asObservable();
+
     }
 
-    set zpHistoryState(val: HistoryState) {
-        this.zpHistoryStateSubject.next(val);
+    get zpHistoryState(): HistoryState<bigint> {
+        return this.zpHistoryStateSubject.value;
     }
 
     private utxoStateSubject: BehaviorSubject<MyUtxoState<bigint>>;
@@ -88,32 +145,8 @@ export class ZeroPoolNetwork {
         this.utxoStateSubject.next(val);
     }
 
-    constructor(
-        contractAddress: string,
-        web3Provider: HttpProvider,
-        zpMnemonic: string,
-        transactionJson: any,
-        proverKey: any,
-        cashedState?: MyUtxoState<string>,
-        historyState?: HistoryState,
-    ) {
-
-        this.transactionJson = transactionJson;
-        this.proverKey = proverKey;
-        this.contractAddress = contractAddress;
-        this.zpKeyPair = getKeyPair(zpMnemonic);
-        this.ZeroPool = new ZeroPoolContract(contractAddress, web3Provider);
-
-        if (cashedState) {
-            this.utxoStateSubject = new BehaviorSubject<MyUtxoState<bigint>>(bigintifyUtxoState(cashedState));
-        } else {
-            this.utxoStateSubject = new BehaviorSubject<MyUtxoState<bigint>>(defaultState);
-        }
-
-        this.utxoState$ = this.utxoStateSubject.asObservable();
-
-        this.zpHistoryStateSubject = new BehaviorSubject<HistoryState>(historyState || defaultHistoryState);
-        this.zpHistoryState$ = this.zpHistoryStateSubject.asObservable();
+    set zpHistoryState(val: HistoryState<bigint>) {
+        this.zpHistoryStateSubject.next(val);
     }
 
     async prepareDeposit(
@@ -137,6 +170,8 @@ export class ZeroPoolNetwork {
             utxoDelta
         );
 
+        const utxoDelta = BigInt(amount);
+
         const [
             tx,
             txHash
@@ -145,6 +180,8 @@ export class ZeroPoolNetwork {
             utxoDelta,
             utxoPair.utxoIn,
             utxoPair.utxoOut,
+            utxoIn,
+            utxoOut,
             state.merkleTreeState,
             callback
         );
@@ -264,7 +301,57 @@ export class ZeroPoolNetwork {
 
     async publishBlockItems(blockItems: BlockItem<string>[], blockNumberExpires: number): Promise<Transaction> {
         const rollupCurrentTxNum = await this.ZeroPool.getRollupTxNum();
-        return this.ZeroPool.publishBlock(blockItems, +rollupCurrentTxNum >> 8, blockNumberExpires)
+        const version = await this.ZeroPool.getContractVersion();
+        return this.ZeroPool.publishBlock(
+            blockItems,
+            +rollupCurrentTxNum >> 8,
+            blockNumberExpires,
+            version
+        )
+    }
+
+    // todo: maybe make sense to cache it
+    async getActiveWithdrawals(): Promise<PayNote[]> {
+        const [
+            publishBlockEvents,
+            withdrawEvents
+        ] = await Promise.all([
+            this.ZeroPool.publishBlockEvents(),
+            this.ZeroPool.withdrawEvents()
+        ]);
+
+        const activeWithdrawals: PayNote[] = [];
+        for (const event of publishBlockEvents) {
+            for (const item of event.params.BlockItems) {
+                const action = getAction(BigInt(item.tx.delta));
+                if (
+                    action === WITHDRAW_ACTION &&
+                    item.tx.txExternalFields.owner === this.ZeroPool.web3Ethereum.ethAddress
+                ) {
+                    const encodedTx = this.ZeroPool.encodeTx(item.tx);
+                    const txHash = hash(encodedTx);
+
+                    const coincidences = withdrawEvents.filter((event: WithdrawEvent) => {
+                        return event.params.txHash === txHash;
+                    });
+
+                    if (coincidences.length === 0) {
+                        activeWithdrawals.push({
+                            utxo: {
+                                owner: item.tx.txExternalFields.owner,
+                                amount: Number(bn128.r - BigInt(item.tx.delta)),
+                                token: item.tx.token
+                            },
+                            blockNumber: event.blockNumber,
+                            txHash: txHash,
+                        });
+                    }
+                }
+            }
+        }
+
+        return activeWithdrawals;
+
     }
 
     async calculateUtxo(
@@ -310,16 +397,20 @@ export class ZeroPoolNetwork {
         delta: bigint,
         utxoIn: Utxo<bigint>[] = [],
         utxoOut: Utxo<bigint>[] = [],
-        merkleTreeState: bigint[][],
+        merkleState: MerkleTreeState<bigint>,
         callback?: (update: any) => any
     ): Promise<[Tx<string>, string]> {
 
-        const mt: IMerkleTree = new MerkleTree(PROOF_LENGTH + 1);
-        if (merkleTreeState.length !== 0) {
-            mt._merkleState = merkleTreeState;
-        }
+        const mtState = copyMerkleTreeState(merkleState);
+
+        const mt: IMerkleTree = MerkleTree.fromObject(mtState);
 
         callback && callback({ step: "transfer-compute" });
+
+        utxoIn.forEach((x: Utxo<bigint>) => {
+            // @ts-ignore
+            x.mp_sibling = mt.proof(x.mp_path);
+        });
 
         const {
             inputs,
@@ -353,8 +444,8 @@ export class ZeroPoolNetwork {
 
         const rootPointer
             = BigInt(
-            merkleTreeState[0].length / 2 !== 0 ?
-                (merkleTreeState[0].length / 2) - 1 :
+            mt._merkleState[0].length / 2 !== 0 ?
+                (mt._merkleState[0].length / 2) - 1 :
                 0
         );
 
@@ -370,7 +461,9 @@ export class ZeroPoolNetwork {
             }
         };
 
-        const encodedTx = this.ZeroPool.encodeTx(tx);
+        const encodedTx = this.ZeroPool.encodeTx(
+            stringifyTx(tx)
+        );
         const txHash = hash(encodedTx);
 
         return [
@@ -442,88 +535,189 @@ export class ZeroPoolNetwork {
         });
     }
 
-
-    async utxoHistory(callback?: (update: UtxoHistoryProgressNotification) => any): Promise<HistoryState> {
+    async utxoHistory(callback?: (update: UtxoHistoryProgressNotification) => any): Promise<HistoryState<bigint>> {
 
         callback && callback({ step: "start" });
 
+        const state = copyUtxoHistory(this.zpHistoryState);
+
         callback && callback({ step: "fetch-utxo-list-from-contact" });
 
-        const {
-            encryptedUtxoList,
-            utxoHashes,
-            blockNumbers,
-            nullifiers,
-            utxoDeltaList
-        } = await this.getUtxoListFromContract(+this.zpHistoryState.lastBlockNumber + 1);
-
-        if (encryptedUtxoList.length === 0) {
+        const blockEvents = await this.ZeroPool.publishBlockEvents(+state.lastBlockNumber + 1);
+        if (blockEvents.length === 0) {
             callback && callback({ step: "finish" });
-            return this.zpHistoryState;
+            return state;
         }
 
-        callback && callback({
-            step: "find-own-utxo",
-            processed: 0,
-            outOf: encryptedUtxoList.length
-        });
+        state.lastBlockNumber = blockEvents[blockEvents.length - 1].blockNumber;
 
-        for (const [i, encryptedUtxo] of encryptedUtxoList.entries()) {
+        // callback && callback({
+        //     step: "find-own-utxo",
+        //     processed: 0,
+        //     outOf: encryptedUtxoList.length
+        // });
 
-            callback && callback({
-                step: "find-own-utxo",
-                processed: i + 1,
-            });
+        for (const block of blockEvents) {
 
-            const p = new Promise((resolve) => {
-                setTimeout(() => resolve(), 1);
-            });
-            await p;
+            for (const item of block.params.BlockItems) {
 
-            try {
+                const tx = bigintifyTx(item.tx);
 
-                const utxo = decryptUtxo(this.zpKeyPair.privateKey, encryptedUtxo, utxoHashes[i]);
-                if (utxo.amount.toString() !== '0') {
+                const action = getAction(tx.delta);
 
-                    const action = getAction(utxoDeltaList[i]);
+                const firstUtxoIndex = state.nullifiers.indexOf(tx.nullifier[0]);
+                const secondUtxoIndex = state.nullifiers.indexOf(tx.nullifier[1]);
+
+                if (
+                    action === WITHDRAW_ACTION &&
+                    (
+                        firstUtxoIndex !== -1 ||
+                        secondUtxoIndex !== -1
+                    )
+                ) {
+
+                    const firstInputAmount = state.utxoList[firstUtxoIndex]
+                        ? state.utxoList[firstUtxoIndex].amount
+                        : 0n;
+
+                    const secondInputAmount = state.utxoList[secondUtxoIndex]
+                        ? state.utxoList[secondUtxoIndex].amount
+                        : 0n;
 
                     const historyItem: HistoryItem = {
                         action: action,
-                        type: 'in', // because we search among utxo. type 'out' means search among nullifiers
-                        amount: Number(utxo.amount),
-                        blockNumber: blockNumbers[i]
+                        type: 'out',
+                        amount: Number(
+                            firstInputAmount +
+                            secondInputAmount
+                        ),
+                        blockNumber: +block.blockNumber
                     };
 
-                    this.zpHistoryState.items.push(historyItem);
-
-                    const utxoNullifier = nullifier(utxo, this.zpKeyPair.privateKey);
-                    const index = nullifiers.indexOf(utxoNullifier);
-                    if (index !== -1) {
-                        const historyItem: HistoryItem = {
-                            action: getAction(utxoDeltaList[index]),
-                            type: 'out',
-                            amount: Number(utxo.amount),
-                            blockNumber: blockNumbers[index]
-                        };
-
-                        this.zpHistoryState.items.push(historyItem);
-                    }
+                    state.items.push(historyItem);
 
                 }
-            } catch (e) {
+
+                let amount = 0n;
+
+
+                try {
+
+                    const utxo = decryptUtxo(
+                        this.zpKeyPair.privateKey,
+                        tx.txExternalFields.message[0].data,
+                        tx.utxoHashes[0]
+                    );
+
+                    if (utxo.amount.toString() !== '0') {
+                        utxo.blockNumber = block.blockNumber;
+                        state.utxoList.push(utxo);
+
+                        const utxoNullifier = nullifier(utxo, this.zpKeyPair.privateKey);
+                        state.nullifiers.push(utxoNullifier);
+
+                        amount += utxo.amount;
+                    }
+
+
+                } catch (e) {
+
+                }
+
+                try {
+
+                    const utxo = decryptUtxo(
+                        this.zpKeyPair.privateKey,
+                        tx.txExternalFields.message[1].data,
+                        tx.utxoHashes[1]
+                    );
+
+                    if (utxo.amount.toString() !== '0') {
+                        utxo.blockNumber = block.blockNumber;
+                        state.utxoList.push(utxo);
+
+                        const utxoNullifier = nullifier(utxo, this.zpKeyPair.privateKey);
+                        state.nullifiers.push(utxoNullifier);
+
+                        amount += utxo.amount;
+                    }
+
+
+                } catch (e) {
+
+                }
+
+
+                if (
+                    amount > 0n &&
+                    (
+                        action === DEPOSIT_ACTION ||
+                        (
+                            firstUtxoIndex === -1 &&
+                            secondUtxoIndex === -1
+                        )
+                    )
+                ) {
+
+                    const historyItem: HistoryItem = {
+                        action: action,
+                        type: 'in',
+                        amount: Number(amount),
+                        blockNumber: +block.blockNumber
+                    };
+
+                    state.items.push(historyItem);
+
+                }
+
+                if (
+                    action === TRANSFER_ACTION &&
+                    amount > 0n &&
+                    (
+                        firstUtxoIndex !== -1 ||
+                        secondUtxoIndex !== -1
+                    )
+                ) {
+
+                    const firstInputAmount = state.utxoList[firstUtxoIndex]
+                        ? state.utxoList[firstUtxoIndex].amount
+                        : 0n;
+
+                    const secondInputAmount = state.utxoList[secondUtxoIndex]
+                        ? state.utxoList[secondUtxoIndex].amount
+                        : 0n;
+
+                    const historyItem: HistoryItem = {
+                        action: action,
+                        type: 'out',
+                        amount: Number(
+                            firstInputAmount +
+                            secondInputAmount -
+                            amount
+                        ),
+                        blockNumber: +block.blockNumber
+                    };
+
+                    state.items.push(historyItem);
+
+                }
+
             }
 
         }
 
-        const sortedHistory = this.zpHistoryState.items.sort(sortHistory);
+
+        const sortedHistory = state.items.sort(sortHistory);
         this.zpHistoryState = {
             items: sortedHistory,
-            lastBlockNumber: sortedHistory[0].blockNumber
+            lastBlockNumber: state.lastBlockNumber,
+            nullifiers: state.nullifiers,
+            utxoList: state.utxoList
         };
 
         callback && callback({ step: "finish" });
 
-        return this.zpHistoryState;
+        return state;
     }
 
     async getBalance(callback?: (update: GetBalanceProgressNotification) => any) {
@@ -556,12 +750,8 @@ export class ZeroPoolNetwork {
 
         const state = copyMyUtxoState(srcState);
 
-        let utxoCount = 0;
-        const mt: IMerkleTree = new MerkleTree(PROOF_LENGTH + 1);
-        if (state.merkleTreeState.length !== 0) {
-            utxoCount = state.merkleTreeState[0].length;
-            mt._merkleState = state.merkleTreeState;
-        }
+        const mt: IMerkleTree = MerkleTree.fromObject(srcState.merkleTreeState);
+        const utxoCount = mt.length;
 
         callback && callback({ step: 'fetch-utxo-list-from-contact' });
 
@@ -572,15 +762,29 @@ export class ZeroPoolNetwork {
             nullifiers
         } = await this.getUtxoListFromContract(+state.lastBlockNumber + 1);
 
+        state.lastBlockNumber = encryptedUtxoList.length !== 0
+            ? blockNumbers[blockNumbers.length - 1]
+            : state.lastBlockNumber;
+
         if (encryptedUtxoList.length === 0) {
             return state;
         }
 
-        for (const hash of utxoHashes) {
-            mt.push(hash);
+        for (const blockHashList of utxoHashes) {
+
+            for (const hash of blockHashList) {
+                mt.push(hash);
+            }
+
+            mt.pushZeros(512 - blockHashList.length);
+
         }
 
-        state.merkleTreeState = mt._merkleState;
+        state.merkleTreeState = {
+            length: mt.length,
+            height: mt.height,
+            _merkleState: mt._merkleState
+        };
 
         const allNullifiers = state.nullifiers.concat(nullifiers);
 
@@ -611,39 +815,50 @@ export class ZeroPoolNetwork {
             outOf: encryptedUtxoList.length
         });
 
-        for (const [i, encryptedUtxo] of encryptedUtxoList.entries()) {
+        let utxoCounter = 0;
+        let utxoPathPointer = 0;
+        for (const [i, blockEncryptedUtxoList] of encryptedUtxoList.entries()) {
 
-            callback && callback({
-                step: 'find-own-utxo',
-                processed: i + 1,
-                outOf: encryptedUtxoList.length
-            });
+            for (const [j, encryptedUtxo] of blockEncryptedUtxoList.entries()) {
 
-            const p = new Promise((resolve) => {
-                setTimeout(() => resolve(), 1);
-            });
-            await p;
+                callback && callback({
+                    step: 'find-own-utxo',
+                    processed: utxoCounter + 1,
+                    outOf: encryptedUtxoList.length //todo: fix it
+                });
 
-            try {
-                const utxo = decryptUtxo(this.zpKeyPair.privateKey, encryptedUtxo, utxoHashes[i]);
-                if (utxo.amount.toString() !== '0') {
-                    utxo.mp_sibling = mt.proof(utxoCount + i);
-                    utxo.mp_path = utxoCount + i;
-                    utxo.blockNumber = blockNumbers[i];
+                const p = new Promise((resolve) => {
+                    setTimeout(() => resolve(), 1);
+                });
+                await p;
 
-                    const utxoNullifier = nullifier(utxo, this.zpKeyPair.privateKey);
-                    if (!nullifiers.find(x => x === utxoNullifier)) {
-                        state.utxoList.push(utxo);
-                        state.nullifiers.push(utxoNullifier);
+                try {
+                    const utxo = decryptUtxo(this.zpKeyPair.privateKey, encryptedUtxo, utxoHashes[i][j]);
+                    if (utxo.amount.toString() !== '0') {
+
+                        // utxo.mp_sibling = mt.proof(utxoNum);
+                        utxo.mp_path = utxoCount + utxoPathPointer;
+                        utxo.blockNumber = blockNumbers[utxoCounter];
+
+                        const utxoNullifier = nullifier(utxo, this.zpKeyPair.privateKey);
+                        if (!nullifiers.find(x => x === utxoNullifier)) {
+                            state.utxoList.push(utxo);
+                            state.nullifiers.push(utxoNullifier);
+                        }
                     }
+                } catch (e) {
+                    // Here can't decode UTXO errors appears
+                    // console.log('Catch error:', e)
                 }
-            } catch (e) {
-                // Here can't decode UTXO errors appears
-                // console.log('Catch error:', e)
-            }
-        }
 
-        state.lastBlockNumber = Number(state.utxoList[state.utxoList.length - 1].blockNumber);
+                utxoCounter++;
+                utxoPathPointer++;
+
+            }
+
+            utxoPathPointer += (512 - blockEncryptedUtxoList.length);
+
+        }
 
         return state;
     }
@@ -654,13 +869,16 @@ export class ZeroPoolNetwork {
             return { encryptedUtxoList: [], utxoHashes: [], blockNumbers: [], nullifiers: [], utxoDeltaList: [] };
         }
 
-        const encryptedUtxoList: bigint[][] = [];
-        const hashList: bigint[] = [];
+        const encryptedUtxoList: bigint[][][] = [];
+        const hashList: bigint[][] = [];
         const inBlockNumber: number[] = [];
         const nullifiers: bigint[] = [];
         const utxoDeltaList: bigint[] = [];
 
         for (const block of blockEvents) {
+
+            const blockHashList: bigint[] = [];
+            const blockEncryptedUtxoList: bigint[][] = [];
 
             for (const item of block.params.BlockItems) {
 
@@ -669,13 +887,13 @@ export class ZeroPoolNetwork {
                 const [hash1, hash2] = item.tx.utxoHashes.map(BigInt);
 
                 const encryptedUtxoPair = item.tx.txExternalFields.message;
-                encryptedUtxoList.push(
+                blockEncryptedUtxoList.push(
                     encryptedUtxoPair[0].data.map(BigInt),
                     encryptedUtxoPair[1].data.map(BigInt)
                 );
 
 
-                hashList.push(hash1, hash2);
+                blockHashList.push(hash1, hash2);
 
                 const utxoDelta = BigInt(item.tx.delta);
                 utxoDeltaList.push(utxoDelta, utxoDelta);
@@ -683,6 +901,9 @@ export class ZeroPoolNetwork {
                 inBlockNumber.push(block.blockNumber, block.blockNumber);
 
             }
+
+            hashList.push(blockHashList);
+            encryptedUtxoList.push(blockEncryptedUtxoList);
 
         }
 

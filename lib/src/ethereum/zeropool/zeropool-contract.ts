@@ -13,7 +13,8 @@ import {
     PublishBlockEvent,
     SmartContractBlockItemSchema,
     Tx,
-    TxExternalFields
+    TxExternalFields,
+    WithdrawEvent
 } from "./zeropool-contract.dto";
 import { Transaction } from 'web3-core';
 import { ZeroPoolAbi } from "./zeropool.abi";
@@ -82,10 +83,12 @@ export class ZeroPoolContract {
     async publishBlock(
         blockItems: BlockItem<string>[],
         rollupCurrentBlockNumber: number,
-        blockNumberExpires: number
+        blockNumberExpires: number,
+        version: number
     ): Promise<Transaction> {
 
         const params = [
+            toHex(version),
             blockItems.map(packBlockItem),
             toHex(rollupCurrentBlockNumber),
             toHex(blockNumberExpires)
@@ -176,22 +179,30 @@ export class ZeroPoolContract {
         return this.parseBlockEvents(events);
     }
 
-    async publishBlockEventsAsync(
-        onData: (data: PublishBlockEvent) => any,
-        fromBlockNumber: string | number
-    ): Promise<void> {
+    async withdrawEvents(fromBlockNumber?: string | number): Promise<WithdrawEvent[]> {
 
-        const eventCallback = async (data: EventData): Promise<void> => {
-            const events = await this.parseBlockEvents([data]);
-            onData(events[0]);
-        };
-
-        await getEvents(
+        const events = await getEvents(
             this.instance,
-            'NewBlockPack',
-            fromBlockNumber,
-            eventCallback
-        );
+            'Withdraw',
+            fromBlockNumber);
+
+        if (events.length === 0) {
+            return [];
+        }
+
+        return this.parseWithdrawEvents(events);
+    }
+
+    getContractVersion(): Promise<number> {
+        return gasLessCall(this.instance, 'version', []);
+    }
+
+    getChallengeExpiresBlocks(): Promise<number> {
+        return gasLessCall(this.instance, 'challenge_expires_blocks', []);
+    }
+
+    getDepositExpiresBlocks(): Promise<number> {
+        return gasLessCall(this.instance, 'deposit_expires_blocks', []);
     }
 
     private async parseBlockEvents(events: EventData[]): Promise<PublishBlockEvent[]> {
@@ -215,6 +226,52 @@ export class ZeroPoolContract {
                 }
             }
         );
+    }
+
+    decodePublishedBlocks(hex: string): Block<string> {
+        const item = {
+            "Tx": TxStructure,
+            "new_root": 'uint256',
+            "deposit_blocknumber": 'uint256'
+        };
+
+        const decodedParameters = this.web3Ethereum.decodeParameters(
+            ['uint256', { "BlockItem[]": item }, 'uint', 'uint'],
+            cutFunctionSignature(hex)
+        );
+
+        const blockItems: BlockItem<string>[] = decodedParameters['1']
+            .map((item: SmartContractBlockItemSchema) => ({
+                newRoot: item.new_root,
+                depositBlockNumber: item.deposit_blocknumber,
+                tx: {
+                    utxoHashes: item.Tx.utxo,
+                    rootPointer: item.Tx.rootptr,
+                    token: item.Tx.token,
+                    delta: item.Tx.delta,
+                    nullifier: item.Tx.nullifier,
+                    proof: {
+                        data: item.Tx.proof
+                    },
+                    txExternalFields: {
+                        owner: item.Tx.TxExternalFields.owner,
+                        message: [
+                            {
+                                data: item.Tx.TxExternalFields.Message[0].data
+                            },
+                            {
+                                data: item.Tx.TxExternalFields.Message[1].data
+                            }
+                        ]
+                    }
+                }
+            }));
+
+        return {
+            BlockItems: blockItems,
+            rollupCurrentBlockNumber: decodedParameters['2'],
+            blockNumberExpires: decodedParameters['3']
+        }
     }
 
     async getLastRootPointer(): Promise<number | null> {
@@ -246,50 +303,48 @@ export class ZeroPoolContract {
         }
     }
 
-    decodePublishedBlocks(hex: string): Block<string> {
-        const item = {
-            "Tx": TxStructure,
-            "new_root": 'uint256',
-            "deposit_blocknumber": 'uint256'
-        };
-
+    decodePayNote(hex: string): PayNote {
         const decodedParameters = this.web3Ethereum.decodeParameters(
-            [{ "BlockItem[]": item }, 'uint', 'uint'],
+            ['address', 'address', 'uint256', 'uint256', 'bytes32'],
             cutFunctionSignature(hex)
         );
 
-        const blockItems: BlockItem<string>[] = decodedParameters['0']
-            .map((item: SmartContractBlockItemSchema) => ({
-                newRoot: item.new_root,
-                depositBlockNumber: item.deposit_blocknumber,
-                tx: {
-                    utxoHashes: item.Tx.utxo,
-                    rootPointer: item.Tx.rootptr,
-                    token: item.Tx.token,
-                    delta: item.Tx.delta,
-                    nullifier: item.Tx.nullifier,
-                    proof: {
-                        data: item.Tx.proof
-                    },
-                    txExternalFields: {
-                        owner: item.Tx.TxExternalFields.owner,
-                        message: [
-                            {
-                                data: item.Tx.TxExternalFields.Message[0].data
-                            },
-                            {
-                                data: item.Tx.TxExternalFields.Message[1].data
-                            }
-                        ]
-                    }
-                }
-            }));
-
         return {
-            BlockItems: blockItems,
-            rollupCurrentBlockNumber: decodedParameters['1'],
-            blockNumberExpires: decodedParameters['2']
+            utxo: {
+                owner: decodedParameters['0'],
+                token: decodedParameters['1'],
+                amount: decodedParameters['2']
+            },
+            blockNumber: decodedParameters['3'],
+            txHash: decodedParameters['4']
         }
+    }
+
+    encodeTx(tx: Tx<string>): string {
+        return this.web3Ethereum.encodeParameter(
+            {
+                "Tx": TxStructure
+            },
+            {
+                "rootptr": tx.rootPointer.toString(),
+                "nullifier": tx.nullifier,
+                "utxo": tx.utxoHashes,
+                "token": tx.token,
+                "delta": tx.delta.toString(),
+                "TxExternalFields": {
+                    "owner": tx.txExternalFields.owner,
+                    "Message": [
+                        {
+                            "data": tx.txExternalFields.message[0].data,
+                        },
+                        {
+                            "data": tx.txExternalFields.message[1].data
+                        }
+                    ]
+                },
+                "proof": tx.proof.data
+            }
+        )
     }
 
     getDepositTxNum(payNote: PayNote): Promise<string> {
@@ -326,35 +381,23 @@ export class ZeroPoolContract {
         );
     }
 
-    encodeTx(tx: Tx<bigint>): string {
-        return this.web3Ethereum.encodeParameter(
-            {
-                "Tx": TxStructure
-            },
-            {
-                "rootptr": tx.rootPointer.toString(),
-                "nullifier": tx.nullifier.map(x => x.toString()),
-                "utxo": tx.utxoHashes.map(x => x.toString()),
-                "token": tx.token === 0n ?
-                    "0000000000000000000000000000000000000000" :
-                    tx.token.toString(16),
-                "delta": tx.delta.toString(),
-                "TxExternalFields": {
-                    "owner": tx.txExternalFields.owner === 0n ?
-                        "0000000000000000000000000000000000000000" :
-                        tx.txExternalFields.owner.toString(16),
-                    "Message": [
-                        {
-                            "data": tx.txExternalFields.message[0].data.map(x => x.toString()),
-                        },
-                        {
-                            "data": tx.txExternalFields.message[1].data.map(x => x.toString())
-                        }
-                    ]
-                },
-                "proof": tx.proof.data.map(x => x.toString())
+    private async parseWithdrawEvents(events: EventData[]): Promise<WithdrawEvent[]> {
+        const transactions$: Promise<Transaction>[] = events.map((e: EventData) => {
+            return this.web3Ethereum.getTransaction(e.transactionHash);
+        });
+
+        const transactions: Transaction[] = await Promise.all<Transaction>(transactions$);
+
+        return transactions.map(
+            (tx: Transaction): WithdrawEvent => {
+                const payNote = this.decodePayNote(tx.input);
+                return {
+                    params: payNote,
+                    owner: tx.from,
+                    blockNumber: tx.blockNumber as number
+                }
             }
-        )
+        );
     }
 
 }

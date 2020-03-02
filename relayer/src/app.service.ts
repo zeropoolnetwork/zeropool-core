@@ -58,6 +58,7 @@ export class AppService {
     const blockNumberExpires = currentBlockNumber + 500;
 
     const rollupCurTxNum = await zp.ZeroPool.getRollupTxNum();
+    const version = await zp.ZeroPool.getContractVersion();
 
     const mt = this.copyMerkleTree(storage.utxoTree);
     mt.push(BigInt(tx.utxoHashes[0]));
@@ -85,7 +86,7 @@ export class AppService {
       block.BlockItems,
       block.rollupCurrentBlockNumber,
       block.blockNumberExpires,
-      await contractVersion,
+      await contractVersion
     );
 
     storage.addBlocks([block]);
