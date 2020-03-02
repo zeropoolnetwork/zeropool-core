@@ -120,7 +120,7 @@ export class ZeroPoolNetwork {
         token: string,
         amount: number,
         callback?: (update: DepositProgressNotification) => any
-    ): Promise<BlockItem<string>> {
+    ): Promise<[Tx<string>, string]> {
 
         callback && callback({ step: "start" });
 
@@ -133,9 +133,9 @@ export class ZeroPoolNetwork {
         ];
 
         const [
-            blockItem,
+            tx,
             txHash
-        ] = await this.prepareBlockItem(
+        ] = await this.prepareTransaction(
             token,
             BigInt(amount),
             utxoIn,
@@ -152,11 +152,9 @@ export class ZeroPoolNetwork {
             txHash
         });
 
-        blockItem.depositBlockNumber = toHex(transactionDetails.blockNumber as number);
-
         callback && callback({ step: "finish" });
 
-        return blockItem;
+        return [tx, String(transactionDetails.blockNumber)];
     }
 
     async transfer(
@@ -164,7 +162,7 @@ export class ZeroPoolNetwork {
         toPubKey: string,
         amount: number,
         callback?: (update: TransferProgressNotification) => any
-    ): Promise<BlockItem<string>> {
+    ): Promise<[Tx<string>, string]> {
 
         callback && callback({ step: "start" });
 
@@ -176,7 +174,7 @@ export class ZeroPoolNetwork {
         const utxoPair = await this.calculateUtxo(state.utxoList, BigInt(token), BigInt(toPubKey), BigInt(amount));
 
         const utxoZeroDelta = 0n;
-        const [blockItem, txHash] = await this.prepareBlockItem(
+        const [tx, txHash] = await this.prepareTransaction(
             token,
             utxoZeroDelta,
             utxoPair.utxoIn,
@@ -187,13 +185,15 @@ export class ZeroPoolNetwork {
 
         callback && callback({ step: "finish" });
 
-        return blockItem;
+        const depositBlockNumber = '0';
+
+        return [tx, depositBlockNumber];
     }
 
     async prepareWithdraw(
         utxoIn: Utxo<bigint>[],
         callback?: (update: PrepareWithdrawProgressNotification) => any
-    ): Promise<BlockItem<string>> {
+    ): Promise<[Tx<string>, string]> {
 
         assert.ok(utxoIn.length > 0, 'min 1 utxo');
         assert.ok(utxoIn.length <= 2, 'max 2 utxo');
@@ -215,7 +215,7 @@ export class ZeroPoolNetwork {
             "0x0000000000000000000000000000000000000000" :
             toHex(utxoIn[0].token);
 
-        const [blockItem, txHash] = await this.prepareBlockItem(
+        const [tx, txHash] = await this.prepareTransaction(
             token,
             utxoDelta * -1n,
             utxoIn,
@@ -226,7 +226,9 @@ export class ZeroPoolNetwork {
 
         callback && callback({ step: "finish" });
 
-        return blockItem;
+        const depositBlockNumber = '0';
+
+        return [tx, depositBlockNumber];
     }
 
     depositCancel(payNote: PayNote): Promise<Transaction> {
@@ -275,14 +277,14 @@ export class ZeroPoolNetwork {
         return { utxoIn, utxoOut }
     }
 
-    async prepareBlockItem(
+    async prepareTransaction(
         token: string,
         delta: bigint,
         utxoIn: Utxo<bigint>[] = [],
         utxoOut: Utxo<bigint>[] = [],
         merkleTreeState: bigint[][],
         callback?: (update: any) => any
-    ): Promise<[BlockItem<string>, string]> {
+    ): Promise<[Tx<string>, string]> {
 
         const mt: IMerkleTree = new MerkleTree(PROOF_LENGTH + 1);
         if (merkleTreeState.length !== 0) {
@@ -343,14 +345,8 @@ export class ZeroPoolNetwork {
         const encodedTx = this.ZeroPool.encodeTx(tx);
         const txHash = hash(encodedTx);
 
-        const blockItem: BlockItem<string> = {
-            tx: stringifyTx(tx),
-            depositBlockNumber: '0x0',
-            newRoot: toHex(mt.root)
-        };
-
         return [
-            blockItem,
+            stringifyTx(tx),
             txHash
         ];
     }
