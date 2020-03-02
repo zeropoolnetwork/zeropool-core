@@ -55,8 +55,10 @@ export class AppController {
   @ApiCreatedResponse({
     description: 'Get relayer ethereum address for gas donations',
   })
-  getRelayerAddress(): string {
-    return zp.ZeroPool.web3Ethereum.ethAddress;
+  getRelayerAddress(): any {
+    return {
+      address: zp.ZeroPool.web3Ethereum.ethAddress
+    };
   }
 
   // @Post('tx-rx')

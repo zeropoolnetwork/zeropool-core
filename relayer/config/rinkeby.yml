@@ -5,8 +5,8 @@ app:
 network:
   etherscan_prefix: 'https://rinkeby.etherscan.io/'
   rpc: 'https://rinkeby.infura.io/v3/826fec4cbd954dfd89c714eabf4611c4'
-  gasRpc: 'https://rinkeby.infura.io/v3/826fec4cbd954dfd89c714eabf4611c4'
-  contract: '0x1e2Ac08FDBe055e3A2c431c304D36A889455F5ae'
-  gas_contract: '0x1e2Ac08FDBe055e3A2c431c304D36A889455F5ae'
+  gasRpc: 'https://kovan.infura.io/v3/826fec4cbd954dfd89c714eabf4611c4'
+  contract: '0x40e0E6076D907c2bf843d0295E78e7523E6aB990'
+  gas_contract: '0x7F0f954269e9b0010E0Aa43d6732F66eB0F5Cb84'
 
 mnemonic: 'music tired panel defense garlic tomorrow feature person december lab keen sausage tourist remember era'

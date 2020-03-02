@@ -12,7 +12,8 @@ export async function initialScan(
   const blockEvents = await zp.ZeroPool.publishBlockEvents();
 
   for (const event of blockEvents) {
-    // await handleBlock(event.params, storage);
+    // const ok = await handleBlock(event.params, storage);
+    // console.log(ok);
     storage.addBlocks([event.params]);
   }
 
