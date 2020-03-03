@@ -65,6 +65,12 @@ async function verify({ proof, publicSignals }) {
   return await bn128.groth16Verify(vk, publicSignals, proof);
 }
 
+
+async function verifySync({ proof, publicSignals }) {
+  const vk = getCircomVerofierJson();
+  return snarkjs.groth.isValid(vk, proof, publicSignals);
+}
+
 function get_pubkey(pk) {
   return babyJub.mulPointEscalar(babyJub.Base8, pk)[0];
 }
@@ -152,4 +158,4 @@ function u160_random() {
   
 
 
-module.exports = { fr_random, fs_random, u160_random, randrange, witness, fload, verify, get_pubkey, linearize_vk_verifier, linearize_proof, proof, subgroupDecompress, bigint_to_hex };
+module.exports = { fr_random, fs_random, u160_random, randrange, witness, fload, verify, get_pubkey, linearize_vk_verifier, linearize_proof, proof, subgroupDecompress, bigint_to_hex, verifySync };

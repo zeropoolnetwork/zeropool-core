@@ -3,7 +3,7 @@ const snarkjs = require("snarkjs");
 const compiler = require("circom");
 const assert = require("assert");
 const {utxo, utxo_random, obj_utxo_inputs, utxo_hash, transfer_compute, PROOF_LENGTH} = require("../src/inputs");
-const {randrange, fr_random, u160_random, fs_random, proof, verify, get_pubkey} = require("../src/utils");
+const {randrange, fr_random, u160_random, fs_random, proof, verify, verifySync, get_pubkey} = require("../src/utils");
 const babyJub = require("circomlib/src/babyjub.js");
 const {MerkleTree} = require("../src/merkletree");
 const {stringifyBigInts} = require("snarkjs/src/stringifybigint");
@@ -79,7 +79,7 @@ describe("Transaction test", function() {
         
         const {inputs} = transfer_compute(root, utxo_in, utxo_out, token, delta, message_hash, secret);
         const pi = await proof(inputs);
-        assert(await verify(pi), 'Verifier should return true');
+        assert(verifySync(pi), 'Verifier should return true');
 
     });
 
