@@ -170,7 +170,7 @@ export default class Base extends Command {
   }
 
   async run(): Promise<void> {
-    const { args, flags } = this.parse(Base)
+    const { args, flags } = this.parse(Base);
 
     const pathToConfig = flags.config || args.config;
 
@@ -202,7 +202,6 @@ export default class Base extends Command {
     //    publicKey: string;
     //    address: string;
     // }
-
 
     this.zp = new ZeroPoolNetwork(
       this.contractAddress,

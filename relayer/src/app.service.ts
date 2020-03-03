@@ -6,12 +6,12 @@ import { handleBlock, initialScan, synced } from './blockScanner/blockScanner';
 import { Block, BlockItem, IMerkleTree, MerkleTree, ZeroPoolNetwork } from 'zeropool-lib';
 import { IStorage } from './storage/IStorage';
 
-const BN128_R = BigInt("21888242871839275222246405745257275088548364400416034343698204186575808495617");
+const BN128_R = BigInt('21888242871839275222246405745257275088548364400416034343698204186575808495617');
 
 export const storage = new MemoryStorage();
 export const gasStorage = new MemoryStorage();
 
-const contractVersion = zp.ZeroPool.getContractVersion();
+// const contractVersion = zp.ZeroPool.getContractVersion();
 
 @Injectable()
 export class AppService {
@@ -22,7 +22,10 @@ export class AppService {
   }
 
   async publishGasDonation(gasTx: Tx, donationHash: string): Promise<any> {
-    const ethTx = await gasZp.ZeroPool.web3Ethereum.getTransaction(donationHash);
+    const ethTx = await zp.ZeroPool.web3Ethereum.getTransaction(donationHash);
+    if (!ethTx) {
+      throw new Error('transaction not found');
+    }
     if (BigInt(ethTx.value) !== BigInt(gasTx.delta)) {
       throw new Error('tx value !== zp tx delta');
     }
@@ -39,26 +42,31 @@ export class AppService {
       throw new Error('not enough gas');
     }
 
-    await this.publishBlock(gasTx, '0', gasZp, gasStorage);
-    return this.publishBlock(tx, depositBlockNumber, zp, storage);
+    const [_, txData] = await Promise.all([
+      this.publishBlock(gasTx, '0', gasZp, gasStorage),
+      this.publishBlock(tx, depositBlockNumber, zp, storage),
+    ]);
+
+    return txData;
   }
 
   private async publishBlock(
     tx: Tx,
     depositBlockNumber: string,
-    zp: ZeroPoolNetwork,
+    localZp: ZeroPoolNetwork,
     storage: IStorage,
   ): Promise<any> {
 
-    if (synced.filter(x => !x) || synced.length < 2) {
+    if (synced.filter(x => !x).length !== 0 || synced.length < 2) {
       throw new Error('relayer not synced');
     }
 
-    const currentBlockNumber = await zp.ZeroPool.web3Ethereum.getBlockNumber();
+    const currentBlockNumber = await localZp.ZeroPool.web3Ethereum.getBlockNumber();
     const blockNumberExpires = currentBlockNumber + 500;
 
-    const rollupCurTxNum = await zp.ZeroPool.getRollupTxNum();
-    const version = await zp.ZeroPool.getContractVersion();
+    const rollupCurTxNum = await localZp.ZeroPool.getRollupTxNum();
+    //const version = await zp.ZeroPool.getContractVersion();
+    const version = 1;
 
     const mt = this.copyMerkleTree(storage.utxoTree);
     mt.push(BigInt(tx.utxoHashes[0]));
@@ -82,11 +90,11 @@ export class AppService {
       throw new Error('cannot verify block');
     }
 
-    const res = await zp.ZeroPool.publishBlock(
+    const res = await localZp.ZeroPool.publishBlock(
       block.BlockItems,
       block.rollupCurrentBlockNumber,
       block.blockNumberExpires,
-      await contractVersion
+      version,
     );
 
     storage.addBlocks([block]);
