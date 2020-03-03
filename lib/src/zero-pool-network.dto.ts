@@ -86,3 +86,8 @@ export type UtxoPair = {
     utxoIn: Utxo<bigint>[],
     utxoOut: Utxo<bigint>[]
 }
+
+export type HistoryAndBalances = {
+    historyItems: HistoryItem[],
+    balances: { [key: string]: number }
+}

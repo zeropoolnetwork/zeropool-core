@@ -29,6 +29,7 @@ import { MerkleTree } from './circom/merkletree';
 import {
     ContractUtxos,
     DepositHistoryItem,
+    HistoryAndBalances,
     HistoryItem,
     HistoryState,
     IMerkleTree,
@@ -533,6 +534,188 @@ export class ZeroPoolNetwork {
         });
     }
 
+    async getBalanceAndHistory(): Promise<HistoryAndBalances> {
+
+        const historyState = copyUtxoHistory(this.zpHistoryState);
+        const utxoState = copyMyUtxoState(this.utxoState);
+
+        const mt: IMerkleTree = MerkleTree.fromObject(utxoState.merkleTreeState);
+        const utxoCount = mt.length;
+
+        const blockEvents = await this.ZeroPool.publishBlockEvents(+historyState.lastBlockNumber + 1);
+        if (blockEvents.length === 0) {
+            return {
+                historyItems: historyState.items,
+                balances: calculateBalance(utxoState)
+            };
+        }
+
+        historyState.lastBlockNumber = blockEvents[blockEvents.length - 1].blockNumber;
+        utxoState.lastBlockNumber = blockEvents[blockEvents.length - 1].blockNumber;
+
+        let utxoPathPointer = 0;
+        const newSpentNullifiers: bigint[] = [];
+
+        let newMyNullifiers: bigint[] = [];
+        let newMyUtxo: Utxo<bigint>[] = [];
+
+        for (const block of blockEvents) {
+
+            for (const item of block.params.BlockItems) {
+
+                const tx = bigintifyTx(item.tx);
+
+                newSpentNullifiers.push(...tx.nullifier);
+
+                mt.push(tx.utxoHashes[0]);
+                mt.push(tx.utxoHashes[1]);
+
+                let amount = 0n;
+                let countOfOwnUtxo = 0;
+
+                await delay(1);
+
+                try {
+
+                    const utxo = decryptUtxo(
+                        this.zpKeyPair.privateKey,
+                        tx.txExternalFields.message[0].data,
+                        tx.utxoHashes[0]
+                    );
+
+                    if (utxo.amount.toString() !== '0') {
+                        utxo.mp_path = utxoCount + utxoPathPointer;
+                        utxo.blockNumber = block.blockNumber;
+
+                        historyState.utxoList.push(utxo);
+                        newMyUtxo.push(utxo);
+
+                        const utxoNullifier = nullifier(utxo, this.zpKeyPair.privateKey);
+                        historyState.nullifiers.push(utxoNullifier);
+                        newMyNullifiers.push(utxoNullifier);
+
+                        amount += utxo.amount;
+                    }
+
+                    countOfOwnUtxo++;
+
+
+                } catch (e) {
+
+                }
+
+                utxoPathPointer++;
+
+                await delay(1);
+
+                try {
+
+                    const utxo = decryptUtxo(
+                        this.zpKeyPair.privateKey,
+                        tx.txExternalFields.message[1].data,
+                        tx.utxoHashes[1]
+                    );
+
+                    if (utxo.amount.toString() !== '0') {
+                        utxo.mp_path = utxoCount + utxoPathPointer;
+                        utxo.blockNumber = block.blockNumber;
+
+                        historyState.utxoList.push(utxo);
+                        newMyUtxo.push(utxo);
+
+                        const utxoNullifier = nullifier(utxo, this.zpKeyPair.privateKey);
+                        historyState.nullifiers.push(utxoNullifier);
+                        newMyNullifiers.push(utxoNullifier);
+
+                        amount += utxo.amount;
+                    }
+
+                    countOfOwnUtxo++;
+
+                } catch (e) {
+
+                }
+
+                utxoPathPointer++;
+
+                const firstUtxoIndex = historyState.nullifiers.indexOf(tx.nullifier[0]);
+                const secondUtxoIndex = historyState.nullifiers.indexOf(tx.nullifier[1]);
+
+                const firstInputAmount = historyState.utxoList[firstUtxoIndex]
+                    ? historyState.utxoList[firstUtxoIndex].amount
+                    : 0n;
+
+                const secondInputAmount = historyState.utxoList[secondUtxoIndex]
+                    ? historyState.utxoList[secondUtxoIndex].amount
+                    : 0n;
+
+                const historyItem = getHistoryItem(
+                    tx,
+                    firstUtxoIndex,
+                    secondUtxoIndex,
+                    countOfOwnUtxo,
+                    firstInputAmount,
+                    secondInputAmount,
+                    +block.blockNumber,
+                    amount
+                );
+
+                if (historyItem) {
+                    historyState.items.push(historyItem);
+                }
+
+            }
+
+            const notFilledBlockItemsCount = 512 - (block.params.BlockItems.length * 2);
+            utxoPathPointer += notFilledBlockItemsCount;
+            mt.pushZeros(notFilledBlockItemsCount);
+
+        }
+
+        utxoState.merkleTreeState = {
+            length: mt.length,
+            height: mt.height,
+            _merkleState: mt._merkleState
+        };
+
+        const notUniqueNullifiers = findDuplicates<bigint>(
+            utxoState.nullifiers.concat(newSpentNullifiers)
+        );
+        for (const nullifier of notUniqueNullifiers) {
+            const index = utxoState.nullifiers.indexOf(nullifier);
+            utxoState.nullifiers = utxoState.nullifiers.filter((x, i) => i !== index);
+            utxoState.utxoList = utxoState.utxoList.filter((x, i) => i !== index);
+        }
+
+        // todo: think about combine upper block and down block
+        const notUniqueNewNullifiers = findDuplicates<bigint>(
+            newMyNullifiers.concat(newSpentNullifiers)
+        );
+        for (const nullifier of notUniqueNewNullifiers) {
+            const index = newMyNullifiers.indexOf(nullifier);
+            newMyNullifiers = newMyNullifiers.filter((x, i) => i !== index);
+            newMyUtxo = newMyUtxo.filter((x, i) => i !== index);
+        }
+
+        utxoState.nullifiers = utxoState.nullifiers.concat(newMyNullifiers);
+        utxoState.utxoList = utxoState.utxoList.concat(newMyUtxo);
+
+        const sortedHistory = historyState.items.sort(sortHistory);
+        this.zpHistoryState = {
+            items: sortedHistory,
+            lastBlockNumber: historyState.lastBlockNumber,
+            nullifiers: historyState.nullifiers,
+            utxoList: historyState.utxoList
+        };
+
+        this.utxoState = utxoState;
+
+        return {
+            historyItems: historyState.items,
+            balances: calculateBalance(utxoState)
+        };
+    }
+
     async utxoHistory(callback?: (update: UtxoHistoryProgressNotification) => any): Promise<HistoryState<bigint>> {
 
         callback && callback({ step: "start" });
@@ -738,21 +921,12 @@ export class ZeroPoolNetwork {
 
         callback && callback({ step: 'start' });
 
-        // todo: think about BigNumber
-        const balances: { [key: string]: number } = {};
         const state = await this.myUtxoState(this.utxoState, callback);
         this.utxoState = state;
 
         callback && callback({ step: 'calculate-balances' });
 
-        for (const utxo of state.utxoList) {
-            const asset = toHex(utxo.token);
-            if (!balances[asset]) {
-                balances[asset] = Number(utxo.amount);
-                continue;
-            }
-            balances[asset] += Number(utxo.amount);
-        }
+        const balances = calculateBalance(state);
 
         callback && callback({ step: 'finish' });
 
@@ -939,4 +1113,112 @@ export class ZeroPoolNetwork {
         ) % bn128.r;
     }
 
+}
+
+function getHistoryItem(
+    tx: Tx<bigint>,
+    firstUtxoIndex: number,
+    secondUtxoIndex: number,
+    countOfOwnUtxo: number,
+    firstInputAmount: bigint,
+    secondInputAmount: bigint,
+    blockNumber: number,
+    amount: bigint
+): HistoryItem | null {
+
+    const action = getAction(tx.delta);
+
+    if (
+        action === WITHDRAW_ACTION &&
+        (
+            firstUtxoIndex !== -1 ||
+            secondUtxoIndex !== -1
+        )
+    ) {
+
+        return {
+            action,
+            type: 'out',
+            amount: Number(bn128.r - tx.delta),
+            blockNumber
+        };
+
+    }
+
+    if (
+        action === DEPOSIT_ACTION &&
+        amount > 0n
+    ) {
+
+        return {
+            action,
+            type: 'in',
+            amount: Number(tx.delta),
+            blockNumber
+        };
+
+    }
+
+    if (
+        amount > 0n &&
+        action !== DEPOSIT_ACTION &&
+        (
+            firstUtxoIndex === -1 &&
+            secondUtxoIndex === -1
+        )
+    ) {
+
+        return {
+            action,
+            type: 'in',
+            amount: Number(amount),
+            blockNumber
+        };
+
+    }
+
+    if (
+        action === TRANSFER_ACTION &&
+        // amount > 0n &&
+        (
+            firstUtxoIndex !== -1 ||
+            secondUtxoIndex !== -1
+        ) &&
+        countOfOwnUtxo !== 2
+    ) {
+
+        return {
+            action,
+            type: 'out',
+            amount: Number(
+                firstInputAmount +
+                secondInputAmount -
+                amount
+            ),
+            blockNumber
+        };
+
+    }
+
+    return null;
+
+}
+
+function calculateBalance(state: MyUtxoState<bigint>): { [key: string]: number } {
+    const balances: { [key: string]: number } = {};
+    for (const utxo of state.utxoList) {
+        const asset = toHex(utxo.token);
+        if (!balances[asset]) {
+            balances[asset] = Number(utxo.amount);
+            continue;
+        }
+        balances[asset] += Number(utxo.amount);
+    }
+    return balances;
+}
+
+function delay(time: number): Promise<void> {
+    return new Promise((resolve) => {
+        setTimeout(() => resolve(), time);
+    });
 }
