@@ -58,15 +58,18 @@ export class Web3Ethereum {
         return this.web3.eth.abi.decodeParameters(types, hex)
     }
 
-    sendTransaction(
+    async sendTransaction(
         to: string,
         value: number | string,
         data: string = "",
         confirmations = 1
     ): Promise<string | Transaction> {
 
+        const nonce = await this.web3.eth.getTransactionCount(this.ethAddress);
+
         return new Promise((resolve) => {
             this.web3.eth.sendTransaction({
+                nonce,
                 data,
                 to,
                 from: this.ethAddress,

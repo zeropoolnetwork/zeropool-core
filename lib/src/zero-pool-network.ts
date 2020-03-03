@@ -586,7 +586,7 @@ export class ZeroPoolNetwork {
                 }
 
                 let amount = 0n;
-
+                let countOfOwnUtxo = 0;
 
                 try {
 
@@ -605,6 +605,8 @@ export class ZeroPoolNetwork {
 
                         amount += utxo.amount;
                     }
+
+                    countOfOwnUtxo++;
 
 
                 } catch (e) {
@@ -629,6 +631,7 @@ export class ZeroPoolNetwork {
                         amount += utxo.amount;
                     }
 
+                    countOfOwnUtxo++;
 
                 } catch (e) {
 
@@ -682,11 +685,12 @@ export class ZeroPoolNetwork {
 
                 if (
                     action === TRANSFER_ACTION &&
-                    amount > 0n &&
+                    // amount > 0n &&
                     (
                         firstUtxoIndex !== -1 ||
                         secondUtxoIndex !== -1
-                    )
+                    ) &&
+                    countOfOwnUtxo !== 2
                 ) {
 
                     const firstInputAmount = state.utxoList[firstUtxoIndex]
