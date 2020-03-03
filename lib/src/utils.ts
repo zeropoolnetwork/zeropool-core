@@ -222,11 +222,16 @@ export function unstringifyVk(vk: any): any {
     return unstringifyBigInts(vk);
 }
 
+export async function verifyProof(proof: bigint[], publicSignals: bigint[], verifierKey: any): Promise<boolean> {
+    return snarkjs.groth.isValid(verifierKey, unLinearizeProof(proof), publicSignals);
+}
+
 export function unLinearizeProof(proof: bigint[]) {
     return {
         pi_a: [
             proof[0],
             proof[1],
+            1n
         ],
         pi_b: [
             [
@@ -237,17 +242,14 @@ export function unLinearizeProof(proof: bigint[]) {
                 proof[5],
                 proof[4]
             ],
+            [1n, 0n]
         ],
         pi_c: [
             proof[6],
             proof[7],
+            1n
         ]
     };
-}
-
-export async function verifyProof(proof: bigint[], publicSignals: bigint[], verifierKey: any): Promise<boolean> {
-    const bn128 = await buildBn128();
-    return await bn128.groth16Verify(verifierKey, publicSignals, unLinearizeProof(proof));
 }
 
 export function getKeyPair(mnemonic: string): KeyPair {
