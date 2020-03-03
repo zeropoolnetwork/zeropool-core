@@ -208,12 +208,13 @@ export function stringifyAddress(token: bigint): string {
     return toHex(token);
 }
 
-
+let bn128: any = undefined;
 export async function getProof(transactionJson: any, inputs: any, proverKey: any): Promise<bigint[]> {
+    if (typeof bn128 === "undefined") {
+        bn128 = await buildBn128();
+    }
     const circuit = new snarkjs.Circuit(transactionJson);
     const witness = circuit.calculateWitness(inputs);
-
-    const bn128 = await buildBn128();
     const proof = unstringifyBigInts(await bn128.groth16GenProof(buildwitness(witness), proverKey));
     return linearize_proof(proof);
 }
