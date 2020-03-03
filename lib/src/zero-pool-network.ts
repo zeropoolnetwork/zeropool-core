@@ -190,19 +190,14 @@ export class ZeroPoolNetwork {
     async deposit(
         token: string,
         amount: number,
-        txHash: string,
-        callback?: (update: DepositProgressNotification) => any
+        txHash: string
     ): Promise<number> {
-
-        // callback && callback({ step: "await-for-web3" });
 
         const transactionDetails: Transaction = await this.ZeroPool.deposit({
             token,
             amount,
             txHash
         });
-
-        callback && callback({ step: "finish" });
 
         return Number(transactionDetails.blockNumber);
     }

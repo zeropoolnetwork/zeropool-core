@@ -6,13 +6,10 @@ export type PrepareBlockItemStep = 'finish-get-proof';
 
 export type PrepareDepositStep = MyUtxoStateSteps | PrepareBlockItemStep | FinishStep;
 
+
 export type BalanceStep = MyUtxoStateSteps | 'calculate-balances' | FinishStep;
 
 export type UtxoHistoryStep = 'fetch-utxo-list-from-contact' | 'find-own-utxo' | FinishStep;
-
-
-export type DepositStep = MyUtxoStateSteps | PrepareBlockItemStep | 'deposit-asset-to-contract' | FinishStep;
-
 
 export type TransferStep = MyUtxoStateSteps | PrepareBlockItemStep | 'calculate-in-out' | FinishStep;
 
@@ -20,12 +17,6 @@ export type PrepareWithdrawStep = MyUtxoStateSteps | PrepareBlockItemStep | Fini
 
 export type PrepareDepositProgressNotification = {
     step: PrepareDepositStep,
-    processed?: number,
-    outOf?: number
-}
-
-export type DepositProgressNotification = {
-    step: DepositStep,
     processed?: number,
     outOf?: number
 }
