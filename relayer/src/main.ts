@@ -2,9 +2,10 @@ import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { AppConfig } from "./app.config";
+import { NestFastifyApplication } from "@nestjs/platform-fastify";
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { cors: true });
+  const app = await NestFactory.create<NestFastifyApplication>(AppModule, { cors: true });
 
   const options = new DocumentBuilder()
     .setTitle('ZeroPool Relayer')
