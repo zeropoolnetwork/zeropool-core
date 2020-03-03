@@ -1,0 +1,31 @@
+{
+  "name": "zeropool",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha  --experimental-worker --timeout 100000",
+    "build:browser": "npx mkdirp browser; npm run browserify:index",
+    "browserify:index": "npx browserify -d -s txcircuit ./src/index.js > ./browser/txcircuit.js --exclude worker_threads"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zeropoolnetwork/zeropool.git"
+  },
+  "author": "Igor Gulamov",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/zeropoolnetwork/zeropool/issues"
+  },
+  "homepage": "https://github.com/zeropoolnetwork/zeropool#readme",
+  "dependencies": {
+    "assert": "^2.0.0",
+    "blake2b": "^2.1.3",
+    "chai": "^4.2.0",
+    "circom": "0.0.35",
+    "circomlib": "0.0.20",
+    "lodash": "^4.17.15",
+    "mocha": "^7.0.0",
+    "snarkjs": "^0.1.20"
+  }
+}
