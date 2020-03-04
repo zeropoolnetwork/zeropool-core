@@ -7,5 +7,7 @@ export interface IStorage {
 
   getNullifiers(): string[];
 
-  addBlocks(blocks: Block<string>[]): void
+  addBlocks(blocks: Block<string>[]): void;
+
+  getRootHashList(): string[];
 }

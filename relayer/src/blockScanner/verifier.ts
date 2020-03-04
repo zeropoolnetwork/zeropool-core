@@ -9,7 +9,7 @@ const vk = unstringifyVk(JSON.parse(fs.readFileSync(vkPath)));
 
 export async function verifyTx(
     stringTx: Tx<string>,
-    lastBlockRootHash: string
+    root: string
 ): Promise<boolean> {
 
     const tx = bigintifyTx(stringTx);
@@ -18,7 +18,7 @@ export async function verifyTx(
     const messageHash = zp.txExternalFieldsHash(tx.txExternalFields);
 
     const inputs = [
-        BigInt(lastBlockRootHash),
+        BigInt(root),
         tx.nullifier[0],
         tx.nullifier[1],
         tx.utxoHashes[0],
