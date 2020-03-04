@@ -48,11 +48,11 @@ export class AppService {
     ]).subscribe(() => {
       console.log('sync is done');
 
-      this.txPipe(this.tx$, zp, storage).subscribe((data: ProcessedTx) => {
+      this.txPipe(this.tx$, zp, storage, this.publishBlock).subscribe((data: ProcessedTx) => {
         this.processedTx$.next(data);
       });
 
-      this.txPipe(this.gasTx$, gasZp, gasStorage).subscribe((data: ProcessedTx) => {
+      this.txPipe(this.gasTx$, gasZp, gasStorage, this.publishGasBlock).subscribe((data: ProcessedTx) => {
         this.processedGasTx$.next(data);
       });
 
@@ -63,12 +63,13 @@ export class AppService {
     txPipe: Subject<TxContract>,
     localZp: ZeroPoolNetwork,
     localStorage: IStorage,
+    publishBlock: any
   ): Observable<ProcessedTx> {
 
     return txPipe.pipe(
       concatMap(
         (contract: TxContract) => {
-          const txData = fromPromise(this.publishBlock(
+          const txData = fromPromise(publishBlock(
             contract.tx, contract.depositBlockNumber, localZp, localStorage,
           )).pipe(
             catchError((e) => {
@@ -122,7 +123,7 @@ export class AppService {
 
     this.gasTx$.next({
       tx: gasTx,
-      depositBlockNumber: '0',
+      depositBlockNumber: '0x0',
       id,
     });
 
@@ -184,6 +185,58 @@ export class AppService {
     if (!ok) {
       throw new Error('cannot verify block');
     }
+
+    const res = await localZp.ZeroPool.publishBlock(
+      block.BlockItems,
+      block.rollupCurrentBlockNumber,
+      block.blockNumberExpires,
+      version,
+    );
+
+    storage.addBlocks([block]);
+
+    return res;
+  }
+
+  private async publishGasBlock(
+    tx: Tx,
+    depositBlockNumber: string,
+    localZp: ZeroPoolNetwork,
+    storage: IStorage,
+  ): Promise<any> {
+
+    if (synced.filter(x => !x).length !== 0 || synced.length < 2) {
+      throw new Error('relayer not synced');
+    }
+
+    const currentBlockNumber = await localZp.ZeroPool.web3Ethereum.getBlockNumber();
+    const blockNumberExpires = currentBlockNumber + 500;
+
+    const rollupCurTxNum = await localZp.ZeroPool.getRollupTxNum();
+    //const version = await zp.ZeroPool.getContractVersion();
+    const version = 1;
+
+    const mt = this.copyMerkleTree(storage.utxoTree);
+    mt.push(BigInt(tx.utxoHashes[0]));
+    mt.push(BigInt(tx.utxoHashes[1]));
+    mt.pushZeros(510);
+
+    const blockItem: BlockItem<string> = {
+      tx,
+      depositBlockNumber,
+      newRoot: mt.root.toString(),
+    };
+
+    const block: Block<string> = {
+      BlockItems: [blockItem],
+      rollupCurrentBlockNumber: +rollupCurTxNum >> 8,
+      blockNumberExpires: blockNumberExpires,
+    };
+
+    // const ok = await handleBlock(block, storage);
+    // if (!ok) {
+    //   throw new Error('cannot verify block');
+    // }
 
     const res = await localZp.ZeroPool.publishBlock(
       block.BlockItems,
