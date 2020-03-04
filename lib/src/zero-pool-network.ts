@@ -44,7 +44,6 @@ import { HttpProvider } from 'web3-providers-http';
 import * as assert from "assert";
 import { BehaviorSubject, Observable } from "rxjs";
 import {
-    DepositProgressNotification,
     GetBalanceProgressNotification,
     PrepareDepositProgressNotification,
     PrepareWithdrawProgressNotification,
@@ -153,7 +152,7 @@ export class ZeroPoolNetwork {
     async prepareDeposit(
         token: string,
         amount: number,
-        callback?: (update: DepositProgressNotification) => any
+        callback?: (update: PrepareDepositProgressNotification) => any
     ): Promise<[Tx<string>, string]> {
 
         const state = await this.myUtxoState(this.utxoState, callback);
@@ -352,8 +351,7 @@ export class ZeroPoolNetwork {
 
         assert.ok(srcUtxoList.length !== 0 || delta > 0n, 'you have not utxoList');
 
-        let utxoList = [...srcUtxoList];
-        utxoList = utxoList.sort(sortUtxo);
+        let utxoList = [...srcUtxoList].sort(sortUtxo);
 
         const utxoIn = utxoList.slice(0, 2);
 
@@ -1140,9 +1138,10 @@ function getHistoryItem(
 
     }
 
+    const utxoAmount = firstInputAmount + secondInputAmount - amount;
     if (
         action === TRANSFER_ACTION &&
-        // amount > 0n &&
+        utxoAmount > 0n &&
         (
             firstUtxoIndex !== -1 ||
             secondUtxoIndex !== -1
