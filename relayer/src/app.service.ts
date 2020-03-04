@@ -6,7 +6,7 @@ import { handleBlock, initialScan, synced } from './blockScanner/blockScanner';
 import { Block, BlockItem, IMerkleTree, MerkleTree, ZeroPoolNetwork } from 'zeropool-lib';
 import { IStorage } from './storage/IStorage';
 import { combineLatest, Observable, of, Subject } from 'rxjs';
-import { catchError, concatMap, filter, map, mergeMap, take } from 'rxjs/operators';
+import { catchError, concatMap, filter, map, take } from 'rxjs/operators';
 import { fromPromise } from 'rxjs/internal-compatibility';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -72,7 +72,10 @@ export class AppService {
             contract.tx, contract.depositBlockNumber, localZp, localStorage,
           )).pipe(
             catchError((e) => {
-              console.log(e);
+              console.log({
+                ...contract,
+                error: e.message,
+              });
               return of(['error', e.message]);
             }),
           );
@@ -116,7 +119,12 @@ export class AppService {
     const id = generateTxId();
 
     this.tx$.next({ tx, id, depositBlockNumber });
-    this.gasTx$.next({ tx, depositBlockNumber: '0x0', id });
+
+    this.gasTx$.next({
+      tx: gasTx,
+      depositBlockNumber: '0',
+      id,
+    });
 
     const gasResult$ = this.processedGasTx$.pipe(
       filter((processedTx) => processedTx.id === id),
