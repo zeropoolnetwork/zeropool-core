@@ -6,7 +6,7 @@ import { handleBlock, initialScan, synced } from './blockScanner/blockScanner';
 import { Block, BlockItem, IMerkleTree, MerkleTree, ZeroPoolNetwork } from 'zeropool-lib';
 import { IStorage } from './storage/IStorage';
 import { combineLatest, Observable, of, Subject } from 'rxjs';
-import { catchError, filter, map, mergeMap, take } from 'rxjs/operators';
+import { catchError, concatMap, filter, map, mergeMap, take } from 'rxjs/operators';
 import { fromPromise } from 'rxjs/internal-compatibility';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -66,7 +66,7 @@ export class AppService {
   ): Observable<ProcessedTx> {
 
     return txPipe.pipe(
-      mergeMap(
+      concatMap(
         (contract: TxContract) => {
           const txData = fromPromise(this.publishBlock(
             contract.tx, contract.depositBlockNumber, localZp, localStorage,
