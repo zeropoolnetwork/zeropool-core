@@ -42,10 +42,10 @@ export class AppService {
   private processedGasTx$ = new Subject<ProcessedTx>();
 
   constructor() {
-    fromPromise(Promise.all([
-      initialScan(storage, zp),
-      initialScan(gasStorage, gasZp),
-    ])).subscribe(() => {
+    combineLatest([
+      fromPromise(initialScan(storage, zp)),
+      fromPromise(initialScan(gasStorage, gasZp)),
+    ]).subscribe(() => {
       console.log('sync is done');
 
       this.txPipe(this.tx$, zp, storage).subscribe((data: ProcessedTx) => {
