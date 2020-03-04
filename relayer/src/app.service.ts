@@ -104,7 +104,7 @@ export class AppService {
     if (BigInt(ethTx.value) !== BigInt(gasTx.delta)) {
       throw new Error('tx value !== zp tx delta');
     }
-    return this.publishBlock(gasTx, '0', gasZp, gasStorage, this.copyMerkleTree);
+    return this.publishGasBlock(gasTx, '0x0', gasZp, gasStorage, this.copyMerkleTree);
   }
 
   publishTransaction(
