@@ -44,16 +44,10 @@ export async function handleBlock(
     //   lastBlockItemRootHash;
 
     const savedBlockItems = storage.getBlockItems();
-    const rootHashList = storage.getRootHashList();
-
-    console.log(rootHashList);
-
 
     const txRootHash = savedBlockItems.length !== 0 ?
       savedBlockItems[Number(BigInt(item.tx.rootPointer) >> 8n)].newRoot :
       '0xDE2890813A22F5DD1131E6EB966C6EA5D0A61340E03CE5B339435EEF7B08D8E';
-
-    console.log(txRootHash);
 
     const okProof = await verifyTx(item.tx, txRootHash);
 
