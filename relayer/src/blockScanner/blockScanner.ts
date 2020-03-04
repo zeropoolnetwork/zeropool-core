@@ -14,6 +14,9 @@ export async function initialScan(
   for (const event of blockEvents) {
     // const ok = await handleBlock(event.params, storage);
     // console.log(ok);
+    // if (!ok) {
+    //   console.log(event.params)
+    // }
     storage.addBlocks([event.params]);
   }
 

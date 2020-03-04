@@ -5,6 +5,10 @@ import { MemoryStorage } from './storage/memoryStorage';
 import { handleBlock, initialScan, synced } from './blockScanner/blockScanner';
 import { Block, BlockItem, IMerkleTree, MerkleTree, ZeroPoolNetwork } from 'zeropool-lib';
 import { IStorage } from './storage/IStorage';
+import { combineLatest, Observable, of, Subject } from 'rxjs';
+import { catchError, concatMap, filter, map, take } from 'rxjs/operators';
+import { fromPromise } from 'rxjs/internal-compatibility';
+import { v4 as uuidv4 } from 'uuid';
 
 const BN128_R = BigInt('21888242871839275222246405745257275088548364400416034343698204186575808495617');
 
@@ -13,12 +17,82 @@ export const gasStorage = new MemoryStorage();
 
 // const contractVersion = zp.ZeroPool.getContractVersion();
 
+type TxContract = {
+  id: string,
+  tx: Tx,
+  depositBlockNumber: string
+}
+
+type ProcessedTx = {
+  id: string
+  txData?: string,
+}
+
+const generateTxId = () => {
+  return uuidv4();
+};
+
 @Injectable()
 export class AppService {
 
+  private tx$ = new Subject<TxContract>();
+  private processedTx$ = new Subject<ProcessedTx>();
+
+  private gasTx$ = new Subject<TxContract>();
+  private processedGasTx$ = new Subject<ProcessedTx>();
+
   constructor() {
-    initialScan(storage, zp);
-    initialScan(gasStorage, gasZp);
+    combineLatest([
+      fromPromise(initialScan(storage, zp)),
+      fromPromise(initialScan(gasStorage, gasZp)),
+    ]).subscribe(() => {
+      console.log('sync is done');
+
+      this.txPipe(this.tx$, zp, storage).subscribe((data: ProcessedTx) => {
+        this.processedTx$.next(data);
+      });
+
+      this.txPipe(this.gasTx$, gasZp, gasStorage).subscribe((data: ProcessedTx) => {
+        this.processedGasTx$.next(data);
+      });
+
+    });
+  }
+
+  private txPipe(
+    txPipe: Subject<TxContract>,
+    localZp: ZeroPoolNetwork,
+    localStorage: IStorage,
+  ): Observable<ProcessedTx> {
+
+    return txPipe.pipe(
+      concatMap(
+        (contract: TxContract) => {
+          const txData = fromPromise(this.publishBlock(
+            contract.tx, contract.depositBlockNumber, localZp, localStorage,
+          )).pipe(
+            catchError((e) => {
+              console.log({
+                ...contract,
+                error: e.message,
+              });
+              return of(['error', e.message]);
+            }),
+          );
+
+          return combineLatest([
+            txData,
+            of(contract.id),
+          ]);
+        },
+      ),
+      map(([txData, id]: [any, string]): ProcessedTx => {
+        return {
+          id,
+          txData,
+        };
+      }),
+    );
   }
 
   async publishGasDonation(gasTx: Tx, donationHash: string): Promise<any> {
@@ -32,22 +106,43 @@ export class AppService {
     return this.publishBlock(gasTx, '0', gasZp, gasStorage);
   }
 
-  async publishTransaction(
+  publishTransaction(
     tx: Tx,
     depositBlockNumber: string,
     gasTx: Tx,
-  ): Promise<any> {
+  ): Observable<any[]> {
 
     if (BN128_R - BigInt(gasTx.delta) < 320n * (10n ** 9n)) {
       throw new Error('not enough gas');
     }
 
-    const [_, txData] = await Promise.all([
-      this.publishBlock(gasTx, '0', gasZp, gasStorage),
-      this.publishBlock(tx, depositBlockNumber, zp, storage),
-    ]);
+    const id = generateTxId();
 
-    return txData;
+    this.tx$.next({ tx, id, depositBlockNumber });
+
+    this.gasTx$.next({
+      tx: gasTx,
+      depositBlockNumber: '0',
+      id,
+    });
+
+    const gasResult$ = this.processedGasTx$.pipe(
+      filter((processedTx) => processedTx.id === id),
+      map((processedTx: ProcessedTx) => {
+        return processedTx.txData;
+      }),
+      take(1),
+    );
+
+    const result$ = this.processedTx$.pipe(
+      filter((processedTx) => processedTx.id === id),
+      map((processedTx: ProcessedTx) => {
+        return processedTx.txData;
+      }),
+      take(1),
+    );
+
+    return combineLatest([result$, gasResult$]);
   }
 
   private async publishBlock(
