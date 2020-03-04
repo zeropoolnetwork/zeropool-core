@@ -70,7 +70,7 @@ export class AppService {
       concatMap(
         (contract: TxContract) => {
           const txData = fromPromise(publishBlock(
-            contract.tx, contract.depositBlockNumber, localZp, localStorage,
+            contract.tx, contract.depositBlockNumber, localZp, localStorage, this.copyMerkleTree
           )).pipe(
             catchError((e) => {
               console.log({
@@ -104,7 +104,7 @@ export class AppService {
     if (BigInt(ethTx.value) !== BigInt(gasTx.delta)) {
       throw new Error('tx value !== zp tx delta');
     }
-    return this.publishBlock(gasTx, '0', gasZp, gasStorage);
+    return this.publishBlock(gasTx, '0', gasZp, gasStorage, this.copyMerkleTree);
   }
 
   publishTransaction(
@@ -151,6 +151,7 @@ export class AppService {
     depositBlockNumber: string,
     localZp: ZeroPoolNetwork,
     storage: IStorage,
+    copyMerkleTree
   ): Promise<any> {
 
     if (synced.filter(x => !x).length !== 0 || synced.length < 2) {
@@ -164,7 +165,7 @@ export class AppService {
     //const version = await zp.ZeroPool.getContractVersion();
     const version = 1;
 
-    const mt = this.copyMerkleTree(storage.utxoTree);
+    const mt = copyMerkleTree(storage.utxoTree);
     mt.push(BigInt(tx.utxoHashes[0]));
     mt.push(BigInt(tx.utxoHashes[1]));
     mt.pushZeros(510);
@@ -203,6 +204,7 @@ export class AppService {
     depositBlockNumber: string,
     localZp: ZeroPoolNetwork,
     storage: IStorage,
+    copyMerkleTree
   ): Promise<any> {
 
     if (synced.filter(x => !x).length !== 0 || synced.length < 2) {
@@ -216,7 +218,7 @@ export class AppService {
     //const version = await zp.ZeroPool.getContractVersion();
     const version = 1;
 
-    const mt = this.copyMerkleTree(storage.utxoTree);
+    const mt = copyMerkleTree(storage.utxoTree);
     mt.push(BigInt(tx.utxoHashes[0]));
     mt.push(BigInt(tx.utxoHashes[1]));
     mt.pushZeros(510);
