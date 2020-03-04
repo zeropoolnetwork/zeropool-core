@@ -35,7 +35,7 @@ export class AppController {
 
   @Post('tx/donation')
   @ApiCreatedResponse({
-    description: 'Accepts ethereum donation transaction to include it into a block and deposit transaction to subchain '
+    description: 'Accepts ethereum donation transaction to include it into a block and deposit transaction to subchain ',
   })
   async postGasDonation(@Body() gd: GasDonationDto): Promise<any> {
     return this.appService.publishGasDonation(gd.gasTx, gd.donationHash);
@@ -47,9 +47,13 @@ export class AppController {
       'Returns hash of Ethereum subchain transaction that post a block on the smart contract',
   })
   async postTransaction(@Body() wtx: TransactionDto): Promise<any> {
-    return this.appService.publishTransaction(wtx.tx, wtx.depositBlockNumber, wtx.gasTx);
+    const txDataList = await this.appService.publishTransaction(wtx.tx, wtx.depositBlockNumber, wtx.gasTx)
+      .toPromise();
+    if (txDataList.map(x => x[0] === 'error').filter(x => x).length !== 0) {
+      throw new Error('');
+    }
+    return txDataList[0];
   }
-
 
   @Get('relayer')
   @ApiCreatedResponse({
@@ -57,7 +61,7 @@ export class AppController {
   })
   getRelayerAddress(): any {
     return {
-      address: zp.ZeroPool.web3Ethereum.ethAddress
+      address: zp.ZeroPool.web3Ethereum.ethAddress,
     };
   }
 
