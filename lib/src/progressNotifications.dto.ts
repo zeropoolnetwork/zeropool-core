@@ -1,21 +1,22 @@
-export type StartFinishSteps = 'start' | 'finish';
+export type FinishStep = 'finish';
 
-export type MyUtxoStateSteps = 'fetch-utxo-list-from-contact' | 'find-spent-utxo' | 'find-own-utxo';
+export type MyUtxoStateSteps = 'finish-fetch-utxo-list-from-contact';
 
-export type BalanceStep = MyUtxoStateSteps | 'calculate-balances' | StartFinishSteps;
+export type PrepareBlockItemStep = 'finish-get-proof';
 
-export type UtxoHistoryStep = 'fetch-utxo-list-from-contact' | 'find-own-utxo' | StartFinishSteps;
+export type PrepareDepositStep = MyUtxoStateSteps | PrepareBlockItemStep | FinishStep;
 
-export type PrepareBlockItemStep = 'transfer-compute' | 'get-proof' | 'get-last-root-pointer';
 
-export type DepositStep = MyUtxoStateSteps | PrepareBlockItemStep | 'deposit-asset-to-contract' | StartFinishSteps;
+export type BalanceStep = MyUtxoStateSteps | 'calculate-balances' | FinishStep;
 
-export type TransferStep = MyUtxoStateSteps | PrepareBlockItemStep | 'calculate-in-out' | StartFinishSteps;
+export type UtxoHistoryStep = 'fetch-utxo-list-from-contact' | 'find-own-utxo' | FinishStep;
 
-export type PrepareWithdrawStep = MyUtxoStateSteps | PrepareBlockItemStep | StartFinishSteps;
+export type TransferStep = MyUtxoStateSteps | PrepareBlockItemStep | 'calculate-in-out' | FinishStep;
 
-export type DepositProgressNotification = {
-    step: DepositStep,
+export type PrepareWithdrawStep = MyUtxoStateSteps | PrepareBlockItemStep | FinishStep;
+
+export type PrepareDepositProgressNotification = {
+    step: PrepareDepositStep,
     processed?: number,
     outOf?: number
 }

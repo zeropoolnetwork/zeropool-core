@@ -46,6 +46,7 @@ import { BehaviorSubject, Observable } from "rxjs";
 import {
     DepositProgressNotification,
     GetBalanceProgressNotification,
+    PrepareDepositProgressNotification,
     PrepareWithdrawProgressNotification,
     TransferProgressNotification,
     UtxoHistoryProgressNotification
@@ -155,8 +156,6 @@ export class ZeroPoolNetwork {
         callback?: (update: DepositProgressNotification) => any
     ): Promise<[Tx<string>, string]> {
 
-        callback && callback({ step: "start" });
-
         const state = await this.myUtxoState(this.utxoState, callback);
         this.utxoState = copyMyUtxoState(state);
 
@@ -191,21 +190,14 @@ export class ZeroPoolNetwork {
     async deposit(
         token: string,
         amount: number,
-        txHash: string,
-        callback?: (update: DepositProgressNotification) => any
+        txHash: string
     ): Promise<number> {
-
-        callback && callback({ step: "start" });
-
-        callback && callback({ step: "deposit-asset-to-contract" });
 
         const transactionDetails: Transaction = await this.ZeroPool.deposit({
             token,
             amount,
             txHash
         });
-
-        callback && callback({ step: "finish" });
 
         return Number(transactionDetails.blockNumber);
     }
@@ -217,7 +209,7 @@ export class ZeroPoolNetwork {
         callback?: (update: TransferProgressNotification) => any
     ): Promise<[Tx<string>, string]> {
 
-        callback && callback({ step: "start" });
+        // callback && callback({ step: "start" });
 
         const state = await this.myUtxoState(this.utxoState, callback);
         this.utxoState = copyMyUtxoState(state);
@@ -256,7 +248,7 @@ export class ZeroPoolNetwork {
         callback?: (update: PrepareWithdrawProgressNotification) => any
     ): Promise<[Tx<string>, string]> {
 
-        callback && callback({ step: "start" });
+        // callback && callback({ step: "start" });
 
         const utxoDelta = BigInt(amount) * -1n;
 
@@ -394,14 +386,12 @@ export class ZeroPoolNetwork {
         utxoIn: Utxo<bigint>[] = [],
         utxoOut: Utxo<bigint>[] = [],
         merkleState: MerkleTreeState<bigint>,
-        callback?: (update: any) => any
+        callback?: (update: PrepareDepositProgressNotification) => any
     ): Promise<[Tx<string>, string]> {
 
         const mtState = copyMerkleTreeState(merkleState);
 
         const mt: IMerkleTree = MerkleTree.fromObject(mtState);
-
-        callback && callback({ step: "transfer-compute" });
 
         utxoIn.forEach((x: Utxo<bigint>) => {
             // @ts-ignore
@@ -432,14 +422,12 @@ export class ZeroPoolNetwork {
 
         inputs.message_hash = this.txExternalFieldsHash(txExternalFields);
 
-        callback && callback({ step: "get-proof" });
-
         const proof = await getProof(this.transactionJson, inputs, this.proverKey);
+
+        callback && callback({ step: "finish-get-proof" });
 
         mt.push(inputs.utxo_out_hash[0]);
         mt.push(inputs.utxo_out_hash[1]);
-
-        callback && callback({ step: "get-last-root-pointer" });
 
         const rootPointer
             = BigInt(
@@ -718,7 +706,7 @@ export class ZeroPoolNetwork {
 
     async utxoHistory(callback?: (update: UtxoHistoryProgressNotification) => any): Promise<HistoryState<bigint>> {
 
-        callback && callback({ step: "start" });
+        // callback && callback({ step: "start" });
 
         const state = copyUtxoHistory(this.zpHistoryState);
 
@@ -919,7 +907,7 @@ export class ZeroPoolNetwork {
 
     async getBalance(callback?: (update: GetBalanceProgressNotification) => any) {
 
-        callback && callback({ step: 'start' });
+        // callback && callback({ step: 'start' });
 
         const state = await this.myUtxoState(this.utxoState, callback);
         this.utxoState = state;
@@ -940,8 +928,6 @@ export class ZeroPoolNetwork {
 
         const mt: IMerkleTree = MerkleTree.fromObject(srcState.merkleTreeState);
         const utxoCount = mt.length;
-
-        callback && callback({ step: 'fetch-utxo-list-from-contact' });
 
         const {
             encryptedUtxoList,
@@ -978,42 +964,17 @@ export class ZeroPoolNetwork {
 
         const notUniqueNullifiers = findDuplicates<bigint>(allNullifiers);
 
-        callback && callback({
-            step: 'find-spent-utxo',
-            processed: 0,
-            outOf: notUniqueNullifiers.length
-        });
-
-        for (const [i, nullifier] of notUniqueNullifiers.entries()) {
-
-            callback && callback({
-                step: 'find-spent-utxo',
-                processed: i + 1,
-                outOf: notUniqueNullifiers.length
-            });
-
+        for (const nullifier of notUniqueNullifiers) {
             const index = state.nullifiers.indexOf(nullifier);
             state.nullifiers = state.nullifiers.filter((x, i) => i !== index);
             state.utxoList = state.utxoList.filter((x, i) => i !== index);
         }
-
-        callback && callback({
-            step: 'find-own-utxo',
-            processed: 0,
-            outOf: encryptedUtxoList.length
-        });
 
         let utxoCounter = 0;
         let utxoPathPointer = 0;
         for (const [i, blockEncryptedUtxoList] of encryptedUtxoList.entries()) {
 
             for (const [j, encryptedUtxo] of blockEncryptedUtxoList.entries()) {
-
-                callback && callback({
-                    step: 'find-own-utxo',
-                    processed: utxoCounter + 1,
-                    outOf: encryptedUtxoList.length //todo: fix it
-                });
 
                 const p = new Promise((resolve) => {
                     setTimeout(() => resolve(), 1);
@@ -1047,6 +1008,8 @@ export class ZeroPoolNetwork {
             utxoPathPointer += (512 - blockEncryptedUtxoList.length);
 
         }
+
+        callback && callback({ step: "finish-fetch-utxo-list-from-contact" });
 
         return state;
     }

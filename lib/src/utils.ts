@@ -208,12 +208,13 @@ export function stringifyAddress(token: bigint): string {
     return toHex(token);
 }
 
-
+let bn128: any = undefined;
 export async function getProof(transactionJson: any, inputs: any, proverKey: any): Promise<bigint[]> {
+    if (typeof bn128 === "undefined") {
+        bn128 = await buildBn128();
+    }
     const circuit = new snarkjs.Circuit(transactionJson);
     const witness = circuit.calculateWitness(inputs);
-
-    const bn128 = await buildBn128();
     const proof = unstringifyBigInts(await bn128.groth16GenProof(buildwitness(witness), proverKey));
     return linearize_proof(proof);
 }
@@ -222,11 +223,16 @@ export function unstringifyVk(vk: any): any {
     return unstringifyBigInts(vk);
 }
 
+export async function verifyProof(proof: bigint[], publicSignals: bigint[], verifierKey: any): Promise<boolean> {
+    return snarkjs.groth.isValid(verifierKey, unLinearizeProof(proof), publicSignals);
+}
+
 export function unLinearizeProof(proof: bigint[]) {
     return {
         pi_a: [
             proof[0],
             proof[1],
+            1n
         ],
         pi_b: [
             [
@@ -237,17 +243,14 @@ export function unLinearizeProof(proof: bigint[]) {
                 proof[5],
                 proof[4]
             ],
+            [1n, 0n]
         ],
         pi_c: [
             proof[6],
             proof[7],
+            1n
         ]
     };
-}
-
-export async function verifyProof(proof: bigint[], publicSignals: bigint[], verifierKey: any): Promise<boolean> {
-    const bn128 = await buildBn128();
-    return await bn128.groth16Verify(verifierKey, publicSignals, unLinearizeProof(proof));
 }
 
 export function getKeyPair(mnemonic: string): KeyPair {
