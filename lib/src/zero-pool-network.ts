@@ -424,15 +424,15 @@ export class ZeroPoolNetwork {
 
         callback && callback({ step: "finish-get-proof" });
 
+        const numberOfUtxo = mt._merkleState[0].length;
+        const numberOfBlocks = Math.ceil(numberOfUtxo / 512);
+
+        const rootBlock = BigInt(Math.max(numberOfBlocks - 1, 0));
+
+        const rootPointer = rootBlock * 256n;
+
         mt.push(inputs.utxo_out_hash[0]);
         mt.push(inputs.utxo_out_hash[1]);
-
-        const rootPointer
-            = BigInt(
-            mt._merkleState[0].length / 2 !== 0 ?
-                (mt._merkleState[0].length / 2) - 1 :
-                0
-        );
 
         const tx: Tx<bigint> = {
             token: BigInt(token),
@@ -518,6 +518,44 @@ export class ZeroPoolNetwork {
                 spentInTx: txHums[i]
             }
         });
+    }
+
+    async fetchMerkleTree(): Promise<IMerkleTree> {
+        const utxoState = copyMyUtxoState(this.utxoState);
+        const historyState = copyUtxoHistory(this.zpHistoryState);
+
+        const mt: IMerkleTree = MerkleTree.fromObject(utxoState.merkleTreeState);
+
+        const blockEvents = await this.ZeroPool.publishBlockEvents(+utxoState.lastBlockNumber + 1);
+        if (blockEvents.length === 0) {
+            return mt;
+        }
+
+        for (const block of blockEvents) {
+
+            for (const item of block.params.BlockItems) {
+
+                const tx = bigintifyTx(item.tx);
+
+                mt.push(tx.utxoHashes[0]);
+                mt.push(tx.utxoHashes[1]);
+            }
+
+            mt.pushZeros(512 - (block.params.BlockItems.length * 2));
+        }
+
+        utxoState.lastBlockNumber = blockEvents[blockEvents.length - 1].blockNumber;
+        historyState.lastBlockNumber = blockEvents[blockEvents.length - 1].blockNumber;
+        utxoState.merkleTreeState = {
+            length: mt.length,
+            _merkleState: mt._merkleState,
+            height: mt.height
+        };
+
+        this.utxoState = utxoState;
+        this.zpHistoryState = historyState;
+
+        return mt;
     }
 
     async getBalanceAndHistory(): Promise<HistoryAndBalances> {
