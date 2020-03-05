@@ -29,21 +29,27 @@ export async function handleBlock(
   storage: IStorage,
 ): Promise<boolean> {
 
-  const storageBlockItems = storage.getBlockItems();
+  // const storageBlockItems = storage.getBlockItems();
   const storageNullifiers = storage.getNullifiers();
 
   const nullifiers = [...storageNullifiers];
 
-  const lastBlockItemRootHash = storageBlockItems.length !== 0 ?
-    storageBlockItems[storageBlockItems.length - 1].newRoot :
-    '0xDE2890813A22F5DD1131E6EB966C6EA5D0A61340E03CE5B339435EEF7B08D8E';
+  // const lastBlockItemRootHash = storageBlockItems.length !== 0 ?
+  //   storageBlockItems[storageBlockItems.length - 1].newRoot :
+  //   '0xDE2890813A22F5DD1131E6EB966C6EA5D0A61340E03CE5B339435EEF7B08D8E';
 
   for (const [i, item] of block.BlockItems.entries()) {
-    const lastRootHash = i !== 0 ?
-      block.BlockItems[i - 1].newRoot :
-      lastBlockItemRootHash;
+    // const lastRootHash = i !== 0 ?
+    //   block.BlockItems[i - 1].newRoot :
+    //   lastBlockItemRootHash;
 
-    const okProof = await verifyTx(item.tx, lastRootHash);
+    const savedBlockItems = storage.getBlockItems();
+
+    const txRootHash = savedBlockItems.length !== 0 ?
+      savedBlockItems[Number(BigInt(item.tx.rootPointer) >> 8n)].newRoot :
+      '0xDE2890813A22F5DD1131E6EB966C6EA5D0A61340E03CE5B339435EEF7B08D8E';
+
+    const okProof = await verifyTx(item.tx, txRootHash);
 
     if (!okProof) {
       return false;

@@ -13,7 +13,7 @@
     "start:debug": "npm run build &&  NODE_ENV=rinkeby node $NODE_DEBUG_OPTION dist/main",
     "start:prod": "npm run build &&  node dist/main",
     "start:prod:rinkeby": "npm run build &&  NODE_ENV=rinkeby node dist/main",
-    "forever:prod:rinkeby": "npm run build && NODE_ENV=rinkeby forever start di st/main.js",
+    "forever:prod:rinkeby": "npm run build && NODE_ENV=rinkeby forever start dist/main.js",
     "forever:prod:rinkeby-4096": "npm run build && NODE_ENV=rinkeby forever start -c \"node --max-old-space-size=4096\" dist/main.js",
     "forever:prod:rinkeby-8192": "npm run build && NODE_ENV=rinkeby forever start -c \"node --max-old-space-size=8192\" dist/main.js",
     "forever:stopall": "forever stopall",

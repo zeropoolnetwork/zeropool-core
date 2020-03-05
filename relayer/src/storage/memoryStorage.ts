@@ -7,10 +7,15 @@ export class MemoryStorage implements IStorage {
   public utxoTree = MerkleTree(32 + 1);
 
   private blockItems: BlockItem<string>[] = [];
+  private rootHashList: string[] = [];
   private nullifiers: string[] = [];
 
   getBlockItems(): BlockItem<string>[] {
     return this.blockItems;
+  }
+
+  getRootHashList(): string[] {
+    return this.rootHashList;
   }
 
   getNullifiers(): string[] {
@@ -26,6 +31,7 @@ export class MemoryStorage implements IStorage {
         this.utxoTree.push(BigInt(item.tx.utxoHashes[1]));
 
         this.blockItems.push(item);
+        this.rootHashList.push(item.newRoot);
         this.nullifiers.push(...item.tx.nullifier);
 
       }
