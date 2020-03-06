@@ -1,6 +1,6 @@
 {
   "name": "zeropool-lib",
-  "version": "0.4.79",
+  "version": "0.4.84",
   "description": "",
   "main": "dist/index.js",
   "typings": "dist/types/index.d.ts",
@@ -8,6 +8,7 @@
     "dist"
   ],
   "scripts": {
+    "test": "mocha -r ts-node/register test/**",
     "clean": "rimraf dist",
     "build": "npm run clean && npm run create-index && npx tsc --module commonjs",
     "build:browser": "npm run build && npm run browserify",
@@ -33,8 +34,15 @@
     "websnark": "github:krboktv/websnark#915a64ec65df8ac304aa23c957f7c3ec5459685c"
   },
   "devDependencies": {
+    "@types/chai": "^4.2.10",
+    "@types/mocha": "^7.0.2",
     "@types/node": "^13.7.1",
+    "chai": "^4.2.0",
     "create-ts-index": "^1.12.0",
+    "mocha": "^7.1.0",
+    "mocha-typescript": "^1.1.17",
+    "source-map-support": "^0.5.16",
+    "ts-node": "^8.6.2",
     "tslint": "^6.0.0",
     "typescript": "^3.7.5"
   }

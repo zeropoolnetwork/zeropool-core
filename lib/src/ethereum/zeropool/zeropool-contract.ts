@@ -1,4 +1,4 @@
-import { gasLessCall, getCallData, getEvents, hash, toHex, Web3Ethereum } from '../ethereum';
+import { gasLessCall, getCallData, getEvents, hash, Web3Ethereum } from '../ethereum';
 import { Contract, EventData } from 'web3-eth-contract';
 import { HttpProvider } from 'web3-providers-http';
 
@@ -18,6 +18,7 @@ import {
 } from "./zeropool-contract.dto";
 import { Transaction } from 'web3-core';
 import { ZeroPoolAbi } from "./zeropool.abi";
+import { toHex } from "../../utils";
 
 export class ZeroPoolContract {
 
