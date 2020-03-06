@@ -22,7 +22,7 @@ import { bn128 } from "snarkjs";
 import { hash, PublishBlockEvent, WithdrawEvent } from './ethereum';
 import { BlockItem, DepositEvent, PayNote, Tx, TxExternalFields, ZeroPoolContract } from './ethereum/zeropool';
 
-import { transfer_compute, utxo } from './circom/inputs';
+import { empty_utxo, transfer_compute, utxo } from './circom/inputs';
 import { MerkleTree } from './circom/merkletree';
 import {
     DepositHistoryItem,
@@ -917,7 +917,7 @@ async function parseBlockEvents(
 
 }
 
-async function calculateUtxo(
+export async function calculateUtxo(
     srcUtxoList: Utxo<bigint>[],
     token: bigint,
     toPubKey: bigint,
@@ -952,6 +952,14 @@ async function calculateUtxo(
         utxoOut.push(
             utxo(token, myChange, myPubKey)
         );
+    }
+
+    if (utxoIn.length !== 2) {
+        utxoIn.push(empty_utxo(token, myPubKey))
+    }
+
+    if (utxoOut.length !== 2) {
+        utxoOut.push(empty_utxo(token, myPubKey))
     }
 
     return { utxoIn, utxoOut }
