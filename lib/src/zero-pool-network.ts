@@ -22,7 +22,7 @@ import { bn128 } from "snarkjs";
 import { hash, PublishBlockEvent, WithdrawEvent } from './ethereum';
 import { BlockItem, DepositEvent, PayNote, Tx, TxExternalFields, ZeroPoolContract } from './ethereum/zeropool';
 
-import { empty_utxo, transfer_compute, utxo } from './circom/inputs';
+import { transfer_compute, utxo } from './circom/inputs';
 import { MerkleTree } from './circom/merkletree';
 import {
     DepositHistoryItem,
@@ -954,13 +954,13 @@ export async function calculateUtxo(
         );
     }
 
-    if (utxoIn.length !== 2) {
-        utxoIn.push(empty_utxo(token, myPubKey))
-    }
-
-    if (utxoOut.length !== 2) {
-        utxoOut.push(empty_utxo(token, myPubKey))
-    }
+    // if (utxoIn.length !== 2) {
+    //     utxoIn.push(empty_utxo(token, myPubKey))
+    // }
+    //
+    // if (utxoOut.length !== 2) {
+    //     utxoOut.push(empty_utxo(token, myPubKey))
+    // }
 
     return { utxoIn, utxoOut }
 }
