@@ -1,6 +1,6 @@
 {
   "name": "zeropool-lib",
-  "version": "0.4.82",
+  "version": "0.4.84",
   "description": "",
   "main": "dist/index.js",
   "typings": "dist/types/index.d.ts",

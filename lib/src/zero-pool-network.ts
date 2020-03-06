@@ -519,7 +519,7 @@ export class ZeroPoolNetwork {
         const mt: IMerkleTree = MerkleTree.fromObject(utxoState.merkleTreeState);
         const utxoCount = mt.length;
 
-        const blockEvents = await this.ZeroPool.publishBlockEvents(+historyState.lastBlockNumber + 1);
+        const blockEvents = await this.ZeroPool.publishBlockEvents(+utxoState.lastBlockNumber + 1);
         if (blockEvents.length === 0) {
             return {
                 historyItems: historyState.items,
