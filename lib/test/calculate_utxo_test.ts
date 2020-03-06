@@ -95,16 +95,19 @@ async function testFunc(srcUtxoList: Utxo<bigint>[], calculatedUtxoList: UtxoPai
     const firstOutput = calculatedUtxoList.utxoOut[0];
     const secondOutput = calculatedUtxoList.utxoOut[1];
 
-    expect(firstOutput.amount == 0n);
-    expect(secondOutput.amount == (srcUtxoList[0].amount + srcUtxoList[1].amount + delta));
+    const amountFirstInput = srcUtxoList[0] && srcUtxoList[0].amount || 0n;
+    const amountSecondInput = srcUtxoList[1] && srcUtxoList[1].amount || 0n;
 
-    if (srcUtxoList[0].amount > srcUtxoList[1].amount) {
+
+    expect(firstOutput.amount == (amountFirstInput + amountSecondInput + delta));
+
+    if (amountFirstInput > amountSecondInput) {
         expect(firstInput).to.eq(srcUtxoList[0]);
-        expect(secondInput).to.eq(srcUtxoList[1]);
     } else {
         expect(firstInput).to.eq(srcUtxoList[1]);
-        expect(secondInput).to.eq(srcUtxoList[0]);
     }
+
+    expect(secondInput === undefined && secondOutput === undefined);
 }
 
 function generateRandomUtxoList(token: bigint, myPublicKey: bigint) {
