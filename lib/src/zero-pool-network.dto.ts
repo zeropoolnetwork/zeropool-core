@@ -27,11 +27,7 @@ export type Utxo<T> = {
     mp_sibling?: T[],
     mp_path?: number,
     blockNumber?: number
-}
-
-export type KeyPair = {
-    privateKey: bigint,
-    publicKey: bigint
+    txNumber?: number
 }
 
 export type MyUtxoState<T> = {
@@ -90,4 +86,21 @@ export type UtxoPair = {
 export type HistoryAndBalances = {
     historyItems: HistoryItem[],
     balances: { [key: string]: number }
+}
+
+export type DecryptedUtxo = {
+    utxo: Utxo<bigint>,
+    nullifier: bigint
+};
+
+export type ParsedBlockList = {
+    myNullifiers: bigint[],
+    myUtxo: Utxo<bigint>[],
+
+    utxoHashList: bigint[][],
+    spentNullifiers: bigint[],
+    deltaList: bigint[],
+    ownUtxoCountList: number[],
+    ownTxAmountList: bigint[],
+    blockNumberList: number[]
 }

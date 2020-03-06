@@ -1,30 +1,20 @@
 // @ts-ignore
-import * as HdWallet from 'hdwallet-babyjub';
-// @ts-ignore
-import * as snarkjs from 'snarkjs';
-// @ts-ignore
 import { unstringifyBigInts } from 'snarkjs/src/stringifybigint';
 // @ts-ignore
-import buildBn128 from 'websnark/src/bn128.js';
-import { in_utxo_inputs, utxo, utxo_hash } from './circom/inputs';
-import { decrypt_message, encrypt_message } from './circom/encryption';
-import { get_pubkey, linearize_proof } from './circom/utils';
-import buildwitness from './circom/buildwitness';
 import {
     Action,
     HistoryItem,
     HistoryState,
     IMerkleTree,
-    KeyPair,
     MerkleTreeState,
     MyUtxoState,
     Utxo
 } from "./zero-pool-network.dto";
 import { Tx } from "./ethereum/zeropool";
-import { toHex } from "./ethereum";
 import { MerkleTree as MT } from './circom/merkletree';
+import { BigNumber } from "bignumber.js";
+import { tbn } from "./ethereum";
 
-const zrpPath = 'm/44\'/0\'/0\'/0/0';
 
 export const MAX_AMOUNT = 1766847064778384329583297500742918515827483896875618958121606201292619776;
 export const BN254_ORDER = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
@@ -32,6 +22,17 @@ export const BN254_ORDER = 21888242871839275222246405745257275088548364400416034
 export const WITHDRAW_ACTION = "withdraw";
 export const DEPOSIT_ACTION = "deposit";
 export const TRANSFER_ACTION = "transfer";
+
+export function toHex(val: number | string | BigNumber | BigInt): string {
+    if (typeof val === "string") {
+        return "0x" + tbn(val).toString(16);
+    }
+    return "0x" + val.toString(16);
+}
+
+export function fromHex(hex: string): number {
+    return parseInt(hex, 16);
+}
 
 export function MerkleTree(height: number): IMerkleTree {
     return new MT(height);
@@ -208,26 +209,17 @@ export function stringifyAddress(token: bigint): string {
     return toHex(token);
 }
 
-let bn128: any = undefined;
-export async function getProof(transactionJson: any, inputs: any, proverKey: any): Promise<bigint[]> {
-    if (typeof bn128 === "undefined") {
-        bn128 = await buildBn128();
-    }
-    const circuit = new snarkjs.Circuit(transactionJson);
-    const witness = circuit.calculateWitness(inputs);
-    const proof = unstringifyBigInts(await bn128.groth16GenProof(buildwitness(witness), proverKey));
-    return linearize_proof(proof);
-}
-
 export function unstringifyVk(vk: any): any {
     return unstringifyBigInts(vk);
 }
 
-export async function verifyProof(proof: bigint[], publicSignals: bigint[], verifierKey: any): Promise<boolean> {
-    return snarkjs.groth.isValid(verifierKey, unLinearizeProof(proof), publicSignals);
+export type UnlinearizedProof = {
+    pi_a: bigint[],
+    pi_b: bigint[][],
+    pi_c: bigint[]
 }
 
-export function unLinearizeProof(proof: bigint[]) {
+export function unLinearizeProof(proof: bigint[]): UnlinearizedProof {
     return {
         pi_a: [
             proof[0],
@@ -251,31 +243,6 @@ export function unLinearizeProof(proof: bigint[]) {
             1n
         ]
     };
-}
-
-export function getKeyPair(mnemonic: string): KeyPair {
-    const privateKey = HdWallet.Privkey(mnemonic, zrpPath).k;
-    return {
-        privateKey: privateKey,
-        publicKey: get_pubkey(privateKey)
-    }
-}
-
-export function encryptUtxo(pubK: bigint, inputs: Utxo<bigint>): bigint[] {
-    // @ts-ignore
-    const dataToEncrypt = in_utxo_inputs(inputs);
-    const dataHash = utxo_hash(inputs);
-    return encrypt_message(dataToEncrypt, pubK, dataHash);
-}
-
-export function decryptUtxo(privateKey: bigint, cipher_text: bigint[], hash: bigint): Utxo<bigint> {
-    const decrypted_message = decrypt_message(cipher_text, privateKey, hash);
-    const receiver_public = get_pubkey(privateKey);
-    const _utxo_rec = utxo(decrypted_message[0], decrypted_message[1], receiver_public, decrypted_message[2]);
-    if (utxo_hash(_utxo_rec) !== hash) {
-        throw new Error('failed to decrypt utxoList');
-    }
-    return _utxo_rec;
 }
 
 export function copyUtxoHistory(src: HistoryState<bigint>): HistoryState<bigint> {
@@ -311,4 +278,14 @@ export function copyMerkleTreeState(src: MerkleTreeState<bigint>): MerkleTreeSta
         height: src.height,
         length: src.length
     }
+}
+
+export function delay(time: number): Promise<void> {
+    return new Promise((resolve) => {
+        setTimeout(() => resolve(), time);
+    });
+}
+
+export function flat<T>(arr: T[][]): T[] {
+    return arr.reduce((acc: T[], val: T[]) => acc.concat(val), []);
 }

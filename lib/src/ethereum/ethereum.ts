@@ -6,6 +6,7 @@ import { Transaction } from 'web3-core';
 import { addHexPrefix, privateToAddress, toChecksumAddress } from 'ethereumjs-util';
 import { Transaction as Tx, TxData } from 'ethereumjs-tx';
 import { BigNumber } from 'bignumber.js'
+import { toHex } from "../utils";
 
 export class Web3Ethereum {
 
@@ -147,13 +148,6 @@ function sign(txParam: TxData, privateKey: string): string {
     tx.sign(privateKeyBuffer);
     const serializedTx = tx.serialize();
     return serializedTx.toString('hex');
-}
-
-export function toHex(val: number | string | BigNumber | BigInt): string {
-    if (typeof val === "string") {
-        return "0x" + tbn(val).toString(16);
-    }
-    return "0x" + val.toString(16);
 }
 
 export const hash = keccak256;
