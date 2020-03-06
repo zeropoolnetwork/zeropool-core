@@ -567,10 +567,10 @@ export class ZeroPoolNetwork {
                 ? historyState.utxoList[secondUtxoIndex].amount
                 : 0n;
 
-            const delta = deltaList[i];
-            const countOfOwnUtxo = ownUtxoCountList[i];
-            const blockNumber = blockNumberList[i];
-            const amount = ownTxAmountList[i];
+            const delta = deltaList[i / 2];
+            const countOfOwnUtxo = ownUtxoCountList[i / 2];
+            const blockNumber = blockNumberList[i / 2];
+            const amount = ownTxAmountList[i / 2];
 
             const historyItem = getHistoryItem(
                 delta,
