@@ -10,7 +10,7 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
-    "start:debug": "npm run build && NODE_ENV=rinkeby node $NODE_DEBUG_OPTION dist/main",
+    "start:debug": "npm run build && node $NODE_DEBUG_OPTION dist/main",
     "start:prod": "npm run build && node dist/main",
     "start:prod:rinkeby": "npm run build && NODE_ENV=rinkeby node dist/main",
     "start:dev:rinkeby": "npm run build && NODE_ENV=dev_rinkeby node dist/main",

@@ -3,10 +3,10 @@ import { ZeroPoolNetwork } from 'zeropool-lib';
 import * as HDWalletProvider from 'truffle-hdwallet-provider';
 import * as fs from 'fs';
 import * as path from 'path';
-import { Mnemonic, NetworkConfig } from './app.config';
+import { GasMnemonic, Mnemonic, NetworkConfig } from './app.config';
 
 const hdWallet = new HDWalletProvider(Mnemonic, NetworkConfig.rpc, 0, 1);
-const gasHdWallet = new HDWalletProvider(Mnemonic, NetworkConfig.gasRpc, 0, 1);
+const gasHdWallet = new HDWalletProvider(GasMnemonic, NetworkConfig.gasRpc, 0, 1);
 
 const transactionJsonPath = path.join(__dirname, './../compiled/transaction.json');
 const transactionJson = fs.readFileSync(transactionJsonPath);

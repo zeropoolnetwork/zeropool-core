@@ -19,10 +19,12 @@ export const NetworkConfig = {
 };
 
 export const Mnemonic = process.env.MNEMONIC || config.get('mnemonic');
+export const GasMnemonic = process.env.GAS_MNEMONIC || config.get('gas_mnemonic');
 
 console.log('CONFIG: #1');
 console.log({
   mnemonic: Mnemonic,
+  gasMnemonic: GasMnemonic,
   rpc: NetworkConfig.rpc,
   gasRpc: NetworkConfig.gasRpc,
   contract: NetworkConfig.contract,
