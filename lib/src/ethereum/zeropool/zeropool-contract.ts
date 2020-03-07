@@ -48,7 +48,7 @@ export class ZeroPoolContract {
         return (await this.web3Ethereum.sendTransaction(this.contractAddress, deposit.amount, data)) as Transaction;
     };
 
-    async cancelDeposit(payNote: PayNote): Promise<Transaction> {
+    async cancelDeposit(payNote: PayNote, waitBlocks = 0): Promise<Transaction> {
         const params = [[
             [
                 payNote.utxo.owner,
@@ -61,11 +61,11 @@ export class ZeroPoolContract {
 
         const data = getCallData(this.instance, 'depositCancel', params);
 
-        return (await this.web3Ethereum.sendTransaction(this.contractAddress, 0, data)) as Transaction;
+        return (await this.web3Ethereum.sendTransaction(this.contractAddress, 0, data, waitBlocks)) as Transaction;
 
     };
 
-    async withdraw(payNote: PayNote): Promise<Transaction> {
+    async withdraw(payNote: PayNote, waitBlocks = 0): Promise<Transaction> {
         const params = [[
             [
                 payNote.utxo.owner,
@@ -78,14 +78,15 @@ export class ZeroPoolContract {
 
         const data = getCallData(this.instance, 'withdraw', params);
 
-        return (await this.web3Ethereum.sendTransaction(this.contractAddress, 0, data)) as Transaction;
+        return (await this.web3Ethereum.sendTransaction(this.contractAddress, 0, data, waitBlocks)) as Transaction;
     };
 
     async publishBlock(
         blockItems: BlockItem<string>[],
         rollupCurrentBlockNumber: number,
         blockNumberExpires: number,
-        version: number
+        version: number,
+        waitBlock = 0
     ): Promise<Transaction> {
 
         const params = [
@@ -97,7 +98,7 @@ export class ZeroPoolContract {
 
         const data = getCallData(this.instance, 'publishBlock', params);
 
-        return (await this.web3Ethereum.sendTransaction(this.contractAddress, 0, data)) as Transaction;
+        return (await this.web3Ethereum.sendTransaction(this.contractAddress, 0, data, waitBlock)) as Transaction;
     };
 
     async challengeTx(

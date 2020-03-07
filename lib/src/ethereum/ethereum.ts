@@ -81,6 +81,11 @@ export class Web3Ethereum {
                         resolve(transactionHash);
                     }
                 })
+                .on('receipt', (receipt: any) => {
+                    if (confirmations === 1) {
+                        resolve(receipt);
+                    }
+                })
                 .on('confirmation', (num: any, receipt: any) => {
                     if (num === confirmations) {
                         resolve(receipt);

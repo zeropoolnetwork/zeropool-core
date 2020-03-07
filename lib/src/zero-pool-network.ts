@@ -187,13 +187,13 @@ export class ZeroPoolNetwork {
     async deposit(
         token: string,
         amount: number,
-        txHash: string
+        txHash: string,
     ): Promise<number> {
 
         const transactionDetails: Transaction = await this.ZeroPool.deposit({
             token,
             amount,
-            txHash
+            txHash,
         });
 
         return Number(transactionDetails.blockNumber);
@@ -203,7 +203,7 @@ export class ZeroPoolNetwork {
         token: string,
         toPubKey: string,
         amount: number,
-        callback?: (update: TransferProgressNotification) => any
+        callback?: (update: TransferProgressNotification) => any,
     ): Promise<[Tx<string>, string]> {
 
         const state = await this.myUtxoState(this.utxoState, callback);
@@ -274,22 +274,28 @@ export class ZeroPoolNetwork {
         return [tx, depositBlockNumber];
     }
 
-    depositCancel(payNote: PayNote): Promise<Transaction> {
-        return this.ZeroPool.cancelDeposit(payNote);
+    depositCancel(payNote: PayNote, waitBlocks = 0): Promise<Transaction> {
+        return this.ZeroPool.cancelDeposit(payNote, waitBlocks);
     }
 
-    withdraw(payNote: PayNote): Promise<Transaction> {
-        return this.ZeroPool.withdraw(payNote);
+    withdraw(payNote: PayNote, waitBlocks = 0): Promise<Transaction> {
+        return this.ZeroPool.withdraw(payNote, waitBlocks);
     }
 
-    async publishBlockItems(blockItems: BlockItem<string>[], blockNumberExpires: number): Promise<Transaction> {
+    async publishBlockItems(
+        blockItems: BlockItem<string>[],
+        blockNumberExpires: number,
+        waitBlocks = 0
+    ): Promise<Transaction> {
+
         const rollupCurrentTxNum = await this.ZeroPool.getRollupTxNum();
         const version = await this.ZeroPool.getContractVersion();
         return this.ZeroPool.publishBlock(
             blockItems,
             +rollupCurrentTxNum >> 8,
             blockNumberExpires,
-            version
+            version,
+            waitBlocks
         )
     }
 
@@ -341,6 +347,56 @@ export class ZeroPoolNetwork {
 
         return activeWithdrawals;
 
+    }
+
+    async getUncompleteDeposits(): Promise<PayNote[]> {
+        const [
+            publishBlockEvents,
+            depositEvents
+        ] = await Promise.all([
+            this.ZeroPool.publishBlockEvents(),
+            this.ZeroPool.getDepositEvents()
+        ]);
+
+        const userCompleteDepositTxHashList: string[] = [];
+        for (const event of publishBlockEvents) {
+            for (const item of event.params.BlockItems) {
+                const action = getAction(BigInt(item.tx.delta));
+                if (
+                    action !== DEPOSIT_ACTION ||
+                    item.tx.txExternalFields.owner !== this.ZeroPool.web3Ethereum.ethAddress
+                ) {
+                    continue;
+                }
+
+                const encodedTx = this.ZeroPool.encodeTx(item.tx);
+                const txHash = hash(encodedTx);
+                userCompleteDepositTxHashList.push(
+                    txHash
+                );
+            }
+        }
+
+        const unconfirmedDeposits: DepositEvent[] = depositEvents.filter(
+            (event: DepositEvent) => {
+                const index = userCompleteDepositTxHashList.indexOf(event.params.txHash);
+                return index === -1;
+            }
+        );
+
+        return unconfirmedDeposits.map(
+            (event: DepositEvent) => {
+                return {
+                    utxo: {
+                        owner: event.owner,
+                        amount: event.params.amount,
+                        token: event.params.token
+                    },
+                    blockNumber: event.blockNumber,
+                    txHash: event.params.txHash,
+                };
+            }
+        );
     }
 
     async prepareTransaction(
