@@ -1,17 +1,22 @@
-FROM keymetrics/pm2:latest-stretch
+FROM node:12.10.0 As build
 
-# Workdir
-RUN mkdir -p /usr/src/relayer
-
-ENV DOCKERIZE_VERSION v0.6.1
-RUN wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
-    && tar -C /usr/local/bin -xzvf dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
-    && rm dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz
-
-WORKDIR /usr/src/relayer
-
-# node_modules and other folders are ignored by .dockerignore
+WORKDIR /home/node/app
 COPY . .
+RUN npm install && npm run build
 
-ENV NODE_ENV production
-RUN npm install --loglevel error && npm run build && npm run start:prod
+FROM node:alpine
+
+COPY --from=build /home/node/app /
+
+ENV PORT = 3000
+ENV RPC = 'http://127.0.0.1:8545'
+ENV GAS_RPC = 'http://127.0.0.1:8545'
+ENV CONTRACT_ADDRESS = ''
+ENV GAS_CONTRACT = ''
+ENV MNEMONIC = ''
+ENV GAS_MNEMONIC = ''
+
+#use --expose=[] to expose a port or a range of ports inside the container
+EXPOSE 3000
+
+CMD ["nest", "start"]
