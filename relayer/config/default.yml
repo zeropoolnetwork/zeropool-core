@@ -6,7 +6,8 @@ network:
   etherscan_prefix: ''
   rpc: 'http://127.0.0.1:8545'
   gasRpc: 'http://127.0.0.1:8545'
-  contract: '0x04f4D781Ba5F29603595a8f23c7E9aA00FBF3F86'
-  gas_contract: '0x1e2Ac08FDBe055e3A2c431c304D36A889455F5ae'
+  contract: '0x20656D3Aee9Cd3B4280840DE17EFE80d9487a948'
+  gas_contract: '0x567a47E3AE32CBbe95ac4eE67F735Fec317662ab'
 
 mnemonic: 'salute grocery glass box cloth pull wedding measure bright tilt shield over'
+gas_mnemonic: 'donate increase aware copper slow trend twenty cliff raw reunion walnut one replace traffic device'

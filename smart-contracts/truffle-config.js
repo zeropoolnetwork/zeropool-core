@@ -20,7 +20,7 @@ module.exports = {
   },
   networks: {
     development: {
-      host: 'localhost',
+      provider: new HDWalletProvider(process.env.MNEMONIC, "http://127.0.0.1:8545", 0, 10),
       port: 8545,
       network_id: '*', // eslint-disable-line camelcase
     },
