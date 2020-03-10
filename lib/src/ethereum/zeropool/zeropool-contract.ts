@@ -161,7 +161,7 @@ export class ZeroPoolContract {
                 return {
                     params: depositCallData,
                     owner: tx.from,
-                    blockNumber: tx.blockNumber as number
+                    blockNumber: tx.blockNumber as number // todo: maybe make sense to handle null
                 }
             }
         );
@@ -370,7 +370,7 @@ export class ZeroPoolContract {
             {
                 "owner": txExternalFields.owner === 0n ?
                     "0000000000000000000000000000000000000000" :
-                    txExternalFields.owner.toString(16),
+                    toHex(txExternalFields.owner),
                 "Message": [
                     {
                         "data": txExternalFields.message[0].data.map(x => x.toString()),
