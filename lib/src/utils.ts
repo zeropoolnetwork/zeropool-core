@@ -23,11 +23,11 @@ export const WITHDRAW_ACTION = "withdraw";
 export const DEPOSIT_ACTION = "deposit";
 export const TRANSFER_ACTION = "transfer";
 
-export function toHex(val: number | string | BigNumber | BigInt): string {
+export function toHex(val: number | string | BigNumber | BigInt, padding = 0): string {
     if (typeof val === "string") {
-        return "0x" + tbn(val).toString(16);
+        return "0x" + tbn(val).toString(16).padStart(padding, '0');
     }
-    return "0x" + val.toString(16);
+    return "0x" + val.toString(16).padStart(padding, '0');
 }
 
 export function fromHex(hex: string): number {
@@ -206,7 +206,7 @@ export function stringifyAddress(token: bigint): string {
     if (token === 0n) {
         return "0x0000000000000000000000000000000000000000";
     }
-    return toHex(token);
+    return toHex(token, 40);
 }
 
 export function unstringifyVk(vk: any): any {

@@ -369,8 +369,8 @@ export class ZeroPoolContract {
             },
             {
                 "owner": txExternalFields.owner === 0n ?
-                    "0000000000000000000000000000000000000000" :
-                    toHex(txExternalFields.owner),
+                    "0x0000000000000000000000000000000000000000" :
+                    toHex(txExternalFields.owner, 40),
                 "Message": [
                     {
                         "data": txExternalFields.message[0].data.map(x => x.toString()),
