@@ -1024,7 +1024,7 @@ export async function calculateUtxo(
 function calculateBalance(state: MyUtxoState<bigint>): { [key: string]: number } {
     const balances: { [key: string]: number } = {};
     for (const utxo of state.utxoList) {
-        const asset = toHex(utxo.token);
+        const asset = toHex(utxo.token, 40);
         if (!balances[asset]) {
             balances[asset] = Number(utxo.amount);
             continue;
