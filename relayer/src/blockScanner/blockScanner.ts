@@ -52,12 +52,14 @@ export async function handleBlock(
     const okProof = await verifyTx(item.tx, txRootHash);
 
     if (!okProof) {
+      console.log('bad proof');
       return false;
     }
 
     const okDoubleSpend = checkDoubleSpend(item.tx, nullifiers);
 
     if (!okDoubleSpend) {
+      console.log('double spend');
       return false;
     }
 
