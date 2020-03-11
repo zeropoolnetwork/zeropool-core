@@ -96,6 +96,8 @@ export class AppService {
         );
     }
 
+    // todo: move it to db/redis
+    private donationHashList = [];
     async publishGasDonation(gasTx: Tx, donationHash: string): Promise<any> {
         // todo: add storing hashes
         const ethTx = await zp.ZeroPool.web3Ethereum.getTransaction(donationHash);
@@ -108,8 +110,28 @@ export class AppService {
         if (ethTx.to !== zp.ZeroPool.web3Ethereum.ethAddress) {
             throw new Error('transaction not to relayer');
         }
+        if (this.donationHashList.indexOf(donationHash) !== -1) {
+            throw new Error('donation already exists');
+        }
+        this.donationHashList.push(donationHash);
         // todo: verify tx confirmation
-        return this.publishBlock(gasTx, '0x0', gasZp, gasStorage);
+
+        const id = generateTxId();
+
+        this.gasTx$.next({
+            tx: gasTx,
+            depositBlockNumber: '0x0',
+            id,
+        });
+
+        return this.processedGasTx$.pipe(
+            filter((processedTx) => processedTx.id === id),
+            map((processedTx: ProcessedTx) => {
+                return processedTx.txData;
+            }),
+            take(1),
+        );
+
     }
 
     publishTransaction(
