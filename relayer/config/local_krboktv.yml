@@ -1,14 +1,14 @@
 app:
-  port: 3001
+  port: 3000
   txAggregationTime: 2000 # milliseconds. Aggregate all incoming tx within 2 seconds into the same block
 
 network:
   etherscan_prefix: ''
-  rpc: 'http://127.0.0.1:8545'
-  gasRpc: 'http://127.0.0.1:8545'
-  contract: '0x04f4D781Ba5F29603595a8f23c7E9aA00FBF3F86'
-  gas_contract: '0x1e2Ac08FDBe055e3A2c431c304D36A889455F5ae'
+  rpc: 'https://rinkeby.infura.io/v3/826fec4cbd954dfd89c714eabf4611c4'
+  gasRpc: 'https://kovan.infura.io/v3/826fec4cbd954dfd89c714eabf4611c4'
+  contract: '0x33641D753c965E9f789C4f2E439C12DeF2fe21d7'
+  gas_contract: '0x85d2f0F6BF0E80e5eCB4F840C10Df76120a5C4eC'
 
 
-mnemonic: 'salute grocery glass box cloth pull wedding measure bright tilt shield over'
-gas_mnemonic: 'salute grocery glass box cloth pull wedding measure bright tilt shield over'
+mnemonic: 'elegant lava crew you jacket first garment tomorrow novel combine deer action lizard throw fragile'
+gas_mnemonic: 'elegant lava crew you jacket first garment tomorrow novel combine deer action lizard throw fragile'

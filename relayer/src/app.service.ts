@@ -52,7 +52,7 @@ export class AppService {
                 this.processedTx$.next(data);
             });
 
-            this.txPipe(this.gasTx$, gasZp, gasStorage).subscribe((data: ProcessedTx) => {
+            this.txPipe(this.gasTx$, gasZp, gasStorage, 1).subscribe((data: ProcessedTx) => {
                 this.processedGasTx$.next(data);
             });
 
@@ -63,13 +63,14 @@ export class AppService {
         txPipe: Subject<TxContract>,
         localZp: ZeroPoolNetwork,
         localStorage: IStorage,
+        waitBlocks = 0,
     ): Observable<ProcessedTx> {
 
         return txPipe.pipe(
             concatMap(
                 (contract: TxContract) => {
                     const txData = fromPromise(this.publishBlock(
-                        contract.tx, contract.depositBlockNumber, localZp, localStorage
+                        contract.tx, contract.depositBlockNumber, localZp, localStorage, waitBlocks
                     )).pipe(
                         catchError((e) => {
                             console.log({
@@ -107,6 +108,7 @@ export class AppService {
         if (ethTx.to !== zp.ZeroPool.web3Ethereum.ethAddress) {
             throw new Error('transaction not to relayer');
         }
+        // todo: verify tx confirmation
         return this.publishBlock(gasTx, '0x0', gasZp, gasStorage);
     }
 
@@ -154,6 +156,7 @@ export class AppService {
         depositBlockNumber: string,
         localZp: ZeroPoolNetwork,
         storage: IStorage,
+        waitBlocks = 0
     ): Promise<any> {
 
         if (synced.filter(x => !x).length !== 0 || synced.length < 2) {
@@ -194,7 +197,7 @@ export class AppService {
             block.rollupCurrentBlockNumber,
             block.blockNumberExpires,
             version,
-            1
+            waitBlocks
         );
 
         storage.addBlocks([block]);
