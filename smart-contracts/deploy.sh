@@ -17,7 +17,7 @@ else
 fi
 
 echo 'MainnetProxy'
-MNEMONIC=$1 truffle migrate --network $main_network --reset --f 2 --to 2 | sed -n -e 's/^.*\(contract address: \)/\1/p' | tail -1
+MNEMONIC=$1 truffle migrate --network $main_network --reset --f 2 --to 2 | sed -n -e 's/^.*\(contract address: \)/\1/p'
 
 echo 'SidechainProxy'
-MNEMONIC=$2 truffle migrate --network $side_network --reset --f 1 --to 1 | sed -n -e 's/^.*\(contract address: \)/\1/p' | tail -1
+MNEMONIC=$2 truffle migrate --network $side_network --reset --f 1 --to 1 | sed -n -e 's/^.*\(contract address: \)/\1/p' 
