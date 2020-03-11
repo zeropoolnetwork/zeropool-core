@@ -149,10 +149,10 @@ export class ZeroPoolNetwork {
     async prepareDeposit(
         token: string,
         amount: number,
-        callback?: (update: PrepareDepositProgressNotification) => any
+        progressCallback?: (update: PrepareDepositProgressNotification) => any
     ): Promise<[Tx<string>, string]> {
 
-        const state = await this.myUtxoState(this.utxoState, callback);
+        const state = await this.getMyUtxoState(this.utxoState, progressCallback);
         this.utxoState = copyMyUtxoState(state);
 
         const utxoDelta = BigInt(amount);
@@ -175,10 +175,10 @@ export class ZeroPoolNetwork {
             utxoPair.utxoIn,
             utxoPair.utxoOut,
             state.merkleTreeState,
-            callback
+            progressCallback
         );
 
-        callback && callback({ step: "finish" });
+        progressCallback && progressCallback({ step: "finish" });
 
         return [tx, txHash];
 
@@ -203,13 +203,13 @@ export class ZeroPoolNetwork {
         token: string,
         toPubKey: string,
         amount: number,
-        callback?: (update: TransferProgressNotification) => any,
+        progressCallback?: (update: TransferProgressNotification) => any,
     ): Promise<[Tx<string>, string]> {
 
-        const state = await this.myUtxoState(this.utxoState, callback);
+        const state = await this.getMyUtxoState(this.utxoState, progressCallback);
         this.utxoState = copyMyUtxoState(state);
 
-        callback && callback({ step: "calculate-in-out" });
+        progressCallback && progressCallback({ step: "calculate-in-out" });
 
         const utxoZeroDelta = 0n;
 
@@ -228,10 +228,10 @@ export class ZeroPoolNetwork {
             utxoPair.utxoIn,
             utxoPair.utxoOut,
             state.merkleTreeState,
-            callback
+            progressCallback
         );
 
-        callback && callback({ step: "finish" });
+        progressCallback && progressCallback({ step: "finish" });
 
         const depositBlockNumber = '0x0';
 
@@ -241,12 +241,12 @@ export class ZeroPoolNetwork {
     async prepareWithdraw(
         token: string,
         amount: number,
-        callback?: (update: PrepareWithdrawProgressNotification) => any
+        progressCallback?: (update: PrepareWithdrawProgressNotification) => any
     ): Promise<[Tx<string>, string]> {
 
         const utxoDelta = BigInt(amount) * -1n;
 
-        const state = await this.myUtxoState(this.utxoState, callback);
+        const state = await this.getMyUtxoState(this.utxoState, progressCallback);
         this.utxoState = copyMyUtxoState(state);
 
         const utxoPair = await calculateUtxo(
@@ -264,10 +264,10 @@ export class ZeroPoolNetwork {
             utxoPair.utxoIn,
             utxoPair.utxoOut,
             state.merkleTreeState,
-            callback
+            progressCallback
         );
 
-        callback && callback({ step: "finish" });
+        progressCallback && progressCallback({ step: "finish" });
 
         const depositBlockNumber = '0x0';
 
@@ -405,7 +405,7 @@ export class ZeroPoolNetwork {
         utxoIn: Utxo<bigint>[] = [],
         utxoOut: Utxo<bigint>[] = [],
         merkleState: MerkleTreeState<bigint>,
-        callback?: (update: PrepareDepositProgressNotification) => any
+        progressCallback?: (update: PrepareDepositProgressNotification) => any
     ): Promise<[Tx<string>, string]> {
 
         const mtState = copyMerkleTreeState(merkleState);
@@ -443,7 +443,7 @@ export class ZeroPoolNetwork {
 
         const proof = await getProof(this.transactionJson, inputs, this.proverKey);
 
-        callback && callback({ step: "finish-get-proof" });
+        progressCallback && progressCallback({ step: "finish-get-proof" });
 
         const numberOfUtxo = mt._merkleState[0].length;
         const numberOfBlocks = Math.ceil(numberOfUtxo / 512);
@@ -685,32 +685,32 @@ export class ZeroPoolNetwork {
         };
     }
 
-    async getBalance(callback?: (update: GetBalanceProgressNotification) => any) {
+    async getBalance(progressCallback?: (update: GetBalanceProgressNotification) => any) {
 
-        // callback && callback({ step: 'start' });
+        // progressCallback && progressCallback({ step: 'start' });
 
-        const state = await this.myUtxoState(this.utxoState, callback);
-        this.utxoState = state;
+        const state = await this.getMyUtxoState(this.utxoState, progressCallback);
+        this.utxoState = copyMyUtxoState(state);
 
-        callback && callback({ step: 'calculate-balances' });
+        progressCallback && progressCallback({ step: 'calculate-balances' });
 
         const balances = calculateBalance(state);
 
-        callback && callback({ step: 'finish' });
+        progressCallback && progressCallback({ step: 'finish' });
 
         return balances;
     }
 
 
-    async myUtxoState(srcState: MyUtxoState<bigint>, callback?: (update: any) => any): Promise<MyUtxoState<bigint>> {
+    async getMyUtxoState(srcState: MyUtxoState<bigint>, progressCallback?: (update: any) => any): Promise<MyUtxoState<bigint>> {
 
         const blockEvents = await this.ZeroPool.publishBlockEvents(+srcState.lastBlockNumber + 1);
 
-        return calculateUtxoState(
+        return applyNewBlocksToState(
             this.zpKeyPair.privateKey,
             srcState,
             blockEvents,
-            callback
+            progressCallback
         );
 
     }
@@ -816,22 +816,22 @@ function getHistoryItem(
 
 }
 
-async function calculateUtxoState(
+async function applyNewBlocksToState(
     privateKey: bigint,
     srcState: MyUtxoState<bigint>,
     blockEventList: PublishBlockEvent[],
-    callback?: (update: any) => any
+    progressCallback?: (update: any) => any
 ): Promise<MyUtxoState<bigint>> {
 
+    const newState = copyMyUtxoState(srcState);
+
     if (blockEventList.length === 0) {
-        return srcState;
+        return newState;
     }
 
-    const utxoState = copyMyUtxoState(srcState);
+    newState.lastBlockNumber = blockEventList[blockEventList.length - 1].blockNumber;
 
-    utxoState.lastBlockNumber = blockEventList[blockEventList.length - 1].blockNumber;
-
-    const mt: IMerkleTree = MerkleTree.fromObject(utxoState.merkleTreeState);
+    const mt: IMerkleTree = MerkleTree.fromObject(newState.merkleTreeState);
     const utxoCount = mt.length;
 
     let {
@@ -846,25 +846,25 @@ async function calculateUtxoState(
         mt.pushZeros(512 - blockHashList.length);
     }
 
-    utxoState.merkleTreeState = {
+    newState.merkleTreeState = {
         length: mt.length,
         height: mt.height,
         _merkleState: mt._merkleState
     };
 
     const spentUtxoNullifiers = findDuplicates<bigint>(
-        utxoState.nullifiers.concat(spentNullifiers).concat(myNullifiers)
+        newState.nullifiers.concat(spentNullifiers).concat(myNullifiers)
     );
 
     // find spent utxo
     for (const nullifier of spentUtxoNullifiers) {
 
-        const oldPackIndex = utxoState.nullifiers.indexOf(nullifier);
+        const oldPackIndex = newState.nullifiers.indexOf(nullifier);
         const newPackIndex = myNullifiers.indexOf(nullifier);
 
         if (oldPackIndex !== -1) {
-            utxoState.nullifiers = utxoState.nullifiers.filter((x, i) => i !== oldPackIndex);
-            utxoState.utxoList = utxoState.utxoList.filter((x, i) => i !== oldPackIndex);
+            newState.nullifiers = newState.nullifiers.filter((x, i) => i !== oldPackIndex);
+            newState.utxoList = newState.utxoList.filter((x, i) => i !== oldPackIndex);
         }
 
         if (newPackIndex !== -1) {
@@ -874,10 +874,10 @@ async function calculateUtxoState(
 
     }
 
-    utxoState.nullifiers = utxoState.nullifiers.concat(myNullifiers);
-    utxoState.utxoList = utxoState.utxoList.concat(myUtxo);
+    newState.nullifiers = newState.nullifiers.concat(myNullifiers);
+    newState.utxoList = newState.utxoList.concat(myUtxo);
 
-    return utxoState;
+    return newState;
 }
 
 async function parseBlockEvents(
@@ -1009,14 +1009,6 @@ export async function calculateUtxo(
             utxo(token, myChange, myPubKey)
         );
     }
-
-    // if (utxoIn.length !== 2) {
-    //     utxoIn.push(empty_utxo(token, myPubKey))
-    // }
-    //
-    // if (utxoOut.length !== 2) {
-    //     utxoOut.push(empty_utxo(token, myPubKey))
-    // }
 
     return { utxoIn, utxoOut }
 }
