@@ -2,7 +2,7 @@ import Web3 from 'web3';
 import { AbiItem, keccak256 } from 'web3-utils';
 import { Contract, EventData } from 'web3-eth-contract';
 import { HttpProvider } from 'web3-providers-http';
-import { Transaction } from 'web3-core';
+import { Transaction, TransactionReceipt } from 'web3-core';
 import { addHexPrefix, privateToAddress, toChecksumAddress } from 'ethereumjs-util';
 import { Transaction as Tx, TxData } from 'ethereumjs-tx';
 import { BigNumber } from 'bignumber.js'
@@ -31,8 +31,16 @@ export class Web3Ethereum {
         return new this.web3.eth.Contract(abi, address);
     }
 
-    getTransaction(txHash: string): Promise<Transaction> {
-        return this.web3.eth.getTransaction(txHash);
+    getTransaction(txHash: string, callback?: (err: any, tx: Transaction) => void): Promise<Transaction> {
+        return this.web3.eth.getTransaction(txHash, callback);
+    }
+
+
+    getTransactionReceipt(
+        txHash: string,
+        callback?: (err: any, tx: TransactionReceipt) => void
+    ): Promise<TransactionReceipt> {
+        return this.web3.eth.getTransactionReceipt(txHash, callback);
     }
 
     getBalance(address: string): Promise<string> {
@@ -87,7 +95,7 @@ export class Web3Ethereum {
                     }
                 })
                 .on('confirmation', (num: any, receipt: any) => {
-                    if (num === confirmations) {
+                    if (num === confirmations - 1) {
                         resolve(receipt);
                     }
                 });
