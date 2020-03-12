@@ -6,8 +6,8 @@ network:
   etherscan_prefix: ''
   rpc: 'https://rinkeby.infura.io/v3/826fec4cbd954dfd89c714eabf4611c4'
   gasRpc: 'https://kovan.infura.io/v3/826fec4cbd954dfd89c714eabf4611c4'
-  contract: '0x33641D753c965E9f789C4f2E439C12DeF2fe21d7'
-  gas_contract: '0x85d2f0F6BF0E80e5eCB4F840C10Df76120a5C4eC'
+  contract: '0x27964b5704f656033a1864da29A740661626aE69'
+  gas_contract: '0x3408A71430C88243Cd3D53A66B59EBCBB93b04D3'
 
 
 mnemonic: 'elegant lava crew you jacket first garment tomorrow novel combine deer action lizard throw fragile'

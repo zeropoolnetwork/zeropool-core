@@ -10,7 +10,7 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
-    "start:debug": "npm run build && node $NODE_DEBUG_OPTION dist/main",
+    "start:debug": "npm run build && NODE_ENV=local_krboktv node $NODE_DEBUG_OPTION dist/main",
     "start:prod": "npm run build && node dist/main",
     "start:prod:rinkeby": "npm run build && NODE_ENV=rinkeby node dist/main",
     "start:dev:rinkeby": "npm run build && NODE_ENV=dev_rinkeby node dist/main",
@@ -33,7 +33,7 @@
     "swagger-ui-express": "^4.1.3",
     "truffle-hdwallet-provider": "^1.0.17",
     "uuid": "^7.0.1",
-    "zeropool-lib": "0.4.97-node"
+    "zeropool-lib": "0.5.1-node"
   },
   "devDependencies": {
     "@nestjs/cli": "^6.13.2",
