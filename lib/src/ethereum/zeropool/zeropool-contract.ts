@@ -36,7 +36,7 @@ export class ZeroPoolContract {
         this.instance = this.web3Ethereum.createInstance(ZeroPoolAbi, contractAddress);
     }
 
-    async deposit(deposit: Deposit): Promise<Transaction> {
+    async deposit(deposit: Deposit, onTransactionHash?: (txHash: string) => void): Promise<Transaction> {
         const params = [
             deposit.token,
             toHex(deposit.amount),
@@ -45,10 +45,14 @@ export class ZeroPoolContract {
 
         const data = getCallData(this.instance, 'deposit', params);
 
-        return (await this.web3Ethereum.sendTransaction(this.contractAddress, deposit.amount, data)) as Transaction;
+        return (await this.web3Ethereum.sendTransaction({
+            to: this.contractAddress,
+            value: deposit.amount,
+            data
+        }, 1, onTransactionHash)) as Transaction;
     };
 
-    async cancelDeposit(payNote: PayNote, waitBlocks = 0): Promise<Transaction> {
+    async cancelDeposit(payNote: PayNote, waitBlocks = 0, onTransactionHash?: (txHash: string) => void): Promise<Transaction> {
         const params = [[
             [
                 payNote.utxo.owner,
@@ -61,11 +65,14 @@ export class ZeroPoolContract {
 
         const data = getCallData(this.instance, 'depositCancel', params);
 
-        return (await this.web3Ethereum.sendTransaction(this.contractAddress, 0, data, waitBlocks)) as Transaction;
+        return (await this.web3Ethereum.sendTransaction({
+            to: this.contractAddress,
+            data
+        }, waitBlocks, onTransactionHash)) as Transaction;
 
     };
 
-    async withdraw(payNote: PayNote, waitBlocks = 0): Promise<Transaction> {
+    async withdraw(payNote: PayNote, waitBlocks = 0, onTransactionHash?: (txHash: string) => void): Promise<Transaction> {
         const params = [[
             [
                 payNote.utxo.owner,
@@ -78,7 +85,10 @@ export class ZeroPoolContract {
 
         const data = getCallData(this.instance, 'withdraw', params);
 
-        return (await this.web3Ethereum.sendTransaction(this.contractAddress, 0, data, waitBlocks)) as Transaction;
+        return (await this.web3Ethereum.sendTransaction({
+            to: this.contractAddress,
+            data
+        }, waitBlocks, onTransactionHash)) as Transaction;
     };
 
     async publishBlock(
@@ -86,7 +96,9 @@ export class ZeroPoolContract {
         rollupCurrentBlockNumber: number,
         blockNumberExpires: number,
         version: number,
-        waitBlock = 0
+        waitBlock = 0,
+        gasPrice?: number | string,
+        onTransactionHash?: (txHash: string) => void
     ): Promise<Transaction> {
 
         const params = [
@@ -98,7 +110,11 @@ export class ZeroPoolContract {
 
         const data = getCallData(this.instance, 'publishBlock', params);
 
-        return (await this.web3Ethereum.sendTransaction(this.contractAddress, 0, data, waitBlock)) as Transaction;
+        return (await this.web3Ethereum.sendTransaction({
+            to: this.contractAddress,
+            data,
+            gasPrice
+        }, waitBlock, onTransactionHash) as Transaction);
     };
 
     async challengeTx(
@@ -113,7 +129,10 @@ export class ZeroPoolContract {
 
         const data = getCallData(this.instance, 'challengeTx', params);
 
-        return (await this.web3Ethereum.sendTransaction(this.contractAddress, 0, data)) as Transaction;
+        return (await this.web3Ethereum.sendTransaction({
+            to: this.contractAddress,
+            data
+        })) as Transaction;
     };
 
     async challengeUTXOTreeUpdate(
@@ -128,7 +147,10 @@ export class ZeroPoolContract {
 
         const data = getCallData(this.instance, 'challengeUTXOTreeUpdate', params);
 
-        return (await this.web3Ethereum.sendTransaction(this.contractAddress, 0, data)) as Transaction;
+        return (await this.web3Ethereum.sendTransaction({
+            to: this.contractAddress,
+            data
+        })) as Transaction;
     };
 
     async challengeDoubleSpend(
@@ -143,7 +165,10 @@ export class ZeroPoolContract {
 
         const data = getCallData(this.instance, 'challengeDoubleSpend', params);
 
-        return (await this.web3Ethereum.sendTransaction(this.contractAddress, 0, data)) as Transaction;
+        return (await this.web3Ethereum.sendTransaction({
+            to: this.contractAddress,
+            data
+        })) as Transaction;
     };
 
     async getDepositEvents(): Promise<DepositEvent[]> {

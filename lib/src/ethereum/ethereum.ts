@@ -8,6 +8,15 @@ import { Transaction as Tx, TxData } from 'ethereumjs-tx';
 import { BigNumber } from 'bignumber.js'
 import { toHex } from "../utils";
 
+export type TransactionParams = {
+    from?: string | number;
+    to: string;
+    value?: number | string;
+    gasPrice?: number | string;
+    data?: string;
+    nonce?: number;
+}
+
 export class Web3Ethereum {
 
     // @ts-ignore
@@ -68,23 +77,30 @@ export class Web3Ethereum {
     }
 
     async sendTransaction(
-        to: string,
-        value: number | string,
-        data: string = "",
-        confirmations = 1
+        txParams: TransactionParams,
+        confirmations = 1,
+        onTransactionHash?: (txHash: string) => void
     ): Promise<string | Transaction> {
 
-        const nonce = await this.web3.eth.getTransactionCount(this.ethAddress);
+        const nonce = !txParams.nonce
+            ? await this.web3.eth.getTransactionCount(this.ethAddress)
+            : txParams.nonce;
+
+        const gasPrice = !txParams.gasPrice
+            ? await this.web3.eth.getGasPrice()
+            : txParams.gasPrice;
 
         return new Promise((resolve) => {
             this.web3.eth.sendTransaction({
-                nonce,
-                data,
-                to,
-                from: this.ethAddress,
-                value: toHex(value)
+                nonce: nonce,
+                data: txParams.data || '',
+                gasPrice: toHex(gasPrice),
+                to: txParams.to,
+                from: txParams.from || this.ethAddress,
+                value: toHex(txParams.value || 0)
             })
                 .on('transactionHash', (transactionHash: string) => {
+                    onTransactionHash && onTransactionHash(transactionHash);
                     if (confirmations === 0) {
                         resolve(transactionHash);
                     }
