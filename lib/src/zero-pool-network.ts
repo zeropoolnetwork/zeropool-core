@@ -149,7 +149,7 @@ export class ZeroPoolNetwork {
     async prepareDeposit(
         token: string,
         amount: number,
-        progressCallback?: (update: PrepareDepositProgressNotification) => any
+        progressCallback?: (update: PrepareDepositProgressNotification) => any,
     ): Promise<[Tx<string>, string]> {
 
         const state = await this.getMyUtxoState(this.utxoState, progressCallback);
@@ -188,13 +188,14 @@ export class ZeroPoolNetwork {
         token: string,
         amount: number,
         txHash: string,
+        onTransactionHash?: (txHash: string) => void
     ): Promise<number> {
 
         const transactionDetails: Transaction = await this.ZeroPool.deposit({
             token,
             amount,
             txHash,
-        });
+        }, onTransactionHash);
 
         return Number(transactionDetails.blockNumber);
     }
@@ -274,18 +275,24 @@ export class ZeroPoolNetwork {
         return [tx, depositBlockNumber];
     }
 
-    depositCancel(payNote: PayNote, waitBlocks = 0): Promise<Transaction> {
-        return this.ZeroPool.cancelDeposit(payNote, waitBlocks);
+    depositCancel(
+        payNote: PayNote,
+        waitBlocks = 0,
+        onTransactionHash?: (txHash: string) => void): Promise<Transaction> {
+
+        return this.ZeroPool.cancelDeposit(payNote, waitBlocks, onTransactionHash);
     }
 
-    withdraw(payNote: PayNote, waitBlocks = 0): Promise<Transaction> {
-        return this.ZeroPool.withdraw(payNote, waitBlocks);
+    withdraw(payNote: PayNote, waitBlocks = 0, onTransactionHash?: (txHash: string) => void): Promise<Transaction> {
+        return this.ZeroPool.withdraw(payNote, waitBlocks, onTransactionHash);
     }
 
     async publishBlockItems(
         blockItems: BlockItem<string>[],
         blockNumberExpires: number,
-        waitBlocks = 0
+        waitBlocks = 0,
+        gasPrice?: number | string,
+        onTransactionHash?: (txHash: string) => void
     ): Promise<Transaction> {
 
         const rollupCurrentTxNum = await this.ZeroPool.getRollupTxNum();
@@ -295,7 +302,9 @@ export class ZeroPoolNetwork {
             +rollupCurrentTxNum >> 8,
             blockNumberExpires,
             version,
-            waitBlocks
+            waitBlocks,
+            gasPrice,
+            onTransactionHash
         )
     }
 
