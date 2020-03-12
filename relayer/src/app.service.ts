@@ -219,7 +219,8 @@ export class AppService {
             block.rollupCurrentBlockNumber,
             block.blockNumberExpires,
             version,
-            waitBlocks
+            waitBlocks,
+            100 * 10**9
         );
 
         storage.addBlocks([block]);
