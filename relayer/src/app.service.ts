@@ -100,9 +100,15 @@ export class AppService {
     private donationHashList = [];
     async publishGasDonation(gasTx: Tx, donationHash: string): Promise<any> {
         // todo: add storing hashes
-        const ethTx = await zp.ZeroPool.web3Ethereum.getTransaction(donationHash);
-        if (!ethTx) {
+        const [receipt, ethTx] = await Promise.all([
+            zp.ZeroPool.web3Ethereum.getTransactionReceipt(donationHash),
+            zp.ZeroPool.web3Ethereum.getTransaction(donationHash)
+        ]);
+        if (!receipt) {
             throw new Error('transaction not found');
+        }
+        if (!receipt.status) {
+            throw new Error('transaction failed');
         }
         if (BigInt(ethTx.value) !== BigInt(gasTx.delta)) {
             throw new Error('tx value !== zp tx delta');
@@ -114,7 +120,6 @@ export class AppService {
             throw new Error('donation already exists');
         }
         this.donationHashList.push(donationHash);
-        // todo: verify tx confirmation
 
         const id = generateTxId();
 
