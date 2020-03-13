@@ -107,6 +107,9 @@ export class AppService {
         if (!receipt) {
             throw new Error('transaction not found');
         }
+        if (!receipt.status) {
+            throw new Error('transaction failed');
+        }
         if (BigInt(ethTx.value) !== BigInt(gasTx.delta)) {
             throw new Error('tx value !== zp tx delta');
         }
