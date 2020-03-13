@@ -7,8 +7,10 @@ import {
     Block,
     BlockItem,
     BlockItemNote,
+    CancelDepositEvent,
     Deposit,
     DepositEvent,
+    Event,
     PayNote,
     PublishBlockEvent,
     SmartContractBlockItemSchema,
@@ -217,7 +219,21 @@ export class ZeroPoolContract {
             return [];
         }
 
-        return this.parseWithdrawEvents(events);
+        return this.parsePayNoteEvents(events);
+    }
+
+    async cancelDepositEvents(fromBlockNumber?: string | number): Promise<CancelDepositEvent[]> {
+
+        const events = await getEvents(
+            this.instance,
+            'DepositCancel',
+            fromBlockNumber);
+
+        if (events.length === 0) {
+            return [];
+        }
+
+        return this.parsePayNoteEvents(events);
     }
 
     getContractVersion(): Promise<number> {
@@ -408,7 +424,7 @@ export class ZeroPoolContract {
         );
     }
 
-    private async parseWithdrawEvents(events: EventData[]): Promise<WithdrawEvent[]> {
+    private async parsePayNoteEvents(events: EventData[]): Promise<Event<PayNote>[]> {
         const transactions$: Promise<Transaction>[] = events.map((e: EventData) => {
             return this.web3Ethereum.getTransaction(e.transactionHash);
         });

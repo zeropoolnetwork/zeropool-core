@@ -19,7 +19,7 @@ import {
 // @ts-ignore
 import { bn128 } from "snarkjs";
 
-import { hash, PublishBlockEvent, WithdrawEvent } from './ethereum';
+import { CancelDepositEvent, hash, PublishBlockEvent, WithdrawEvent } from './ethereum';
 import { BlockItem, DepositEvent, PayNote, Tx, TxExternalFields, ZeroPoolContract } from './ethereum/zeropool';
 
 import { transfer_compute, utxo } from './circom/inputs';
@@ -361,10 +361,12 @@ export class ZeroPoolNetwork {
     async getUncompleteDeposits(): Promise<PayNote[]> {
         const [
             publishBlockEvents,
-            depositEvents
+            depositEvents,
+            cancelDepositEvents
         ] = await Promise.all([
             this.ZeroPool.publishBlockEvents(),
-            this.ZeroPool.getDepositEvents()
+            this.ZeroPool.getDepositEvents(),
+            this.ZeroPool.cancelDepositEvents()
         ]);
 
         const userCompleteDepositTxHashList: string[] = [];
@@ -393,19 +395,32 @@ export class ZeroPoolNetwork {
             }
         );
 
-        return unconfirmedDeposits.map(
-            (event: DepositEvent) => {
-                return {
-                    utxo: {
-                        owner: event.owner,
-                        amount: event.params.amount,
-                        token: event.params.token
-                    },
-                    blockNumber: event.blockNumber,
-                    txHash: event.params.txHash,
-                };
+        const notCanceledUnconfirmedDeposits: PayNote[] = [];
+
+        for (const event of unconfirmedDeposits) {
+
+            const alreadyCanceled = cancelDepositEvents.find((cancelEvent: CancelDepositEvent) => {
+                return cancelEvent.params.txHash === event.params.txHash;
+            });
+
+            if (alreadyCanceled) {
+                continue;
             }
-        );
+
+            const unconfirmedDeposit = {
+                utxo: {
+                    owner: event.owner,
+                    amount: event.params.amount,
+                    token: event.params.token
+                },
+                blockNumber: event.blockNumber,
+                txHash: event.params.txHash,
+            };
+
+            notCanceledUnconfirmedDeposits.push(unconfirmedDeposit);
+        }
+
+        return notCanceledUnconfirmedDeposits;
     }
 
     async prepareTransaction(
