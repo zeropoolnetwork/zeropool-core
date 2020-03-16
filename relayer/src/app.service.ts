@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import * as prettyMilliseconds from 'pretty-ms';
 import { Tx } from './transaction.dto';
 import { gasZp, zp } from './zeroPool';
 import { MemoryStorage } from './storage/memoryStorage';
@@ -9,6 +10,7 @@ import { combineLatest, Observable, of, Subject } from 'rxjs';
 import { catchError, concatMap, filter, map, take } from 'rxjs/operators';
 import { fromPromise } from 'rxjs/internal-compatibility';
 import { v4 as uuidv4 } from 'uuid';
+import { performance } from "perf_hooks";
 
 const BN128_R = BigInt('21888242871839275222246405745257275088548364400416034343698204186575808495617');
 
@@ -42,11 +44,15 @@ export class AppService {
     private processedGasTx$ = new Subject<ProcessedTx>();
 
     constructor() {
+
+        const t1 = performance.now();
+
         combineLatest([
             fromPromise(initialScan(storage, zp)),
             fromPromise(initialScan(gasStorage, gasZp)),
         ]).subscribe(() => {
-            console.log('sync is done');
+            const t2 = performance.now();
+            console.log(`sync is done in ${prettyMilliseconds(t2 - t1)} ms`);
 
             this.txPipe(this.tx$, zp, storage).subscribe((data: ProcessedTx) => {
                 this.processedTx$.next(data);
