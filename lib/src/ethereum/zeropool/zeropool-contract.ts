@@ -38,7 +38,11 @@ export class ZeroPoolContract {
         this.instance = this.web3Ethereum.createInstance(ZeroPoolAbi, contractAddress);
     }
 
-    async deposit(deposit: Deposit, onTransactionHash?: (txHash: string) => void): Promise<Transaction> {
+    async deposit(
+        deposit: Deposit,
+        onTransactionHash?: (error: any, txHash: string | undefined) => void
+    ): Promise<Transaction> {
+
         const params = [
             deposit.token,
             toHex(deposit.amount),
@@ -54,7 +58,12 @@ export class ZeroPoolContract {
         }, 1, onTransactionHash)) as Transaction;
     };
 
-    async cancelDeposit(payNote: PayNote, waitBlocks = 0, onTransactionHash?: (txHash: string) => void): Promise<Transaction> {
+    async cancelDeposit(
+        payNote: PayNote,
+        waitBlocks = 0,
+        onTransactionHash?: (error: any, txHash: string | undefined) => void
+    ): Promise<Transaction> {
+
         const params = [[
             [
                 payNote.utxo.owner,
@@ -74,7 +83,12 @@ export class ZeroPoolContract {
 
     };
 
-    async withdraw(payNote: PayNote, waitBlocks = 0, onTransactionHash?: (txHash: string) => void): Promise<Transaction> {
+    async withdraw(
+        payNote: PayNote,
+        waitBlocks = 0,
+        onTransactionHash?: (error: any, txHash: string | undefined) => void
+    ): Promise<Transaction> {
+
         const params = [[
             [
                 payNote.utxo.owner,
@@ -100,7 +114,7 @@ export class ZeroPoolContract {
         version: number,
         waitBlock = 0,
         gasPrice?: number | string,
-        onTransactionHash?: (txHash: string) => void
+        onTransactionHash?: (error: any, txHash: string | undefined) => void
     ): Promise<Transaction> {
 
         const params = [

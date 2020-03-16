@@ -79,7 +79,7 @@ export class Web3Ethereum {
     async sendTransaction(
         txParams: TransactionParams,
         confirmations = 1,
-        onTransactionHash?: (txHash: string) => void
+        onTransactionHash?: (error: any, txHash: string | undefined) => void
     ): Promise<string | Transaction> {
 
         const nonce = !txParams.nonce
@@ -98,9 +98,13 @@ export class Web3Ethereum {
                 to: txParams.to,
                 from: txParams.from || this.ethAddress,
                 value: toHex(txParams.value || 0)
+            }, (error: any, txHash: string | undefined) => {
+                if (error) {
+                    onTransactionHash && onTransactionHash(error, undefined)
+                }
             })
                 .on('transactionHash', (transactionHash: string) => {
-                    onTransactionHash && onTransactionHash(transactionHash);
+                    onTransactionHash && onTransactionHash(undefined, transactionHash);
                     if (confirmations === 0) {
                         resolve(transactionHash);
                     }

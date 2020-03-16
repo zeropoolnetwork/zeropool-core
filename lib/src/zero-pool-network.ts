@@ -188,7 +188,7 @@ export class ZeroPoolNetwork {
         token: string,
         amount: number,
         txHash: string,
-        onTransactionHash?: (txHash: string) => void
+        onTransactionHash?: (error: any, txHash: string | undefined) => void
     ): Promise<number> {
 
         const transactionDetails: Transaction = await this.ZeroPool.deposit({
@@ -278,12 +278,17 @@ export class ZeroPoolNetwork {
     depositCancel(
         payNote: PayNote,
         waitBlocks = 0,
-        onTransactionHash?: (txHash: string) => void): Promise<Transaction> {
+        onTransactionHash?: (error: any, txHash: string | undefined) => void): Promise<Transaction> {
 
         return this.ZeroPool.cancelDeposit(payNote, waitBlocks, onTransactionHash);
     }
 
-    withdraw(payNote: PayNote, waitBlocks = 0, onTransactionHash?: (txHash: string) => void): Promise<Transaction> {
+    withdraw(
+        payNote: PayNote,
+        waitBlocks = 0,
+        onTransactionHash?: (error: any, txHash: string | undefined) => void
+    ): Promise<Transaction> {
+
         return this.ZeroPool.withdraw(payNote, waitBlocks, onTransactionHash);
     }
 
@@ -292,7 +297,7 @@ export class ZeroPoolNetwork {
         blockNumberExpires: number,
         waitBlocks = 0,
         gasPrice?: number | string,
-        onTransactionHash?: (txHash: string) => void
+        onTransactionHash?: (error: any, txHash: string | undefined) => void
     ): Promise<Transaction> {
 
         const rollupCurrentTxNum = await this.ZeroPool.getRollupTxNum();
