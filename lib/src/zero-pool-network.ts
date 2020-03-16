@@ -396,7 +396,10 @@ export class ZeroPoolNetwork {
         const unconfirmedDeposits: DepositEvent[] = depositEvents.filter(
             (event: DepositEvent) => {
                 const index = userCompleteDepositTxHashList.indexOf(event.params.txHash);
-                return index === -1;
+                return (
+                    event.owner === this.ZeroPool.web3Ethereum.ethAddress &&
+                    index === -1
+                );
             }
         );
 
