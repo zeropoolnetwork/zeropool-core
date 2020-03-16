@@ -52,7 +52,7 @@ export class AppService {
             fromPromise(initialScan(gasStorage, gasZp)),
         ]).subscribe(() => {
             const t2 = performance.now();
-            console.log(`sync is done in ${prettyMilliseconds(t2 - t1)} ms`);
+            console.log(`sync is done in ${prettyMilliseconds(t2 - t1)}`);
 
             this.txPipe(this.tx$, zp, storage).subscribe((data: ProcessedTx) => {
                 this.processedTx$.next(data);
