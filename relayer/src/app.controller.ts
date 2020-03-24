@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpStatus, Post, Res } from '@nestjs/common';
 import { ApiCreatedResponse, ApiExcludeEndpoint, ApiTags } from '@nestjs/swagger';
 import { AppService } from './app.service';
 import { zp } from './zeroPool';
 import { GasDonationDto, TransactionDto } from './transaction.dto';
+import { first, take } from "rxjs/operators";
 
 // import { AppServiceRx } from "./app.service-rx";
 
@@ -37,14 +38,23 @@ export class AppController {
     @ApiCreatedResponse({
         description: 'Accepts ethereum donation transaction to include it into a block and deposit transaction to subchain ',
     })
-    async postGasDonation(@Body() gd: GasDonationDto): Promise<any> {
-        const txData = await this.appService.publishGasDonation(gd.gasTx, gd.donationHash);
-        if (typeof txData === 'string') {
-            return {
-                transactionHash: txData
-            }
+    async postGasDonation(@Body() gd: GasDonationDto, @Res() res): Promise<void> {
+        const processedGasTx = await this.appService.publishGasDonation(gd.gasTx, gd.donationHash).toPromise();
+
+        if (processedGasTx.error) {
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR).send(processedGasTx.error);
+            return res.end();
         }
-        return txData;
+
+        if (typeof processedGasTx.txData === 'string') {
+            res.status(HttpStatus.OK).send({
+                transactionHash: processedGasTx.txData
+            });
+            return res.end();
+        }
+
+        res.status(HttpStatus.OK).send(processedGasTx.txData);
+        res.end();
     }
 
     @Post('tx')
@@ -52,18 +62,29 @@ export class AppController {
         description: 'Accepts ethereum donation transaction to include it into a block and deposit transaction to subchain ' +
             'Returns hash of Ethereum subchain transaction that post a block on the smart contract',
     })
-    async postTransaction(@Body() wtx: TransactionDto): Promise<any> {
-        const txDataList = await this.appService.publishTransaction(wtx.tx, wtx.depositBlockNumber, wtx.gasTx)
-            .toPromise();
-        if (txDataList.map(x => x[0] === 'error').filter(x => x).length !== 0) {
-            throw new Error('');
+    async postTransaction(@Body() wtx: TransactionDto, @Res() res): Promise<void> {
+        const [processedTx, processedGasTx] =
+            await this.appService.publishTransaction(wtx.tx, wtx.depositBlockNumber, wtx.gasTx).toPromise();
+
+        if (processedTx.error) {
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR).send(processedTx.error);
+            return res.end();
         }
-        if (typeof txDataList[0] === 'string') {
-            return {
-                transactionHash: txDataList[0]
-            }
+
+        if (processedGasTx.error) {
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR).send(processedGasTx.error);
+            return res.end();
         }
-        return txDataList[0];
+
+        if (typeof processedTx.txData === 'string') {
+            res.status(HttpStatus.OK).send({
+                transactionHash: processedTx.txData
+            });
+            return res.end();
+        }
+
+        res.status(HttpStatus.OK).send(processedTx.txData);
+        res.end();
     }
 
     @Get('relayer')

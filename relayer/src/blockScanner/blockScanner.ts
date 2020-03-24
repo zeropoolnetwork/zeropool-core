@@ -70,7 +70,7 @@ function getRootHash(rootHashList: string[][], rootPointer: bigint): string {
     }
 
     const blockPointer = Number(rootPointer >> 8n);
-    const blockItemInBlockPointer = Number(rootPointer % 256n);
+    const blockItemInBlockPointer = Number(rootPointer % 256n) - 1;
 
     return rootHashList[Number(blockPointer)][Number(blockItemInBlockPointer)];
 }
