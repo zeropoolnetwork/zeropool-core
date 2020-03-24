@@ -9,5 +9,5 @@ export interface IStorage {
 
   addBlocks(blocks: Block<string>[]): void;
 
-  getRootHashList(): string[];
+  getRootHashList(): string[][];
 }
