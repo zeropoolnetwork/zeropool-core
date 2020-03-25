@@ -29,7 +29,6 @@ describe('AppService', () => {
             // waiting for synchronizing
             // await delay(10000);
 
-            // todo: complete for several blocks. current implementation has unhandled behaviour
             const numOfTransactions = 60;
 
             const zpInitialState = await zp.getMyUtxoState(zp.utxoState);
