@@ -3,9 +3,6 @@ import { ApiCreatedResponse, ApiExcludeEndpoint, ApiTags } from '@nestjs/swagger
 import { AppService } from './app.service';
 import { zp } from './zeroPool';
 import { GasDonationDto, TransactionDto } from './transaction.dto';
-import { first, take } from "rxjs/operators";
-
-// import { AppServiceRx } from "./app.service-rx";
 
 @ApiTags('RelayerAPI')
 @Controller()
@@ -96,14 +93,5 @@ export class AppController {
             address: zp.ZeroPool.web3Ethereum.ethAddress,
         };
     }
-
-    // @Post('tx-rx')
-    // @ApiCreatedResponse({
-    //     description: 'Accepts signed transaction to include it into a block. ' +
-    //         'Returns hash of Ethereum transaction that post a block on the smart contract'
-    // })
-    // async postTransactionsRx(@Body() tx: TransactionDto): Promise<any> {
-    //     return await this.appServiceRx.handleTx(tx);
-    // }
 
 }

@@ -1,7 +1,7 @@
 app:
   port: 3000
   txAggregationTime: 20000 # milliseconds. Aggregate all incoming tx within 2 seconds into the same block
-  maxBatchCapacity: 30
+  maxBatchCapacity: 2
 
 network:
   etherscan_prefix: ''

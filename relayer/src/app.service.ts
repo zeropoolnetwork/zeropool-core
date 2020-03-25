@@ -6,8 +6,8 @@ import { MemoryStorage } from './storage/memoryStorage';
 import { handleBlock, initialScan, synced } from './blockScanner/blockScanner';
 import { Block, BlockItem, IMerkleTree, MerkleTree, Tx as ZpTx, ZeroPoolNetwork } from 'zeropool-lib';
 import { IStorage } from './storage/IStorage';
-import { combineLatest, Observable, of, Subject } from 'rxjs';
-import { bufferTime, catchError, concatMap, filter, map, mergeMap, take } from 'rxjs/operators';
+import { combineLatest, concat, Observable, of, Subject, timer } from 'rxjs';
+import { bufferTime, catchError, concatMap, delay, filter, map, mergeMap, take, timeout } from 'rxjs/operators';
 import { fromPromise } from 'rxjs/internal-compatibility';
 import { v4 as uuidv4 } from 'uuid';
 import { performance } from "perf_hooks";
@@ -60,19 +60,15 @@ export class AppService {
             const t2 = performance.now();
             console.log(`sync is done in ${prettyMilliseconds(t2 - t1)}`);
 
-            this.txPipe(this.tx$, zp, storage).subscribe((data: ProcessedTx[][]) => {
-                data.forEach((processedTxList) => {
-                    processedTxList.forEach((processedTx) => {
-                        this.processedTx$.next(processedTx);
-                    })
+            this.txPipe(this.tx$, zp, storage).subscribe((data: ProcessedTx[]) => {
+                data.forEach((processedTx) => {
+                    this.processedTx$.next(processedTx);
                 })
             });
 
-            this.txPipe(this.gasTx$, gasZp, gasStorage, 1).subscribe((data: ProcessedTx[][]) => {
-                data.forEach((processedTxList) => {
-                    processedTxList.forEach((processedTx) => {
-                        this.processedGasTx$.next(processedTx);
-                    })
+            this.txPipe(this.gasTx$, gasZp, gasStorage, 1).subscribe((data: ProcessedTx[]) => {
+                data.forEach((processedTx) => {
+                    this.processedGasTx$.next(processedTx);
                 })
             });
 
@@ -171,7 +167,7 @@ export class AppService {
         localZp: ZeroPoolNetwork,
         localStorage: IStorage,
         waitBlocks = 0,
-    ): Observable<ProcessedTx[][]> {
+    ): Observable<ProcessedTx[]> {
 
         return txPipe.pipe(
             bufferTime(AppConfig.txAggregationTime),
@@ -185,16 +181,21 @@ export class AppService {
 
                 const chunkedContractList: TxContract[][] = splitArr(contract, numChunks);
 
-                const processedTxChunkList$ = chunkedContractList.map((contractChunk: TxContract[]) => {
-                    return this.handleTransactionContractList(
+                const processedTxChunkList$: Observable<ProcessedTx[]>[] = chunkedContractList.map((contractChunk: TxContract[]) => {
+                    const processedTx$ = this.handleTransactionContractList(
                         contractChunk,
                         localZp,
                         localStorage,
                         waitBlocks
                     );
+
+                    if (numChunks > 1) {
+                        return processedTx$.pipe(delay(15000), take(1));
+                    }
+                    return processedTx$.pipe(take(1));
                 });
 
-                return combineLatest(processedTxChunkList$)
+                return concat(...processedTxChunkList$)
             }),
         );
 
@@ -206,9 +207,12 @@ export class AppService {
         localStorage: IStorage,
         waitBlocks = 0,
     ): Observable<ProcessedTx[]> {
-        return fromPromise(this.publishBlock(
-            contract.map(x => x.payload), localZp, localStorage, waitBlocks
-        )).pipe(
+        return of('').pipe(
+            mergeMap(() => {
+                return fromPromise(this.publishBlock(
+                    contract.map(x => x.payload), localZp, localStorage, waitBlocks
+                ))
+            }),
             map((txData: any) => {
                 return contract.map(x => {
                     return { txData, id: x.id };
@@ -224,6 +228,7 @@ export class AppService {
                 });
                 return of(processedTransactionList);
             }),
+            take(1)
         );
     }
 
@@ -321,3 +326,15 @@ function getCurrentDate(): string {
 
 const splitArr = (arr: any[], chunks: number): any[][] =>
     [...Array(chunks)].map((_, c) => arr.filter((n, i) => i % chunks === c));
+
+const linearizeArray = (arr: any[][]): any[] => {
+    const arr2 = [];
+    for (let i = 0; i < arr.length; i++) {
+        for (let j = 0; j < arr[i].length; j++) {
+            let k = i;
+            arr2[k] = arr[i];
+            k++;
+        }
+    }
+    return arr2;
+};
