@@ -1,6 +1,7 @@
 app:
   port: 3005
   txAggregationTime: 2000 # milliseconds. Aggregate all incoming tx within 2 seconds into the same block
+  maxBatchCapacity: 30
 
 network:
   etherscan_prefix: 'https://rinkeby.etherscan.io/'

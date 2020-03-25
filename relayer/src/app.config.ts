@@ -8,6 +8,7 @@ const networkConfig = config.get('network') as any;
 export const AppConfig = {
   port: process.env.PORT || appConfig.port || 3000,
   txAggregationTime: process.env.BLOCK_TIME || appConfig.txAggregationTime || 2000,
+  maxBatchCapacity: process.env.MAX_BATCH_CAPACITY || appConfig.maxBatchCapacity || 30
 };
 
 export const NetworkConfig = {

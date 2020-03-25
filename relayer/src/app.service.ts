@@ -60,15 +60,19 @@ export class AppService {
             const t2 = performance.now();
             console.log(`sync is done in ${prettyMilliseconds(t2 - t1)}`);
 
-            this.txPipe(this.tx$, zp, storage).subscribe((data: ProcessedTx[]) => {
-                data.forEach((processedTx) => {
-                    this.processedTx$.next(processedTx);
+            this.txPipe(this.tx$, zp, storage).subscribe((data: ProcessedTx[][]) => {
+                data.forEach((processedTxList) => {
+                    processedTxList.forEach((processedTx) => {
+                        this.processedTx$.next(processedTx);
+                    })
                 })
             });
 
-            this.txPipe(this.gasTx$, gasZp, gasStorage, 1).subscribe((data: ProcessedTx[]) => {
-                data.forEach((processedTx) => {
-                    this.processedGasTx$.next(processedTx);
+            this.txPipe(this.gasTx$, gasZp, gasStorage, 1).subscribe((data: ProcessedTx[][]) => {
+                data.forEach((processedTxList) => {
+                    processedTxList.forEach((processedTx) => {
+                        this.processedGasTx$.next(processedTx);
+                    })
                 })
             });
 
@@ -167,23 +171,30 @@ export class AppService {
         localZp: ZeroPoolNetwork,
         localStorage: IStorage,
         waitBlocks = 0,
-    ): Observable<ProcessedTx[]> {
+    ): Observable<ProcessedTx[][]> {
 
         return txPipe.pipe(
             bufferTime(AppConfig.txAggregationTime),
             filter((txs) => txs.length > 0),
             concatMap((contract: TxContract[]) => {
-                // todo: handle > 256 tx
                 console.log(
                     `${getCurrentDate()}: Received Transaction ${localStorage.storageName} Batch with ${contract.length} tx`
                 );
 
-                return this.handleTransactionContractList(
-                    contract,
-                    localZp,
-                    localStorage,
-                    waitBlocks
-                );
+                const numChunks = Math.ceil(contract.length / AppConfig.maxBatchCapacity);
+
+                const chunkedContractList: TxContract[][] = splitArr(contract, numChunks);
+
+                const processedTxChunkList$ = chunkedContractList.map((contractChunk: TxContract[]) => {
+                    return this.handleTransactionContractList(
+                        contractChunk,
+                        localZp,
+                        localStorage,
+                        waitBlocks
+                    );
+                });
+
+                return combineLatest(processedTxChunkList$)
             }),
         );
 
@@ -307,3 +318,6 @@ function getCurrentDate(): string {
     const time = today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
     return date + ' ' + time;
 }
+
+const splitArr = (arr: any[], chunks: number): any[][] =>
+    [...Array(chunks)].map((_, c) => arr.filter((n, i) => i % chunks === c));
