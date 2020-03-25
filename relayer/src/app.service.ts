@@ -6,8 +6,8 @@ import { MemoryStorage } from './storage/memoryStorage';
 import { handleBlock, initialScan, synced } from './blockScanner/blockScanner';
 import { Block, BlockItem, IMerkleTree, MerkleTree, Tx as ZpTx, ZeroPoolNetwork } from 'zeropool-lib';
 import { IStorage } from './storage/IStorage';
-import { combineLatest, concat, Observable, of, Subject, timer } from 'rxjs';
-import { bufferTime, catchError, concatMap, delay, filter, map, mergeMap, take, timeout } from 'rxjs/operators';
+import { combineLatest, concat, Observable, of, Subject } from 'rxjs';
+import { bufferTime, catchError, concatMap, delay, filter, map, mergeMap, take } from 'rxjs/operators';
 import { fromPromise } from 'rxjs/internal-compatibility';
 import { v4 as uuidv4 } from 'uuid';
 import { performance } from "perf_hooks";
@@ -177,9 +177,7 @@ export class AppService {
                     `${getCurrentDate()}: Received Transaction ${localStorage.storageName} Batch with ${contract.length} tx`
                 );
 
-                const numChunks = Math.ceil(contract.length / AppConfig.maxBatchCapacity);
-
-                const chunkedContractList: TxContract[][] = splitArr(contract, numChunks);
+                const chunkedContractList: TxContract[][] = splitArr(contract, AppConfig.maxBatchCapacity);
 
                 const processedTxChunkList$: Observable<ProcessedTx[]>[] = chunkedContractList.map((contractChunk: TxContract[]) => {
                     const processedTx$ = this.handleTransactionContractList(
@@ -189,7 +187,7 @@ export class AppService {
                         waitBlocks
                     );
 
-                    if (numChunks > 1) {
+                    if (chunkedContractList.length > 1) {
                         return processedTx$.pipe(delay(15000), take(1));
                     }
                     return processedTx$.pipe(take(1));
@@ -324,8 +322,15 @@ function getCurrentDate(): string {
     return date + ' ' + time;
 }
 
-const splitArr = (arr: any[], chunks: number): any[][] =>
-    [...Array(chunks)].map((_, c) => arr.filter((n, i) => i % chunks === c));
+const splitArr = (arr: any[], chunkSize: number): any[][] => {
+    const tmp = [];
+    for (let i = 0, j = arr.length; i < j; i += chunkSize) {
+        tmp.push(
+            arr.slice(i, i + chunkSize)
+        );
+    }
+    return tmp;
+};
 
 const linearizeArray = (arr: any[][]): any[] => {
     const arr2 = [];

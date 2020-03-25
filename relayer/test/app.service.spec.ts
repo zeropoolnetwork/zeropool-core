@@ -8,6 +8,8 @@ import { calculateUtxo, MerkleTreeFromObject, MerkleTreeState, Tx } from "zeropo
 import { unstringifyBigInts } from 'snarkjs/src/stringifybigint';
 import { combineLatest } from "rxjs";
 import { AppConfig } from "../src/app.config";
+import { performance } from "perf_hooks";
+import * as prettyMilliseconds from "pretty-ms";
 
 const ethToken = '0x0000000000000000000000000000000000000000';
 
@@ -23,12 +25,12 @@ describe('AppService', () => {
     });
 
     describe('test transaction batch', () => {
-        it('should еще не придумал', async (done) => {
+        it('should create and send two batches', async () => {
             // waiting for synchronizing
             // await delay(10000);
 
             // todo: complete for several blocks. current implementation has unhandled behaviour
-            const numOfTransactions = 4;
+            const numOfTransactions = 60;
 
             const zpInitialState = await zp.getMyUtxoState(zp.utxoState);
             const gasZpInitialState = await gasZp.getMyUtxoState(gasZp.utxoState);
@@ -135,6 +137,8 @@ describe('AppService', () => {
                 )
             }
 
+            const t1 = performance.now();
+
             let processedTxCounter = 0;
             combineLatest(publishedTransactions$).subscribe(
                 (res) => {
@@ -145,7 +149,8 @@ describe('AppService', () => {
                     throw err;
                 },
                 () => {
-                    console.log('done');
+                    const t2 = performance.now();
+                    console.log(`relayer done in ${prettyMilliseconds(t2 - t1)}`);
                     expect(processedTxCounter).to.eq(publishedTransactions$.length);
                 }
             );
