@@ -12,7 +12,7 @@
     "ZeroPoolSidechain.full.sol": "solidityFlattener.pl --contractsdir=contracts --mainsol=ZeroPoolSidechain.sol --outputsol=ZeroPoolSidechain.full.sol --verbose",
     "dist:Proxy": "npm run Proxy.full.sol && solcjs --bin --abi --optimize Proxy.full.sol && mv Proxy_full_sol_MainnetProxy.abi Proxy.full.abi && mv Proxy_full_sol_MainnetProxy.bin Proxy.full.bin && rm -rf Proxy_full_sol*",
     "dist:ZeroPool": "npm run ZeroPool.full.sol && solcjs --bin --abi --optimize ZeroPool.full.sol && mv ZeroPool_full_sol_Zeropool.abi ZeroPool.full.abi && mv ZeroPool_full_sol_Zeropool.bin ZeroPool.full.bin && rm -rf ZeroPool_full_sol*",
-    "dist:ZeroPoolSidechain": "npm run ZeroPoolSidechain.full.sol && solcjs --bin --abi --optimize ZeroPoolSidechain.full.sol && mv ZeroPoolSidechain_full_sol_Zeropool.abi ZeroPoolSidechain.full.abi && mv ZeroPoolSidechain_full_sol_Zeropool.bin ZeroPoolSidechain.full.bin && rm -rf ZeroPoolSidechain_full_sol*",
+    "dist:ZeroPoolSidechain": "npm run ZeroPoolSidechain.full.sol && solcjs --bin --abi --optimize ZeroPoolSidechain.full.sol && mv ZeroPoolSidechain_full_sol_ZeropoolSidechain.abi ZeroPoolSidechain.full.abi && mv ZeroPoolSidechain_full_sol_ZeropoolSidechain.bin ZeroPoolSidechain.full.bin && rm -rf ZeroPoolSidechain_full_sol*",
     "dist": "npm run dist:Proxy && npm run dist:ZeroPool && npm run dist:ZeroPoolSidechain"
   },
   "repository": {
