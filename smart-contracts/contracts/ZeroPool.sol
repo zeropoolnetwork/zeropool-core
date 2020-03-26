@@ -178,10 +178,13 @@ contract Zeropool is OptimisticRollup {
         if (get_rollup_tx_num() > lastvalid) set_rollup_tx_num(lastvalid);
     }
 
+    uint256 constant HARDFORK_TX_NUM = 12800;
+
     function challengeTx(BlockItemNote memory cur, BlockItemNote memory base)
         public
         returns (bool)
     {
+        require(cur.id > HARDFORK_TX_NUM && base.id > HARDFORK_TX_NUM);
         require(blockItemNoteVerifyPair(cur, base));
         require(cur.item.ctx.rootptr == base.id);
         uint256[] memory inputs = new uint256[](8);
