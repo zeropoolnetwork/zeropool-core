@@ -12,6 +12,7 @@ import { fromPromise } from 'rxjs/internal-compatibility';
 import { v4 as uuidv4 } from 'uuid';
 import { performance } from "perf_hooks";
 import { AppConfig } from "./app.config";
+import { Transaction } from "web3-core";
 
 const BN128_R = BigInt('21888242871839275222246405745257275088548364400416034343698204186575808495617');
 
@@ -32,7 +33,7 @@ type TxContract = {
 
 type ProcessedTx = {
     id: string
-    txData?: string,
+    txData?: string | Transaction,
     error?: string
 }
 
@@ -330,16 +331,4 @@ const splitArr = (arr: any[], chunkSize: number): any[][] => {
         );
     }
     return tmp;
-};
-
-const linearizeArray = (arr: any[][]): any[] => {
-    const arr2 = [];
-    for (let i = 0; i < arr.length; i++) {
-        for (let j = 0; j < arr[i].length; j++) {
-            let k = i;
-            arr2[k] = arr[i];
-            k++;
-        }
-    }
-    return arr2;
 };
