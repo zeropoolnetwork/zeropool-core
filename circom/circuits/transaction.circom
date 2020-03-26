@@ -76,6 +76,7 @@ template Transaction(n) {
         utxo_out[i].token <== secret_token;
         utxo_out[i].amount <== utxo_out_data[i][0];
         utxo_out[i].owner_commit <== utxo_out_data[i][1];
+        utxo_out[i].out === utxo_out_hash[i];
 
         utxo_out_invalid[i] = Num2Bits(240);
         utxo_out_invalid[i].in <== utxo_out[i].amount;
