@@ -1,10 +1,10 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpException, HttpStatus, Post } from '@nestjs/common';
 import { ApiCreatedResponse, ApiExcludeEndpoint, ApiTags } from '@nestjs/swagger';
 import { AppService } from './app.service';
 import { zp } from './zeroPool';
-import { GasDonationDto, TransactionDto } from './transaction.dto';
-
-// import { AppServiceRx } from "./app.service-rx";
+import { GasDonationRequest, RelayerAddressResponse, TransactionRequest, TransactionResponse } from './transaction.dto';
+import { Observable } from "rxjs";
+import { map, take } from "rxjs/operators";
 
 @ApiTags('RelayerAPI')
 @Controller()
@@ -22,29 +22,27 @@ export class AppController {
         </div>`;
     }
 
-    // @Get('smart-contract-info')
-    // @ApiCreatedResponse({description: 'Returns link to ZeroPool smart contract on etherscan'})
-    // getSmartContractDetails(): string {
-    //     if (NetworkConfig.etherscan_prefix) {
-    //         return `${NetworkConfig.etherscan_prefix}/address/${NetworkConfig.contract}`
-    //     }
-    //     return NetworkConfig.contract;
-    // }
-
-    // TODO: add network parameter. Rinkeby, Mainnet
-
     @Post('tx/donation')
     @ApiCreatedResponse({
         description: 'Accepts ethereum donation transaction to include it into a block and deposit transaction to subchain ',
     })
-    async postGasDonation(@Body() gd: GasDonationDto): Promise<any> {
-        const txData = await this.appService.publishGasDonation(gd.gasTx, gd.donationHash);
-        if (typeof txData === 'string') {
-            return {
-                transactionHash: txData
-            }
-        }
-        return txData;
+    postGasDonation(@Body() gd: GasDonationRequest): Observable<TransactionResponse> {
+        return this.appService.publishGasDonation(gd.gasTx, gd.donationHash).pipe(
+            map((processedGasTx) => {
+                if (processedGasTx.error) {
+                    throw new HttpException(processedGasTx.error, HttpStatus.INTERNAL_SERVER_ERROR)
+                }
+
+                if (typeof processedGasTx.txData === 'string') {
+                    return {
+                        transactionHash: processedGasTx.txData
+                    };
+                }
+
+                return processedGasTx.txData;
+            }),
+            take(1)
+        );
     }
 
     @Post('tx')
@@ -52,37 +50,37 @@ export class AppController {
         description: 'Accepts ethereum donation transaction to include it into a block and deposit transaction to subchain ' +
             'Returns hash of Ethereum subchain transaction that post a block on the smart contract',
     })
-    async postTransaction(@Body() wtx: TransactionDto): Promise<any> {
-        const txDataList = await this.appService.publishTransaction(wtx.tx, wtx.depositBlockNumber, wtx.gasTx)
-            .toPromise();
-        if (txDataList.map(x => x[0] === 'error').filter(x => x).length !== 0) {
-            throw new Error('');
-        }
-        if (typeof txDataList[0] === 'string') {
-            return {
-                transactionHash: txDataList[0]
-            }
-        }
-        return txDataList[0];
+    postTransaction(@Body() wtx: TransactionRequest): Observable<TransactionResponse> {
+        return this.appService.publishTransaction(wtx.tx, wtx.depositBlockNumber, wtx.gasTx).pipe(
+            map(([processedTx, processedGasTx]) => {
+                if (processedTx.error) {
+                    throw new HttpException(processedTx.error, HttpStatus.INTERNAL_SERVER_ERROR)
+                }
+
+                if (processedGasTx.error) {
+                    throw new HttpException(processedGasTx.error, HttpStatus.INTERNAL_SERVER_ERROR)
+                }
+
+                if (typeof processedTx.txData === 'string') {
+                    return {
+                        transactionHash: processedTx.txData
+                    }
+                }
+
+                return processedTx.txData;
+            }),
+            take(1)
+        );
     }
 
     @Get('relayer')
     @ApiCreatedResponse({
         description: 'Get relayer ethereum address for gas donations',
     })
-    getRelayerAddress(): any {
+    getRelayerAddress(): RelayerAddressResponse {
         return {
             address: zp.ZeroPool.web3Ethereum.ethAddress,
         };
     }
-
-    // @Post('tx-rx')
-    // @ApiCreatedResponse({
-    //     description: 'Accepts signed transaction to include it into a block. ' +
-    //         'Returns hash of Ethereum transaction that post a block on the smart contract'
-    // })
-    // async postTransactionsRx(@Body() tx: TransactionDto): Promise<any> {
-    //     return await this.appServiceRx.handleTx(tx);
-    // }
 
 }

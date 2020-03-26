@@ -1,6 +1,7 @@
 app:
   port: 3000
   txAggregationTime: 2000 # milliseconds. Aggregate all incoming tx within 2 seconds into the same block
+  maxBatchCapacity: 30
 
 network:
   etherscan_prefix: 'https://rinkeby.etherscan.io/'
@@ -11,4 +12,3 @@ network:
 
 mnemonic: 'music tired panel defense garlic tomorrow feature person december lab keen sausage tourist remember era'
 gas_mnemonic: 'music tired panel defense garlic tomorrow feature person december lab keen sausage tourist remember era'
-

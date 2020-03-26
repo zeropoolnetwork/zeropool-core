@@ -1,13 +1,15 @@
 import { Block, BlockItem, IMerkleTree } from 'zeropool-lib';
 
 export interface IStorage {
-  utxoTree: IMerkleTree;
+    storageName?: string
 
-  getBlockItems(): BlockItem<string>[];
+    utxoTree: IMerkleTree;
 
-  getNullifiers(): string[];
+    getBlockItems(): BlockItem<string>[];
 
-  addBlocks(blocks: Block<string>[]): void;
+    getNullifiers(): string[];
 
-  getRootHashList(): string[];
+    addBlocks(blocks: Block<string>[]): void;
+
+    getRootHashList(): string[][];
 }

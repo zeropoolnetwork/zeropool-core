@@ -1,13 +1,14 @@
 app:
   port: 3000
-  txAggregationTime: 2000 # milliseconds. Aggregate all incoming tx within 2 seconds into the same block
+  txAggregationTime: 20000 # milliseconds. Aggregate all incoming tx within 2 seconds into the same block
+  maxBatchCapacity: 30
 
 network:
   etherscan_prefix: ''
   rpc: 'https://rinkeby.infura.io/v3/826fec4cbd954dfd89c714eabf4611c4'
   gasRpc: 'https://kovan.infura.io/v3/826fec4cbd954dfd89c714eabf4611c4'
-  contract: '0x27964b5704f656033a1864da29A740661626aE69'
-  gas_contract: '0x3408A71430C88243Cd3D53A66B59EBCBB93b04D3'
+  contract: '0x6B989220CFDeb3B4Aec4f904E5D293d3f3E98685'
+  gas_contract: '0xE5CAd5F5f4021e2427462115251090B1196f9C1F'
 
 mnemonic: 'elegant lava crew you jacket first garment tomorrow novel combine deer action lizard throw fragile'
 gas_mnemonic: 'elegant lava crew you jacket first garment tomorrow novel combine deer action lizard throw fragile'
