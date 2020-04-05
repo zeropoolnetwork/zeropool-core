@@ -4,11 +4,17 @@
 ZeroPoolNetwork is a pure JavaScript library for iterating with ZeroPool Ethereum smart contract.
 
 ## Installation
+### Frontend
 ```bash
-npm i -s zeropool-lib
+npm i -s zeropool-lib@0.5.5
+```
+### Backend
+```bash
+npm i -s zeropool-lib@0.5.51-node
 ```
 
-For browser version:
+## Build
+### Frontend
 ```bash
 git clone https://github.com/zeropoolnetwork/zeropool-core.git
 
@@ -19,22 +25,88 @@ npm i
 npm run build:browser
 ```
 
+### Backend  
+Go to the `package.json` and change `"websnark": "github:krboktv/websnark#915a64ec65df8ac304aa23c957f7c3ec5459685c"` to `"websnark": "0.0.5"`
+```bash
+git clone https://github.com/zeropoolnetwork/zeropool-core.git
+
+cd lib
+
+npm i
+
+npm run build
+```
+
 ## Usage
 ```javascript
 const zp = new ZeroPoolNetwork(
-    contractAddress, 
-    ethPrivateKey,
-    zpMnemonic,
-    transactionJson,
-    proverKey
+  contractAddress,
+  provider,        // for example: Web3 or Truffle provider
+  mnemonic,       
+  transactionJson, // see: compiled folder
+  proverKey,       // see: compiled folder
 );
 ```
 
-### Deposit
+### Available view methods
+```javascript
+/*
+    This type of deposits haven't included to ZeroPool block 
+    but exists in Ethereum chain 
+*/
+
+zp.getUncompleteDeposits();
+```
+
+```javascript
+/*
+  Allows to get not finalized withdrawals  
+*/
+
+zp.getActiveWithdrawals();
+```
+
+```javascript
+// Balance object {[asset]: balance}
+
+zp.getBalance();
+```
+
+```javascript
+/*
+    Allows to get:
+    1. Merkle Tree State
+    2. Last fetched block number
+    3. Utxo list (by public key)
+    4. Nullifiers of each utxo
+*/
+
+zp.getMyUtxoState();
+```
+
+```javascript
+/*
+    Balance by each asset
+    ZeroPool Deposit/Transfer/Withdraw history
+*/
+
+zp.getBalanceAndHistory();
+```
+
+```javascript
+// Actual Merkle Tree State
+
+zp.fetchMerkleTree();
+```
+
+### PrepareDeposit
+
+Generate ZeroPool transaction and its hash
+
 ```javascript
 const token = "0x0000000000000000000000000000000000000000";
 const amount = 10000002;
-zp.deposit(token, amount)
+zp.prepareDeposit(token, amount)
   .then(console.log)
   
 /*
@@ -66,31 +138,52 @@ zp.deposit(token, amount)
 */
 ```
 
-### My Deposits
+### Deposit
+
+Deposit ZeroPool transaction to Ethereum Chain
+
 ```javascript
-zp.myDeposits()
+const token = "0x0000000000000000000000000000000000000000";
+const amount = 10000002;
+// hash of ZeroPool transaction from prepareDeposit fundtion response
+const zeroPoolTxHash = "0xc68eca23f89667fd80105d1d7e9c7a087297a7ce701d11e50109e5dd66d9ad98";
+
+zp.deposit(token, amount, zeroPoolTxHash)
   .then(console.log)
   
 /*
-[ 
-  { 
-    deposit: { 
-      token: '0x0000000000000000000000000000000000000000',
-      amount: '10000002',
-      txhash:
-        '0x626b9a6681dae7ec6776d083f08c42fba7c0d1f68bbead511478235ca5afc257',
-      owner: '0x5c526bc400c619Ca631619F52C58545ad56a0F19',
-      blocknumber: 105 
+[
+    {
+      tx: {
+        token: '0x0000000000000000000000000000000000000000',
+        rootPointer: '0x6a',
+        nullifier: [
+          '0xbf39f6a7ee49c3e9715d6107a3a1122ca1ae80f28dd25512b1316a03b13345',
+          '0x14e247a277fda49a5bf7aa63b5629ae406a25c54c68bd4c357cc00be460bccd4'
+        ],
+        utxoHashes: [
+          '0xee9541ff3784792d550b3d6ba498ec1685d1156c86709462db6a27427bf1cf2',
+          '0x25c44b40af6abb8d854cfd222a8b51bf8182c4a2213ab6119d5208dabfd6e2f5'
+        ],
+        delta: '0x30644e72e131a029b85045b68181585d2833e84879b9709143dec31fa42aa801',
+        txExternalFields: {
+          owner: '0x5c526bc400c619Ca631619F52C58545ad56a0F19',
+          message: [Array]
+        },
+        proof: { data: [Array] }
+      },
+      depositBlockNumber: '0x0',
+      newRoot: '0x2d945693d4e2e412ad4b21df76a9423af24adbdb48d905fe42b5d5c22307e3f7'
     },
-    isExists: true,
-    isSpent: false,
-    spentInTx: 0 
-  } 
+    '0xc68eca23f89667fd80105d1d7e9c7a087297a7ce701d11e50109e5dd66d9ad98'
 ]
 */
 ```
 
 ### Cancel Deposit
+
+Cancel deposit that was not included to ZeroPool block
+
 ```javascript
 const deposit = {
     utxo: { 
@@ -106,7 +199,50 @@ zp.depositCancel(deposit)
   .then(console.log)
 ```
 
+### Transfer
+
+Create ZeroPool transaction
+
+```javascript
+const token = "0x0000000000000000000000000000000000000000";
+const destPubKey = "0x8aba319d7609671a719e30fee2b7c74631ac2ebbb19676510268f64bcae27e8";
+const amount = 10002;
+zp.transfer(token, destPubKey, amount)
+  .then(console.log)
+```
+
+### Prepare withdraw
+
+Prepare ZeroPool Withdraw
+
+```javascript
+const token = "0x0000000000000000000000000000000000000000";
+const numberOfUtxo = 1;
+zp.prepareWithdraw(token, numberOfUtxo)
+  .then(console.log)
+```
+
+### Withdraw
+
+Withdraw funds from ZeroPool smart contract
+
+```javascript
+zp.withdraw({
+    utxo: {
+      token: "0x0000000000000000000000000000000000000000",
+      amount: 10 ** 5,
+      owner: zp.ethAddress
+    },   
+    blockNumber: 168,
+    txHash: "0xc68eca23f89667fd80105d1d7e9c7a087297a7ce701d11e50109e5dd66d9ad98"
+}).then(console.log);
+```
+
+
 ### Publish blocks
+
+Send ZeroPool Transactions to the smart contract
+
 ```javascript
 const blockItem = [
   {
@@ -141,106 +277,3 @@ zp.publishBlockItems(blocks, blockNumberExpires)
   .then(console.log)
 ```
 
-### Find own UTXO
-```javascript
-zp.myUtxos()
-  .then(console.log)
-  
-/*
-[ 
-  { token: 0n,
-    amount: 10000002n,
-    pubkey:
-     12123946667276826336013985323462868612130966473467100169422703722373267055672n,
-    blinding:
-     18782047853899156349418357931391833619305251468979533390192400340875930082397n,
-    mp_sibling:
-     [ 6675163126093257903099739234723449784990797034507726406515264335056294826463n,
-       9885323406998500013793438129556536303224276963647976814508482533349574357385n,
-       17325516636655203304685357446470211555866789883064202373892151823301208051968n,
-       15362496748596162224562673039646463735701166694902230246191366360084089741808n,
-       3171421283011099678172213181064215781395844368275901880503819278767032266053n,
-       811463681839953651777473541765908085536220022209428190504815069489494010885n,
-       13064558374208152162708697998995611495305529433229206948157197076451175327959n,
-       7311503910832266130755624400428811561405414443392140543102318211775248233362n,
-       17002201217364759451217610853591697968986488295235380974427951403550807321707n,
-       3500442693561461904038125704341979247251580107582557078642280160477539792818n,
-       10501656479781836719197170875200353438080615205837812789201747535798868006609n,
-       12914839239293365621585921068127683428941648179795690273965418411181646964415n,
-       12492880136601929540904754914885001782263519525598738093563325262150635302360n,
-       17936846559010455689227552817658893787011739602623722562423495781781027896246n,
-       13121683564499582125450586031954700642263221699331733123771659586379936915090n,
-       2151306395078888140082390342396672064177601520918049536222458442287316625149n,
-       973981158916562824715210270245787078520087699511931306830353220473866989272n,
-       12898540022437736719586872477129837513582070640020546314181205384805761992552n,
-       10735091884781591299635655521928651084111810461354093711649475411912469649843n,
-       13327530160302227271697984708670609451674249054901805775401956241509057418700n,
-       15986313087792016329347698116251406749758077340959961537937482287420481099813n,
-       21663645665006187845941287869331227818803254029633093035761111206856504590873n,
-       6894123801651624732464317171894904979383696323335879951392387189806360479396n,
-       3143742548657777282352720086119375615149853609086256306717859951072208904762n,
-       11576922831286256560284620841077464395695347730830789665177223146385642313483n,
-       19618776947554247327503805715555642544618369397629233982225982437668900848680n,
-       2957506134981379138072587707549241847260360051372092991593286757652107999695n,
-       5535857054133359989943183856109469945469070067054831224622465697587699586741n,
-       21754553799146747998207416465892208719427900803102670069027925178357742398193n,
-       19775312519358466453604956678080879392589515452908593006741652198244393197561n,
-       13238170592610231769082643290569709711316545507151657257788487738181309369115n,
-       414462044381848533880208748926423808039968765845791454432677987651222650587n ],
-    mp_path: 0 
-  } 
-]
-*/
-```
-
-### Get Balance
-```javascript
-zp.getBalance()
-  .then(console.log)
-  
-/* 
-  { '0x0': 100020 }
-*/
-```
-
-
-### Get UTXO Root Hash
-```javascript
-zp.utxoRootHash()
-  .then(console.log)
-  
-/*
-17970794380061284616596800972425971487597130002759127715876732862858270648168n
-*/
-```
-
-### Transfer
-```javascript
-const token = "0x0000000000000000000000000000000000000000";
-const destPubKey = "0x8aba319d7609671a719e30fee2b7c74631ac2ebbb19676510268f64bcae27e8";
-const amount = 10002;
-zp.transfer(token, destPubKey, amount)
-  .then(console.log)
-```
-
-### Prepare withdraw
-```javascript
-const token = "0x0000000000000000000000000000000000000000";
-const numberOfUtxo = 1;
-zp.prepareWithdraw(token, numberOfUtxo)
-  .then(console.log)
-```
-
-### Withdraw
-```javascript
-const token = "0x0000000000000000000000000000000000000000";
-zp.withdraw({
-    utxo: {
-      token,
-      amount: 10 ** 5,
-      owner: zp.ethAddress
-    },   
-    blockNumber: 168,
-    txHash: "0xc68eca23f89667fd80105d1d7e9c7a087297a7ce701d11e50109e5dd66d9ad98"
-}).then(console.log);
-```
