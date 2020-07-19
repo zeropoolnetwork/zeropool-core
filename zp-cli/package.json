@@ -29,7 +29,7 @@
     "cosmiconfig": "^6.0.0",
     "debug": "^4.1.1",
     "fs": "0.0.1-security",
-    "lodash": "^4.17.15",
+    "lodash": "^4.17.19",
     "path": "^0.12.7",
     "zeropool-lib": "0.1.0"
   },
