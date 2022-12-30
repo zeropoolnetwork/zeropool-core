@@ -28,7 +28,7 @@
     "chai": "^4.2.0",
     "config": "^3.2.5",
     "fs": "0.0.1-security",
-    "mocha": "^7.1.1",
+    "mocha": "^10.2.0",
     "path": "^0.12.7",
     "pretty-ms": "^6.0.1",
     "reflect-metadata": "^0.1.13",
